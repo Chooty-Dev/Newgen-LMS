@@ -1,12 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
-import { BentoCard } from "./BentoCard";
 import { FriendlySkeletons } from "./FriendlySkeletons";
 import { NewsReaderSheet, StudentAnnouncement } from "./NewsReaderSheet";
-import { Button } from "@/components/ui/button";
 import {
   Megaphone,
   Search,
@@ -14,8 +12,8 @@ import {
   ArrowRight,
   Pin,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export function StudentAnnouncementsView() {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -85,134 +83,138 @@ export function StudentAnnouncementsView() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* 1. Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2">
-        <div className="space-y-1">
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
-            School News
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground font-medium">
-            Stay updated with announcements, class schedules, and center notices.
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. Hero Banner */}
+      <section className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] relative overflow-hidden">
+        <div className="space-y-2.5 max-w-lg text-center md:text-left z-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#184880] tracking-tight leading-tight">
+            School News & Notices
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            Stay updated with timetable changes, center announcements, and teacher notices.
           </p>
         </div>
 
-        {/* Search Pill */}
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search news..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-12 pl-11 pr-4 rounded-full bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <div className="relative w-40 h-36 sm:w-48 sm:h-40 shrink-0 z-10">
+          <Image
+            src="/images/class.webp"
+            alt="School News"
+            fill
+            priority
+            className="object-contain drop-shadow-sm"
+            sizes="(max-width: 768px) 160px, 192px"
           />
         </div>
-      </div>
+      </section>
 
-      {/* 2. Filter Pills: All / My Classes */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setFilterAudience("all")}
-          className={cn(
-            "h-11 px-5 rounded-full text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            filterAudience === "all"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted/70 hover:bg-muted text-foreground"
-          )}
-        >
-          All News
-        </button>
-        <button
-          type="button"
-          onClick={() => setFilterAudience("classes")}
-          className={cn(
-            "h-11 px-5 rounded-full text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            filterAudience === "classes"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-muted/70 hover:bg-muted text-foreground"
-          )}
-        >
-          My Classes Only
-        </button>
-      </div>
+      {/* 2. Controls & Search */}
+      <section className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search announcements..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-11 pl-11 pr-4 rounded-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#184880]"
+          />
+        </div>
 
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFilterAudience("all")}
+            className={`h-10 px-5 rounded-full text-xs font-bold transition-all ${filterAudience === "all"
+              ? "bg-[#184880] text-white shadow-xs"
+              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+          >
+            All Notices
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterAudience("classes")}
+            className={`h-10 px-5 rounded-full text-xs font-bold transition-all ${filterAudience === "classes"
+              ? "bg-[#184880] text-white shadow-xs"
+              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+          >
+            My Classes
+          </button>
+        </div>
+      </section>
+
+      {/* 3. Notices Content */}
       {filteredNews.length === 0 ? (
-        <Card className="rounded-[2.5rem] p-12 text-center space-y-4">
-          <div className="size-16 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
-            <Megaphone className="size-8" />
+        <div className="bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 rounded-3xl p-10 text-center space-y-3 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)]">
+          <div className="size-14 rounded-full bg-blue-50 text-[#184880] flex items-center justify-center mx-auto">
+            <Megaphone className="size-6" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-2xl font-bold text-foreground">No news found</h3>
-            <p className="text-base text-muted-foreground max-w-md mx-auto">
-              There are no announcements matching your current filters.
-            </p>
+            <h4 className="text-base font-bold text-slate-900">No notices found</h4>
+            <p className="text-xs text-slate-500">No announcements match your current filters.</p>
           </div>
           {filterAudience !== "all" && (
-            <Button
-              variant="outline"
+            <button
+              type="button"
               onClick={() => setFilterAudience("all")}
-              className="rounded-full h-11 px-6 text-sm font-semibold"
+              className="rounded-full h-9 px-5 text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
             >
-              Show All News
-            </Button>
+              Show All Notices
+            </button>
           )}
-        </Card>
+        </div>
       ) : (
         <div className="space-y-6">
-          {/* Pinned Hero Banner */}
+          {/* Pinned / Featured Notice */}
           {pinnedNews && (
-            <BentoCard
-              variant="hero"
-              className="cursor-pointer group hover:border-primary/40 relative"
+            <div
               onClick={() => handleOpenNews(pinnedNews)}
+              className="relative overflow-hidden p-6 sm:p-7 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] hover:border-blue-200 cursor-pointer transition-all space-y-3"
             >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-primary">
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10">
-                      <Pin className="size-3.5" />
-                      Important Notice
-                    </span>
-                    {!readIds.has(pinnedNews.id) && (
-                      <span className="size-2.5 rounded-full bg-primary animate-pulse" title="Unread" />
-                    )}
-                  </div>
-                  <span className="text-muted-foreground">
-                    {pinnedNews.date || pinnedNews.createdAt?.slice(0, 10) || "Recent"}
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#184880]">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EBF3FE]">
+                    <Pin className="size-3" />
+                    Pinned
                   </span>
+                  {!readIds.has(pinnedNews.id) && (
+                    <span className="size-2 rounded-full bg-blue-600 animate-pulse" title="Unread" />
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <h2 className="text-2xl md:text-3xl font-bold text-foreground group-hover:text-primary transition-colors">
-                    {pinnedNews.title}
-                  </h2>
-                  <p className="text-base md:text-lg text-muted-foreground line-clamp-3 leading-relaxed">
-                    {pinnedNews.body}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border/80">
-                  <div className="flex items-center gap-2 text-sm text-foreground font-medium">
-                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                      {pinnedNews.authorName?.[0] || "T"}
-                    </div>
-                    <span>{pinnedNews.authorName || "Teacher / Center Staff"}</span>
-                  </div>
-
-                  <span className="text-sm font-semibold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Read Full News <ArrowRight className="size-4" />
-                  </span>
-                </div>
+                <span className="text-slate-400 font-semibold text-xs normal-case">
+                  {pinnedNews.date || pinnedNews.createdAt?.slice(0, 10) || "Recent"}
+                </span>
               </div>
-            </BentoCard>
+
+              <div className="space-y-1">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 hover:text-[#184880] transition-colors">
+                  {pinnedNews.title}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed">
+                  {pinnedNews.body}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                  <div className="size-6 rounded-full bg-[#EBF3FE] text-[#184880] flex items-center justify-center font-bold text-[10px]">
+                    {pinnedNews.authorName?.[0] || "T"}
+                  </div>
+                  <span>{pinnedNews.authorName || "Staff"}</span>
+                </div>
+
+                <span className="text-xs font-bold text-[#184880] flex items-center gap-1">
+                  Read notice <ArrowRight className="size-3.5" />
+                </span>
+              </div>
+            </div>
           )}
 
-          {/* Regular News List */}
+          {/* Regular Notices Grid */}
           {regularNews.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-xl font-bold text-foreground px-1">
+            <div className="space-y-3">
+              <h3 className="text-base font-bold text-slate-900 px-1">
                 More Notices
               </h3>
 
@@ -224,37 +226,37 @@ export function StudentAnnouncementsView() {
                     <div
                       key={news.id}
                       onClick={() => handleOpenNews(news)}
-                      className="group p-6 rounded-[2rem] bg-card border border-border shadow-sm hover:shadow-md hover:border-primary/40 cursor-pointer transition-all flex flex-col justify-between space-y-4 relative"
+                      className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/50 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] hover:border-blue-200 cursor-pointer transition-all flex flex-col justify-between space-y-3"
                     >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-medium text-slate-400">
                           <div className="flex items-center gap-2">
                             {isUnread && (
-                              <span className="size-2 rounded-full bg-primary shrink-0" title="Unread" />
+                              <span className="size-2 rounded-full bg-blue-600 shrink-0" title="Unread" />
                             )}
                             <Calendar className="size-3.5" />
                             <span>{news.date || news.createdAt?.slice(0, 10) || "Recent"}</span>
                           </div>
                           {news.audience === "classes" && (
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#184880] bg-[#EBF3FE] px-2.5 py-0.5 rounded-full">
                               Class
                             </span>
                           )}
                         </div>
 
-                        <h4 className="text-lg md:text-xl font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                        <h4 className="text-base font-bold text-slate-900 truncate hover:text-[#184880] transition-colors">
                           {news.title}
                         </h4>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                        <p className="text-xs text-slate-500 line-clamp-2">
                           {news.body}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-border/80">
-                        <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className="text-xs text-slate-500 truncate max-w-[180px]">
                           {news.authorName || "Staff"}
                         </span>
-                        <span className="text-xs font-semibold text-primary flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        <span className="text-xs font-bold text-[#184880] flex items-center gap-1">
                           Read <ChevronRight className="size-3.5" />
                         </span>
                       </div>

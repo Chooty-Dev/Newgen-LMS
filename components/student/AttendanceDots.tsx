@@ -21,17 +21,21 @@ export function AttendanceDots({
   totalCount,
   className,
 }: AttendanceDotsProps) {
+  const percentage = totalCount > 0 ? Math.round((attendedCount / totalCount) * 100) : 100;
+
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-semibold text-foreground">Recent Sessions</span>
-        <span className="text-muted-foreground font-medium">
-          {attendedCount} of {totalCount} attended
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-bold text-slate-700 uppercase tracking-wider">
+          Recent Sessions
+        </span>
+        <span className="text-slate-500 font-semibold tabular-nums">
+          {attendedCount} of {totalCount} attended ({percentage}%)
         </span>
       </div>
 
-      {/* 14 Dot Grid */}
-      <div className="grid grid-cols-7 sm:grid-cols-14 gap-2 pt-1">
+      {/* Cute Rounded Circles Grid */}
+      <div className="grid grid-cols-7 sm:grid-cols-14 gap-1.5 pt-1">
         {dots.slice(-14).map((dot, idx) => {
           const isPresent = dot.status === "present" || dot.status === "excused";
           const isLate = dot.status === "late";
@@ -42,16 +46,16 @@ export function AttendanceDots({
               key={idx}
               title={`${dot.date}: ${dot.status}`}
               className={cn(
-                "h-7 rounded-full flex items-center justify-center transition-transform hover:scale-110",
-                isPresent && "bg-primary text-primary-foreground",
-                isLate && "bg-primary/50 text-primary-foreground",
-                isAbsent && "bg-muted text-muted-foreground border border-border"
+                "size-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-xs",
+                isPresent && "bg-emerald-500 text-white",
+                isLate && "bg-amber-400 text-white",
+                isAbsent && "bg-slate-100 text-slate-400 border border-slate-200"
               )}
             >
               <div
                 className={cn(
-                  "size-2 rounded-full",
-                  isPresent ? "bg-primary-foreground" : isLate ? "bg-primary-foreground" : "bg-muted-foreground/40"
+                  "size-1.5 rounded-full",
+                  isPresent || isLate ? "bg-white" : "bg-slate-300"
                 )}
               />
             </div>
@@ -59,7 +63,7 @@ export function AttendanceDots({
         })}
       </div>
 
-      <p className="text-sm text-muted-foreground pt-1">
+      <p className="text-xs text-slate-500 font-medium pt-0.5">
         Showing up regularly builds strong habits and better grades!
       </p>
     </div>

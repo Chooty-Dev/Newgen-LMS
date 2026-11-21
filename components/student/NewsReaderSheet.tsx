@@ -9,7 +9,6 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Megaphone, Calendar, User } from "lucide-react";
 
 export interface StudentAnnouncement {
@@ -42,42 +41,46 @@ export function NewsReaderSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="sm:max-w-xl mx-auto rounded-t-[2.5rem]">
-        <SheetHeader className="text-left space-y-3">
-          <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-            <Megaphone className="size-5" />
-            <span>School News</span>
+      <SheetContent
+        data-student-portal=""
+        side="bottom"
+        className="student-portal sm:max-w-xl mx-auto rounded-t-3xl !bg-white !text-slate-800 border-t border-slate-100 p-6 sm:p-8"
+      >
+        <SheetHeader className="text-left space-y-2">
+          <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+            <Megaphone className="size-4" />
+            <span>Center News</span>
           </div>
-          <SheetTitle className="text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-snug">
+          <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 leading-snug">
             {announcement.title}
           </SheetTitle>
-          <SheetDescription className="text-sm md:text-base text-muted-foreground flex flex-wrap items-center gap-3">
+          <SheetDescription className="text-xs text-slate-500 flex flex-wrap items-center gap-3">
             {announcement.authorName && (
-              <span className="flex items-center gap-1.5 font-medium text-foreground">
-                <User className="size-4 text-muted-foreground" />
-                {announcement.authorName} {announcement.authorRole ? `(${announcement.authorRole})` : ""}
+              <span className="flex items-center gap-1 font-medium text-slate-700">
+                <User className="size-3.5 text-slate-400" />
+                {announcement.authorName}
               </span>
             )}
-            <span className="flex items-center gap-1.5">
-              <Calendar className="size-4" />
+            <span className="flex items-center gap-1">
+              <Calendar className="size-3.5 text-slate-400" />
               {dateStr}
             </span>
           </SheetDescription>
         </SheetHeader>
 
-        <div className="my-6 p-6 rounded-[2rem] bg-card border border-border overflow-y-auto max-h-[50vh]">
-          <p className="text-base md:text-lg leading-relaxed text-foreground whitespace-pre-wrap">
-            {announcement.body}
-          </p>
+        {/* Content Body */}
+        <div className="my-6 p-5 rounded-3xl bg-slate-50 border border-slate-100 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+          {announcement.body}
         </div>
 
         <SheetFooter>
-          <Button
+          <button
+            type="button"
             onClick={() => onOpenChange(false)}
-            className="w-full h-12 rounded-full text-base font-semibold"
+            className="w-full h-11 rounded-full text-sm font-bold bg-[#184880] hover:bg-[#0F2C59] text-white shadow-sm transition-all"
           >
-            Done Reading
-          </Button>
+            Close Notice
+          </button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

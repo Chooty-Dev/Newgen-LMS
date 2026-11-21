@@ -30,14 +30,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // If role is student, use StudentShell
+  // If role is student, use StudentShell (No floating sign out on student portal)
   if (user?.role === "student") {
-    return (
-      <>
-        <StudentShell>{children}</StudentShell>
-        <FloatingSignOut hideOnMobile />
-      </>
-    );
+    return <StudentShell>{children}</StudentShell>;
   }
 
   // Staff, Teacher, Admin, Super Admin Shell

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Info, Sparkles, BookOpen, Calendar, Lightbulb } from "lucide-react";
+import { Info, Sparkles, BookOpen, Calendar } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -29,42 +28,18 @@ interface ScoreExplanationData {
   };
   marksPoints: number;
   attendancePoints: number;
-  subjects: Array<{
-    subjectId: string;
-    subjectName: string;
-    score: number;
-    assessmentCount: number;
-    assessments: Array<{
-      id: string;
-      title: string;
-      type: string;
-      score: number;
-      totalMarks: number;
-      percentage: number;
-    }>;
-  }>;
-  attendanceBreakdown: {
-    presentCount: number;
-    lateCount: number;
-    absentCount: number;
-    excusedCount: number;
-    totalFinalized: number;
-    countedSessions: number;
-  };
   tip: string;
   summarySentence: string;
 }
 
 interface ScoreInfoDialogProps {
-  studentId?: string; // omit or "me" for logged in student
+  studentId?: string;
   className?: string;
-  showSubjectsTable?: boolean; // true for teacher/admin inspection
 }
 
 export function ScoreInfoDialog({
   studentId = "me",
   className,
-  showSubjectsTable = false,
 }: ScoreInfoDialogProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -85,146 +60,87 @@ export function ScoreInfoDialog({
       <DialogTrigger asChild>
         <button
           type="button"
-          aria-label="How is my score made?"
+          aria-label="How is my score calculated?"
           className={cn(
-            "size-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0",
+            "size-8 rounded-full flex items-center justify-center text-slate-400 hover:text-[#184880] hover:bg-slate-100 transition-colors shrink-0",
             className
           )}
         >
-          <Info className="size-5 stroke-[2]" />
+          <Info className="size-4 stroke-[2]" />
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] p-6 sm:p-8 bg-card border border-border">
-        <DialogHeader className="space-y-2 text-left">
-          <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider">
-            <Sparkles className="size-4" />
-            <span>Score Calculation</span>
-          </div>
-          <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            How is my score made?
+      <DialogContent
+        data-student-portal=""
+        className="student-portal max-w-md rounded-3xl p-6 sm:p-8 !bg-white !text-slate-800 border border-slate-100 shadow-2xl space-y-5"
+      >
+        <DialogHeader className="space-y-1.5 text-left">
+          <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            How your score is made
           </DialogTitle>
-          <DialogDescription className="text-base text-muted-foreground">
-            Your score is out of 100. It comes from two things.
+          <DialogDescription className="text-xs sm:text-sm text-slate-500">
+            Your performance score combines your test marks and classroom attendance.
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="space-y-4 py-4">
-            <Skeleton className="h-24 w-full rounded-2xl" />
-            <Skeleton className="h-24 w-full rounded-2xl" />
+        {isLoading || !explanation ? (
+          <div className="space-y-3 py-4">
+            <Skeleton className="h-20 w-full rounded-2xl" />
             <Skeleton className="h-20 w-full rounded-2xl" />
           </div>
-        ) : explanation ? (
-          <div className="space-y-6 py-2">
-            {/* The 2 Components */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* 1. Marks */}
-              <div className="p-5 rounded-2xl bg-muted/50 border border-border space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-base text-foreground flex items-center gap-2">
-                    <BookOpen className="size-4 text-primary" />
-                    1. Your marks ({explanation.weights.marks}%)
-                  </span>
+        ) : (
+          <div className="space-y-3">
+            {/* Marks Weight Box */}
+            <div className="p-4 rounded-2xl bg-[#EBF3FE] border border-blue-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs">
+                  <BookOpen className="size-5" />
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  The average of your exams, tests, quizzes and assignments in all your subjects. Exams count a little more.
-                </p>
-              </div>
-
-              {/* 2. Attendance */}
-              <div className="p-5 rounded-2xl bg-muted/50 border border-border space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-base text-foreground flex items-center gap-2">
-                    <Calendar className="size-4 text-primary" />
-                    2. Coming to class ({explanation.weights.attendance}%)
-                  </span>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900">Test Marks</h4>
+                  <p className="text-[11px] text-slate-500">
+                    Accounts for {explanation.weights?.marks || 70}% of your total score
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Present counts as 1, late counts as half, absent counts as 0. Excused classes are skipped.
-                </p>
               </div>
-            </div>
-
-            {/* Live Numbers Box */}
-            <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20 space-y-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-primary block">
-                Your Live Numbers
+              <span className="text-lg font-black text-[#184880] tabular-nums">
+                {explanation.marksScore}%
               </span>
-              <p className="text-lg font-bold text-foreground leading-snug">
-                {explanation.summarySentence}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-sm">
-                <div className="p-3 rounded-xl bg-card border border-border">
-                  <span className="text-xs text-muted-foreground block">Marks Average</span>
-                  <span className="text-xl font-extrabold text-foreground tabular-nums">
-                    {explanation.marksScore}%
-                  </span>
-                  <span className="text-xs text-primary font-medium block">
-                    +{explanation.marksPoints} pts
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-card border border-border">
-                  <span className="text-xs text-muted-foreground block">Class Attendance</span>
-                  <span className="text-xl font-extrabold text-foreground tabular-nums">
-                    {explanation.attendanceScore}%
-                  </span>
-                  <span className="text-xs text-primary font-medium block">
-                    +{explanation.attendancePoints} pts
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-card border border-border col-span-2 sm:col-span-1">
-                  <span className="text-xs text-muted-foreground block">Final Score</span>
-                  <span className="text-xl font-extrabold text-primary tabular-nums">
-                    {explanation.score ?? 0}
-                  </span>
-                  <span className="text-xs text-muted-foreground block">out of 100</span>
-                </div>
-              </div>
             </div>
 
-            {/* Kind Tip */}
-            {explanation.tip && (
-              <div className="flex items-start gap-3 p-4 rounded-2xl bg-card border border-border">
-                <Lightbulb className="size-5 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold uppercase text-primary tracking-wider">Helpful Tip</span>
-                  <p className="text-sm font-medium text-foreground">{explanation.tip}</p>
+            {/* Attendance Weight Box */}
+            <div className="p-4 rounded-2xl bg-[#F0F6FF] border border-blue-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs">
+                  <Calendar className="size-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900">Attendance</h4>
+                  <p className="text-[11px] text-slate-500">
+                    Accounts for {explanation.weights?.attendance || 30}% of your total score
+                  </p>
                 </div>
               </div>
-            )}
+              <span className="text-lg font-black text-[#184880] tabular-nums">
+                {explanation.attendanceScore}%
+              </span>
+            </div>
 
-            {/* Subject details table for teachers / inspect mode */}
-            {showSubjectsTable && explanation.subjects.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <span className="text-sm font-bold text-foreground">Subjects Used in Marks Score:</span>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {explanation.subjects.map((sub) => (
-                    <div key={sub.subjectId} className="p-3 rounded-xl bg-muted/40 border border-border flex items-center justify-between text-sm">
-                      <span className="font-semibold text-foreground">{sub.subjectName}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground">{sub.assessmentCount} tests</span>
-                        <span className="font-bold text-foreground tabular-nums">{Math.round(sub.score)}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="pt-2 text-xs text-muted-foreground">
-              Your score updates when new marks or attendance are added. The Top 10 list updates once a day.
+            {/* Simple Tip */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 leading-relaxed">
+              💡 {explanation.tip || "Regular attendance and daily revision will boost your score!"}
             </div>
           </div>
-        ) : null}
+        )}
 
         <div className="pt-2">
-          <Button
+          <button
+            type="button"
             onClick={() => setOpen(false)}
-            className="w-full h-11 rounded-full text-sm font-semibold"
+            className="w-full h-11 rounded-full text-sm font-bold bg-[#184880] hover:bg-[#0F2C59] text-white shadow-sm transition-all"
           >
-            Got it
-          </Button>
+            Got it, thanks!
+          </button>
         </div>
       </DialogContent>
     </Dialog>

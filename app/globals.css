@@ -109,6 +109,41 @@
 }
 
 /* =========================================
+   STUDENT PORTAL LIGHT THEME (EDULEARN)
+========================================= */
+.student-portal,
+[data-student-portal] {
+  color-scheme: light;
+  --background: #F5F8FC;
+  --foreground: #0F172A;
+
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+
+  --primary: #184880;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #EBF3FE;
+  --secondary-foreground: #184880;
+
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+
+  --accent: #EBF3FE;
+  --accent-foreground: #184880;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #184880;
+}
+
+/* =========================================
    DARK THEME
 ========================================= */
 

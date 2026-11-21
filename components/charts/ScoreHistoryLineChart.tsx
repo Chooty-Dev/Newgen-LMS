@@ -31,7 +31,7 @@ interface ScoreHistoryResponse {
 }
 
 interface ScoreHistoryLineChartProps {
-  studentId?: string; // omit or "me" for logged-in student
+  studentId?: string;
   className?: string;
   height?: number;
 }
@@ -59,18 +59,18 @@ export function ScoreHistoryLineChart({
     <div className={cn("space-y-4 flex flex-col justify-between", className)}>
       {/* Top Filter Buttons */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-sm font-semibold text-muted-foreground">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
           Score Timeline
         </span>
-        <div className="flex items-center gap-1 p-1 rounded-full bg-muted/60 border border-border">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100 border border-slate-200">
           <button
             type="button"
             onClick={() => setRange("7d")}
             className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all",
+              "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
               range === "7d"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-[#184880] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             )}
           >
             Last Week
@@ -79,10 +79,10 @@ export function ScoreHistoryLineChart({
             type="button"
             onClick={() => setRange("30d")}
             className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all",
+              "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
               range === "30d"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-[#184880] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             )}
           >
             Last Month
@@ -91,10 +91,10 @@ export function ScoreHistoryLineChart({
             type="button"
             onClick={() => setRange("90d")}
             className={cn(
-              "px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all",
+              "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
               range === "90d"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-[#184880] text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
             )}
           >
             Last 3 Months
@@ -107,100 +107,89 @@ export function ScoreHistoryLineChart({
         {isLoading ? (
           <Skeleton className="w-full h-full rounded-2xl" />
         ) : points.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+          <div className="flex items-center justify-center h-full text-slate-400 text-xs">
             Not enough score history recorded yet.
           </div>
         ) : (
-          <>
-            <span className="sr-only">
-              Score history line chart showing daily scores over {range}. {history?.summarySentence}
-            </span>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={points} margin={{ top: 15, right: 15, left: -10, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="displayDate"
-                  stroke="var(--muted-foreground)"
-                  fontSize={13}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{
-                    value: "Day",
-                    position: "insideBottom",
-                    offset: -12,
-                    fontSize: 12,
-                    fill: "var(--muted-foreground)",
-                  }}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  ticks={[0, 25, 50, 75, 100]}
-                  stroke="var(--muted-foreground)"
-                  fontSize={13}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{
-                    value: "My score (out of 100)",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: 20,
-                    fontSize: 12,
-                    fill: "var(--muted-foreground)",
-                  }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--card)",
-                    borderColor: "var(--border)",
-                    borderRadius: "1.2rem",
-                    color: "var(--foreground)",
-                    fontSize: "0.875rem",
-                    padding: "0.75rem 1rem",
-                  }}
-                  formatter={(val: unknown) => [`${val} out of 100`, "Score"]}
-                  labelFormatter={(lbl: React.ReactNode, payload: readonly { payload?: ScoreHistoryPoint }[]) => {
-                    const item = payload?.[0]?.payload;
-                    if (item?.eventText) {
-                      return `${item.displayDate} • ${item.eventText}`;
-                    }
-                    return `${lbl}`;
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="score"
-                  name="Score"
-                  stroke="var(--primary)"
-                  strokeWidth={3}
-                  dot={(props: { cx?: number; cy?: number; payload?: ScoreHistoryPoint }) => {
-                    if (props.payload?.hasEvent) {
-                      return (
-                        <circle
-                          key={props.payload.date}
-                          cx={props.cx}
-                          cy={props.cy}
-                          r={5}
-                          fill="var(--primary)"
-                          stroke="var(--background)"
-                          strokeWidth={2}
-                        />
-                      );
-                    }
-                    return <g key={props.payload?.date || (props.cx !== undefined ? `${props.cx}-${props.cy}` : "dot")} />;
-                  }}
-                  activeDot={{ r: 6, fill: "var(--primary)" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={points} margin={{ top: 15, right: 15, left: -10, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+              <XAxis
+                dataKey="displayDate"
+                tick={{ fill: "#64748B", fontSize: 11, fontWeight: 500 }}
+                tickLine={false}
+                axisLine={{ stroke: "#E2E8F0" }}
+                dy={8}
+              />
+              <YAxis
+                domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
+                tick={{ fill: "#64748B", fontSize: 11, fontWeight: 500 }}
+                tickLine={false}
+                axisLine={false}
+                dx={-5}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const dataPoint = payload[0].payload as ScoreHistoryPoint;
+                    return (
+                      <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-md text-xs space-y-1">
+                        <span className="font-bold text-slate-500 block">
+                          {dataPoint.date}
+                        </span>
+                        <div className="flex items-center gap-1.5 font-black text-slate-900 text-sm">
+                          <span>Score:</span>
+                          <span className="text-[#184880]">{dataPoint.score}%</span>
+                        </div>
+                        {dataPoint.eventText && (
+                          <p className="text-[11px] text-slate-500 font-medium">
+                            {dataPoint.eventText}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="score"
+                stroke="#184880"
+                strokeWidth={2.5}
+                dot={(props: { cx?: number; cy?: number; payload?: ScoreHistoryPoint }) => {
+                  const { cx, cy, payload } = props;
+                  if (!cx || !cy || !payload) return null;
+                  return (
+                    <circle
+                      key={`dot-${payload.date}`}
+                      cx={cx}
+                      cy={cy}
+                      r={payload.hasEvent ? 5 : 3.5}
+                      fill="#184880"
+                      stroke="#FFFFFF"
+                      strokeWidth={2}
+                    />
+                  );
+                }}
+                activeDot={{
+                  r: 6,
+                  fill: "#184880",
+                  stroke: "#FFFFFF",
+                  strokeWidth: 2,
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         )}
       </div>
 
-      {/* Friendly summary sentence */}
+      {/* Summary Sentence */}
       {history && (
-        <p className="text-sm font-medium text-foreground pt-1">
-          {history.summarySentence}
-        </p>
+        <div className="pt-2 text-xs font-semibold text-slate-600">
+          <span>{history.summarySentence}</span>
+        </div>
       )}
     </div>
   );

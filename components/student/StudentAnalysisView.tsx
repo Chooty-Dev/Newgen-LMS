@@ -3,29 +3,25 @@
 import * as React from "react";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
-import { BentoCard } from "./BentoCard";
-import { ScoreRing } from "./ScoreRing";
-import { AttendanceDots } from "./AttendanceDots";
 import { FriendlySkeletons } from "./FriendlySkeletons";
 import { ScoreInfoDialog } from "@/components/shared/ScoreInfoDialog";
 import { ScoreHistoryLineChart } from "@/components/charts/ScoreHistoryLineChart";
 import { SubjectBarChart } from "@/components/charts/SubjectBarChart";
+import { AttendanceDots } from "./AttendanceDots";
 import {
   Printer,
   Award,
   TrendingUp,
   Target,
-  BarChart3,
   Calendar,
   CheckCircle2,
-  Users,
   Lightbulb,
   BookOpen,
   Crown,
   Medal,
   Trophy,
+  Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface AnalysisStories {
   student: {
@@ -115,331 +111,245 @@ export function StudentAnalysisView() {
     average: s.average,
   }));
 
+  const overallScoreVal = score ?? stories.overall.score ?? 0;
+  const radius = 46;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (Math.min(100, Math.max(0, overallScoreVal)) / 100) * circumference;
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* 1. Header with Round Print Button */}
-      <div className="flex items-center justify-between gap-4 pb-2">
-        <div className="space-y-1">
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-foreground">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. Hero Banner */}
+      <section className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] relative overflow-hidden">
+        <div className="space-y-2.5 max-w-lg text-center md:text-left z-10">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#184880] tracking-tight leading-tight">
             How I&apos;m Doing
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground font-medium">
-            Your personal learning story and tips to keep growing.
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+            Your strengths, growth areas, and tips to keep improving.
           </p>
-        </div>
 
-        <button
-          type="button"
-          onClick={() => window.print()}
-          aria-label="Print Report"
-          className="print:hidden flex size-12 shrink-0 items-center justify-center rounded-full bg-card text-foreground border border-border shadow-sm hover:bg-muted hover:scale-105 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Printer className="size-5 stroke-[2]" />
-        </button>
-      </div>
-
-      {/* 2. Top Card: Score, Info Dialog, #N in LMS, Daily Message */}
-      <BentoCard variant="hero" className="p-8 relative overflow-hidden">
-        {/* Decorative Pattern Background */}
-        <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden rounded-[2.5rem]">
-          <Image
-            src="/new-bg.webp"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 1200px) 100vw, 1200px"
-            className="object-cover opacity-20 dark:opacity-25"
-          />
-        </div>
-
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="relative flex items-center justify-center">
-              <ScoreRing score={score ?? stories.overall.score} label={stories.overall.groupLabel} />
-            </div>
-
-            <div className="space-y-2 text-center sm:text-left">
-              <div className="flex items-center justify-center sm:justify-start gap-2">
-                <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
-                  {stories.overall.groupLabel}
-                </h2>
-                <ScoreInfoDialog studentId={student.id} />
-              </div>
-
-              {lmsRank && (
-                <div className="flex items-center justify-center sm:justify-start gap-2 pt-0.5">
-                  {lmsRank === 1 ? (
-                    <Crown className="size-6 text-yellow-600 dark:text-yellow-400 stroke-[2.2]" />
-                  ) : lmsRank === 2 ? (
-                    <Medal className="size-6 text-slate-600 dark:text-slate-300 stroke-[2.2]" />
-                  ) : lmsRank === 3 ? (
-                    <Medal className="size-6 text-amber-700 dark:text-amber-400 stroke-[2.2]" />
-                  ) : (
-                    <Trophy className="size-5 text-muted-foreground stroke-[2.2]" />
-                  )}
-                  <span
-                    className={cn(
-                      "font-black tracking-tight",
-                      lmsRank === 1
-                        ? "text-xl text-yellow-600 dark:text-yellow-400"
-                        : lmsRank === 2
-                        ? "text-xl text-slate-600 dark:text-slate-300"
-                        : lmsRank === 3
-                        ? "text-xl text-amber-700 dark:text-amber-400"
-                        : "text-lg text-foreground"
-                    )}
-                  >
-                    #{lmsRank} in LMS
-                  </span>
-                </div>
-              )}
-
-              <p className="text-base md:text-lg text-muted-foreground leading-relaxed max-w-xl">
-                {dailyMessage || stories.overall.summary}
-              </p>
-            </div>
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs shadow-xs transition-all print:hidden"
+            >
+              <Printer className="size-4 text-slate-600" />
+              <span>Print Report</span>
+            </button>
           </div>
         </div>
-      </BentoCard>
 
-      {/* 3. Story Cards Grid: 1 col on mobile, 6 on md, 12 on lg */}
-      <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6">
-        {/* Story 2: What am I best at? (6 cols on lg, 3 on md) */}
-        <BentoCard variant="soft" className="md:col-span-3 lg:col-span-6 justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <Award className="size-5" />
-              <span>Story 1</span>
+        {/* Right Illustration */}
+        <div className="relative w-40 h-40 sm:w-48 sm:h-48 shrink-0 z-10">
+          <Image
+            src="/images/bulb-on-books.webp"
+            alt="Learning Insights"
+            fill
+            priority
+            className="object-contain drop-shadow-sm"
+            sizes="(max-width: 768px) 160px, 192px"
+          />
+        </div>
+      </section>
+
+      {/* 2. Overall Score Card */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-white via-white to-[#F0F6FF]/70 rounded-3xl p-6 sm:p-7 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)]">
+        <div className="absolute -bottom-10 -right-10 w-48 h-48 rounded-full bg-blue-100/30 pointer-events-none blur-2xl" />
+        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+          {/* Circular Progress Ring */}
+          <div className="relative flex items-center justify-center shrink-0">
+            <svg width="120" height="120" className="rotate-[-90deg]">
+              <circle
+                cx="60"
+                cy="60"
+                r={radius}
+                stroke="#E2E8F0"
+                strokeWidth="11"
+                fill="transparent"
+              />
+              <circle
+                cx="60"
+                cy="60"
+                r={radius}
+                stroke="#184880"
+                strokeWidth="11"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                fill="transparent"
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight tabular-nums">
+                {overallScoreVal}%
+              </span>
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-4">
+          </div>
+
+          <div className="space-y-1.5 text-center sm:text-left flex-1">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-[#184880]">
+                {stories.overall.groupLabel}
+              </h3>
+              <ScoreInfoDialog studentId={student.id} />
+            </div>
+
+            {lmsRank && (
+              <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                {lmsRank === 1 ? (
+                  <Crown className="size-5 text-yellow-500 fill-yellow-500 stroke-[2]" />
+                ) : lmsRank === 2 ? (
+                  <Medal className="size-5 text-slate-400 stroke-[2]" />
+                ) : lmsRank === 3 ? (
+                  <Medal className="size-5 text-amber-600 stroke-[2]" />
+                ) : (
+                  <Trophy className="size-4 text-slate-400 stroke-[2]" />
+                )}
+                <span className="font-bold text-sm text-slate-800">
+                  #{lmsRank} in LMS
+                </span>
+              </div>
+            )}
+
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-xl">
+              {dailyMessage || stories.overall.summary}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Story Cards Grid */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Story: Top Subject */}
+        <div className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 rounded-3xl p-5 sm:p-6 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] transition-all flex flex-col justify-between space-y-3">
+          <div>
+            <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider pb-1.5">
+              <Award className="size-4" />
+              <span>Strongest Area</span>
+            </div>
+            <h4 className="text-base font-bold text-slate-900 pb-2">
               {stories.bestSubject.title}
-            </h2>
-            <div className="p-6 rounded-[2rem] bg-card border border-border flex items-center justify-between">
+            </h4>
+            <div className="p-3.5 rounded-2xl bg-[#EBF3FE] border border-blue-100/60 flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-muted-foreground block">
+                <span className="text-xs font-semibold text-slate-500 block">
                   Top Subject
                 </span>
-                <span className="text-2xl font-extrabold text-foreground">
+                <span className="text-sm font-bold text-slate-900">
                   {stories.bestSubject.subject}
                 </span>
               </div>
-              <div className="text-3xl font-extrabold text-primary tabular-nums">
+              <span className="text-xl font-black text-[#184880] tabular-nums">
                 {stories.bestSubject.score}%
-              </div>
+              </span>
             </div>
           </div>
-          <p className="text-base text-muted-foreground pt-4">
+          <p className="text-xs text-slate-600">
             {stories.bestSubject.message}
           </p>
-        </BentoCard>
+        </div>
 
-        {/* Story 3: Where can I get better? (6 cols on lg, 3 on md) */}
-        <BentoCard variant="soft" className="md:col-span-3 lg:col-span-6 justify-between">
+        {/* Story: Subject to Focus On */}
+        <div className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#FFF9EE]/80 rounded-3xl p-5 sm:p-6 border border-amber-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] transition-all flex flex-col justify-between space-y-3">
           <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <Target className="size-5" />
-              <span>Story 2</span>
+            <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider pb-1.5">
+              <Target className="size-4" />
+              <span>Opportunity to Grow</span>
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-4">
+            <h4 className="text-base font-bold text-slate-900 pb-2">
               {stories.worstSubject.title}
-            </h2>
-            <div className="p-6 rounded-[2rem] bg-card border border-border flex items-center justify-between">
+            </h4>
+            <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-muted-foreground block">
-                  Subject to Focus On
+                <span className="text-xs font-semibold text-slate-500 block">
+                  Focus Subject
                 </span>
-                <span className="text-2xl font-extrabold text-foreground">
+                <span className="text-sm font-bold text-slate-900">
                   {stories.worstSubject.subject}
                 </span>
               </div>
-              <div className="text-3xl font-extrabold text-foreground tabular-nums">
+              <span className="text-xl font-black text-amber-700 tabular-nums">
                 {stories.worstSubject.score}%
-              </div>
+              </span>
             </div>
           </div>
-          <p className="text-base text-muted-foreground pt-4">
+          <p className="text-xs text-slate-600">
             {stories.worstSubject.message}
           </p>
-        </BentoCard>
+        </div>
 
-        {/* Story 4: How is my score calculated? (2-bar visual: Marks and Coming to class) */}
-        <BentoCard variant="soft" className="md:col-span-6 lg:col-span-12">
-          <div className="flex items-center justify-between pb-2">
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider">
-              <BarChart3 className="size-5" />
-              <span>Story 3</span>
-            </div>
-            <ScoreInfoDialog studentId={student.id} />
-          </div>
-          <h2 className="text-2xl font-extrabold text-foreground pb-4">
-            {stories.scoreBreakdown.title}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-            {stories.scoreBreakdown.items.map((item) => (
-              <div key={item.label} className="p-6 rounded-2xl bg-card border border-border space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-lg text-foreground">
-                    {item.label}
-                  </span>
-                  <span className="font-extrabold text-2xl text-primary tabular-nums">
-                    {item.score}%
-                  </span>
-                </div>
-                <div className="h-4 w-full rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-700"
-                    style={{ width: `${Math.min(100, Math.max(5, item.score))}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground font-medium">
-                  Contributes {item.weight}% to your total performance score.
-                </p>
-              </div>
-            ))}
-          </div>
-        </BentoCard>
-
-        {/* Story 5: Score History Line Chart with Segmented Filter (Last Week / Month / 3 Months) */}
-        <BentoCard variant="soft" className="md:col-span-6 lg:col-span-12">
-          <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-            <TrendingUp className="size-5" />
-            <span>Story 4</span>
-          </div>
-          <h2 className="text-2xl font-extrabold text-foreground pb-2">
-            Score History & Trend
-          </h2>
-          <div className="pt-2">
-            <ScoreHistoryLineChart studentId={student.id} height={260} />
-          </div>
-        </BentoCard>
-
-        {/* Story 6: My subjects side by side (6 cols on lg, 3 on md) */}
-        <BentoCard variant="soft" className="md:col-span-3 lg:col-span-6 justify-between">
+        {/* Story: Attendance Habit */}
+        <div className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 rounded-3xl p-5 sm:p-6 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] transition-all flex flex-col justify-between space-y-3">
           <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <BookOpen className="size-5" />
-              <span>Story 5</span>
+            <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider pb-1.5">
+              <Calendar className="size-4" />
+              <span>Attendance</span>
             </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-2">
-              {stories.subjects.title}
-            </h2>
-            <div className="h-64 pt-2">
-              <SubjectBarChart data={barChartData} />
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground pt-3">
-            Comparison of your average percentage scores across each subject.
-          </p>
-        </BentoCard>
-
-        {/* Story 7: Exams vs Regular Tests (6 cols on lg, 3 on md) */}
-        <BentoCard variant="soft" className="md:col-span-3 lg:col-span-6 justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <Award className="size-5" />
-              <span>Story 6</span>
-            </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-4">
-              {stories.examsVsTests.title}
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-5 rounded-2xl bg-card border border-border text-center">
-                <span className="text-xs uppercase font-bold text-muted-foreground block">
-                  Regular Tests
-                </span>
-                <span className="text-3xl md:text-4xl font-extrabold text-primary tabular-nums">
-                  {stories.examsVsTests.regularAvg}%
-                </span>
-              </div>
-              <div className="p-5 rounded-2xl bg-card border border-border text-center">
-                <span className="text-xs uppercase font-bold text-muted-foreground block">
-                  Major Exams
-                </span>
-                <span className="text-3xl md:text-4xl font-extrabold text-foreground tabular-nums">
-                  {stories.examsVsTests.examAvg}%
-                </span>
-              </div>
-            </div>
-          </div>
-          <p className="text-sm md:text-base text-muted-foreground pt-4 leading-relaxed">
-            {stories.examsVsTests.tip}
-          </p>
-        </BentoCard>
-
-        {/* Story 8: Do I come to class? (4 cols on lg, 2 on md) */}
-        <BentoCard variant="soft" className="md:col-span-2 lg:col-span-4 justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <Calendar className="size-5" />
-              <span>Story 7</span>
-            </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-4">
+            <h4 className="text-base font-bold text-slate-900 pb-2">
               {stories.attendance.title}
-            </h2>
+            </h4>
             <AttendanceDots
               dots={stories.attendance.dots}
               attendedCount={Math.round((stories.attendance.percentage / 100) * 14)}
               totalCount={14}
             />
           </div>
-          <p className="text-sm text-muted-foreground pt-4">
+          <p className="text-xs text-slate-600">
             {stories.attendance.message}
           </p>
-        </BentoCard>
+        </div>
+      </section>
 
-        {/* Story 9: Leaderboard place card (4 cols on lg, 2 on md) */}
-        <BentoCard variant="soft" className="md:col-span-2 lg:col-span-4 justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <Users className="size-5" />
-              <span>Story 8</span>
-            </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-4">
-              {stories.classStanding.title}
-            </h2>
-            <div className="p-6 rounded-[2rem] bg-card border border-border text-center space-y-1">
-              <span className="text-2xl md:text-3xl font-extrabold text-primary">
-                {stories.classStanding.label}
+      {/* 4. Score History Line Chart */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/40 rounded-3xl p-6 sm:p-7 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-3">
+        <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+          <TrendingUp className="size-4" />
+          <span>Score Progression</span>
+        </div>
+        <h4 className="text-lg font-bold text-slate-900">
+          Score History &amp; Trend
+        </h4>
+        <div className="pt-1">
+          <ScoreHistoryLineChart studentId={student.id} height={260} />
+        </div>
+      </section>
+
+      {/* 5. Subject Breakdown Bar Chart */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/40 rounded-3xl p-6 sm:p-7 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-3">
+        <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+          <BookOpen className="size-4" />
+          <span>Subject Comparison</span>
+        </div>
+        <h4 className="text-lg font-bold text-slate-900">
+          {stories.subjects.title}
+        </h4>
+        <div className="h-64 pt-1">
+          <SubjectBarChart data={barChartData} />
+        </div>
+      </section>
+
+      {/* 6. Action Plan Checklist */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#EBF3FE] to-[#DFEEFE] border border-blue-100/80 rounded-3xl p-6 sm:p-7 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-3">
+        <h4 className="text-lg font-bold text-slate-900">
+          {stories.actionPlan.title}
+        </h4>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+          {stories.actionPlan.tasks.map((task, idx) => (
+            <div
+              key={idx}
+              className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-blue-100/60 shadow-xs"
+            >
+              <CheckCircle2 className="size-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">
+                {task}
               </span>
-              <p className="text-xs text-muted-foreground font-medium">
-                Center standings
-              </p>
             </div>
-          </div>
-          <p className="text-sm text-muted-foreground pt-4">
-            {stories.classStanding.message}
-          </p>
-        </BentoCard>
-
-        {/* Story 10: What can I do next? (4 cols on lg, 2 on md) */}
-        <BentoCard variant="soft" className="md:col-span-2 lg:col-span-4 justify-between bg-primary/5 border-primary/20">
-          <div>
-            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider pb-2">
-              <Lightbulb className="size-5" />
-              <span>Story 9</span>
-            </div>
-            <h2 className="text-2xl font-extrabold text-foreground pb-4">
-              {stories.actionPlan.title}
-            </h2>
-            <div className="space-y-3">
-              {stories.actionPlan.tasks.map((task, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start gap-3 p-3.5 rounded-2xl bg-card border border-border"
-                >
-                  <CheckCircle2 className="size-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm font-medium text-foreground">
-                    {task}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground pt-4 font-medium">
-            Student: {student.name} • {student.admissionNo} • {student.grade}
-          </p>
-        </BentoCard>
-      </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
