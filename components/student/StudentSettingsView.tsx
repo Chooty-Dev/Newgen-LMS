@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "next-themes";
 import { BentoCard } from "./BentoCard";
@@ -160,8 +161,20 @@ export function StudentSettingsView() {
       </div>
 
       {/* 2. Hero Profile Card with Large Avatar, Score, Info Icon, and #N in LMS */}
-      <BentoCard variant="hero" className="p-8">
-        <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 text-center md:text-left">
+      <BentoCard variant="hero" className="p-8 relative overflow-hidden">
+        {/* Decorative Pattern Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden rounded-[2.5rem]">
+          <Image
+            src="/new-bg.webp"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 1200px) 100vw, 1200px"
+            className="object-cover opacity-20 dark:opacity-25"
+          />
+        </div>
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start justify-between gap-6 text-center md:text-left">
           {/* Left: Avatar & Bio */}
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
             <div className="size-24 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-extrabold text-3xl shadow-md shrink-0 border-2 border-border">

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { BentoCard } from "./BentoCard";
@@ -154,44 +155,58 @@ export function StudentHomeView() {
       {/* 2. Full-Width Bento Grid: 1 col mobile, 6 cols tablet, 12 cols desktop */}
       <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-6">
         {/* Card 1 (Hero): Overall Score Ring (7 cols on lg, 6 on md) */}
-        <BentoCard variant="hero" className="md:col-span-6 lg:col-span-7 justify-between">
-          <div className="flex items-center justify-between pb-4">
-            <span className="text-sm uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-2">
-              <Sparkles className="size-4 text-primary" />
-              Overall Progress
-            </span>
-            <div className="flex items-center gap-3">
-              <ScoreInfoDialog studentId={home.student.id} />
-              <Link
-                href="/analysis"
-                className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline"
-              >
-                See Story <ChevronRight className="size-4" />
-              </Link>
-            </div>
+        <BentoCard variant="hero" className="md:col-span-6 lg:col-span-7 justify-between relative overflow-hidden">
+          {/* Decorative Pattern Background */}
+          <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden rounded-[2.5rem]">
+            <Image
+              src="/new-bg.webp"
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 650px"
+              className="object-cover opacity-20 dark:opacity-25"
+            />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
-            <div className="relative flex items-center justify-center">
-              <ScoreRing score={home.overallScore} label={home.groupLabel} />
-            </div>
-            <div className="space-y-3 text-center sm:text-left">
-              <div className="flex items-center justify-center sm:justify-start gap-2">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-                  {home.groupLabel}
-                </h2>
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between pb-4">
+              <span className="text-sm uppercase font-bold tracking-wider text-muted-foreground flex items-center gap-2">
+                <Sparkles className="size-4 text-primary" />
+                Overall Progress
+              </span>
+              <div className="flex items-center gap-3">
                 <ScoreInfoDialog studentId={home.student.id} />
-              </div>
-              <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-                You are performing at a {home.overallScore}% average across all your subjects this term.
-              </p>
-              <div className="pt-1">
-                <Link href="/marks">
-                  <Button variant="outline" className="rounded-full h-11 px-5 text-sm font-semibold gap-2">
-                    <BookOpen className="size-4" />
-                    View Marks
-                  </Button>
+                <Link
+                  href="/analysis"
+                  className="text-sm font-semibold text-primary flex items-center gap-1 hover:underline"
+                >
+                  See Story <ChevronRight className="size-4" />
                 </Link>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
+              <div className="relative flex items-center justify-center">
+                <ScoreRing score={home.overallScore} label={home.groupLabel} />
+              </div>
+              <div className="space-y-3 text-center sm:text-left">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+                    {home.groupLabel}
+                  </h2>
+                  <ScoreInfoDialog studentId={home.student.id} />
+                </div>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+                  You are performing at a {home.overallScore}% average across all your subjects this term.
+                </p>
+                <div className="pt-1">
+                  <Link href="/marks">
+                    <Button variant="outline" className="rounded-full h-11 px-5 text-sm font-semibold gap-2">
+                      <BookOpen className="size-4" />
+                      View Marks
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

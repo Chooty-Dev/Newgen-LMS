@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { BentoCard } from "./BentoCard";
 import { ScoreRing } from "./ScoreRing";
@@ -138,8 +139,20 @@ export function StudentAnalysisView() {
       </div>
 
       {/* 2. Top Card: Score, Info Dialog, #N in LMS, Daily Message */}
-      <BentoCard variant="hero" className="p-8">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+      <BentoCard variant="hero" className="p-8 relative overflow-hidden">
+        {/* Decorative Pattern Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden rounded-[2.5rem]">
+          <Image
+            src="/new-bg.webp"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 1200px) 100vw, 1200px"
+            className="object-cover opacity-20 dark:opacity-25"
+          />
+        </div>
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="relative flex items-center justify-center">
               <ScoreRing score={score ?? stories.overall.score} label={stories.overall.groupLabel} />

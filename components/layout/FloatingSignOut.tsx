@@ -60,7 +60,7 @@ export function FloatingSignOut() {
                   <button
                     type="button"
                     aria-label="Sign Out"
-                    className="flex gap-2 w-32 py-2 backdrop-blur-sm items-center justify-center rounded-full bg-red-500/50 text-foreground border border-red-600 shadow-lg transition-all hover:bg-red-600 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex gap-2 w-32 py-5 backdrop-blur-sm items-center justify-center rounded-full bg-red-500/50 text-foreground border border-red-600 shadow-lg transition-all hover:bg-red-600 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     Sign Out
                     <LogOut className="size-6 stroke-[2]" />
