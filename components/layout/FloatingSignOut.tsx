@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,10 +22,17 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export function FloatingSignOut() {
+interface FloatingSignOutProps {
+  hideOnMobile?: boolean;
+}
+
+export function FloatingSignOut({ hideOnMobile }: FloatingSignOutProps = {}) {
   const router = useRouter();
+  const { user } = useAuth();
   const [open, setOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  const shouldHideOnMobile = hideOnMobile ?? (user?.role === "student");
 
   // Guarantee that the logging out overlay is clean on unmount
   React.useEffect(() => {
@@ -51,7 +59,11 @@ export function FloatingSignOut() {
 
   return (
     <>
-      <div className="fixed bottom-4 right-4 z-40 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)]">
+      <div
+        className={`fixed bottom-4 right-4 z-40 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] ${
+          shouldHideOnMobile ? "hidden md:block" : ""
+        }`}
+      >
         <AlertDialog open={open} onOpenChange={setOpen}>
           <TooltipProvider>
             <Tooltip>

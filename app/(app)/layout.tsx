@@ -35,7 +35,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     return (
       <>
         <StudentShell>{children}</StudentShell>
-        <FloatingSignOut />
+        <FloatingSignOut hideOnMobile />
       </>
     );
   }
