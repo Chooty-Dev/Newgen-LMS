@@ -28,6 +28,7 @@ import {
   Calendar as CalendarIcon,
   PlusCircle,
   HelpCircle,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -111,7 +112,7 @@ export function TeacherDashboardView() {
   });
 
   // 3. Fetch teacher exams / assignments
-  const { data: examsRes, isLoading: loadingExams } = useQuery<{ data: ExamItem[] }>({
+  const { data: examsRes } = useQuery<{ data: ExamItem[] }>({
     queryKey: ["exams", "teacher", user?.centerId],
     queryFn: async () => {
       const res = await fetch("/api/v1/exams");
@@ -120,51 +121,104 @@ export function TeacherDashboardView() {
     },
   });
 
-  // Generate current calendar week dynamically
-  const today = React.useMemo(() => new Date(), []);
-  const [selectedDate, setSelectedDate] = React.useState<Date>(today);
-
-  const weekDays = React.useMemo(() => {
-    // Determine start of current week (Monday)
-    const current = new Date(today);
-    const day = current.getDay(); // 0 is Sun, 1 is Mon
-    const diffToMonday = (day + 6) % 7; // days since Monday
-    const monday = new Date(current);
-    monday.setDate(current.getDate() - diffToMonday);
-
-    const days = [];
-    const dayLabels = ["M", "T", "W", "T", "F", "S", "S"];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      days.push({
-        label: dayLabels[i],
-        date: d.getDate(),
-        fullDate: d,
-        dayOfWeek: d.getDay(), // 0 = Sun, 1 = Mon ...
-        isToday: d.toDateString() === today.toDateString(),
-      });
-    }
-    return days;
-  }, [today]);
-
-  if (loadingAnalytics && loadingClasses) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <Skeleton className="h-48 w-full rounded-3xl" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-24 rounded-2xl" />
-        </div>
-      </div>
-    );
-  }
-
+  // Data bindings
   const analytics = analyticsRes?.data;
   const rawClasses: ClassItem[] = classesRes?.data || [];
   const rawExams: ExamItem[] = examsRes?.data || [];
+
+  // Full Month Calendar State & Hooks
+  const today = React.useMemo(() => new Date(), []);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [viewMonth, setViewMonth] = React.useState<Date>(
+    () => new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+  const [selectedDate, setSelectedDate] = React.useState<Date>(today);
+
+  const prevMonth = () => {
+    setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  // Build Full Month Calendar Grid unconditionally
+  const calendarDays = React.useMemo(() => {
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 is Sun
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const days: Array<{
+      dateNumber: number;
+      fullDate: Date;
+      dayOfWeek: number;
+      isCurrentMonth: boolean;
+      isToday: boolean;
+      hasClass: boolean;
+    }> = [];
+
+    // Blank slots for previous month
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      const prevDate = new Date(year, month, -firstDayOfWeek + i + 1);
+      days.push({
+        dateNumber: prevDate.getDate(),
+        fullDate: prevDate,
+        dayOfWeek: prevDate.getDay(),
+        isCurrentMonth: false,
+        isToday: prevDate.toDateString() === today.toDateString(),
+        hasClass: false,
+      });
+    }
+
+    // Days in current month
+    for (let d = 1; d <= totalDays; d++) {
+      const current = new Date(year, month, d);
+      const dayOfWeek = current.getDay();
+      const dateStr = current.toISOString().slice(0, 10);
+
+      const hasClass = rawClasses.some((c) => {
+        if (c.schedule?.type === "regular" && c.schedule?.regular?.daysOfWeek) {
+          return c.schedule.regular.daysOfWeek.includes(dayOfWeek);
+        }
+        if (c.schedule?.type === "special" && c.schedule?.special?.sessions) {
+          return c.schedule.special.sessions.some((s) => s.date === dateStr);
+        }
+        return false;
+      });
+
+      days.push({
+        dateNumber: d,
+        fullDate: current,
+        dayOfWeek,
+        isCurrentMonth: true,
+        isToday: current.toDateString() === today.toDateString(),
+        hasClass,
+      });
+    }
+
+    return days;
+  }, [viewMonth, rawClasses, today]);
+
+  const filteredDashboardClasses = rawClasses.filter((c) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return c.name.toLowerCase().includes(q) || (c.subject && c.subject.toLowerCase().includes(q));
+  });
+
+  // Today's classes and next class today for live status
+  const todayDayOfWeek = today.getDay();
+  const todayDateStr = today.toISOString().slice(0, 10);
+  const todaysClasses = rawClasses.filter((c) => {
+    if (c.schedule?.type === "regular" && c.schedule?.regular?.daysOfWeek) {
+      return c.schedule.regular.daysOfWeek.includes(todayDayOfWeek);
+    }
+    if (c.schedule?.type === "special" && c.schedule?.special?.sessions) {
+      return c.schedule.special.sessions.some((s) => s.date === todayDateStr);
+    }
+    return false;
+  });
+  const nextClassToday = todaysClasses[0];
 
   // Real statistics computation
   const totalStudents = rawClasses.reduce((acc, c) => acc + (c.enrolledCount || 0), 0);
@@ -173,7 +227,6 @@ export function TeacherDashboardView() {
   const topStudentsCount = analytics?.topStudents?.length || 0;
 
   // Real Weekly Teaching Hours calculation from class schedules
-  // 0: Sun, 1: Mon, 2: Tue, 3: Wed, 4: Thu, 5: Fri, 6: Sat
   const dayHoursMap: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
   rawClasses.forEach((cls) => {
     if (cls.schedule?.type === "regular" && cls.schedule?.regular?.daysOfWeek) {
@@ -219,7 +272,6 @@ export function TeacherDashboardView() {
   const pNeedsHelp =
     totalEvaluated > 0 ? Math.round((needsHelpCount / totalEvaluated) * 100) : 0;
 
-  // Overall satisfaction/progress rate
   const overallRate =
     totalEvaluated > 0
       ? Math.round(((excellentCount + goodCount) / totalEvaluated) * 100)
@@ -240,7 +292,8 @@ export function TeacherDashboardView() {
   const c3 = 2 * Math.PI * r3;
   const o3 = c3 - (pNeedsHelp / 100) * c3;
 
-  // Real Sessions for Selected Day in Schedule Card
+
+  // Real Sessions for Selected Day in Calendar
   const selectedDayOfWeek = selectedDate.getDay();
   const selectedDateString = selectedDate.toISOString().slice(0, 10);
 
@@ -256,122 +309,166 @@ export function TeacherDashboardView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 2-Column Responsive Layout matching reference image */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
-        {/* ========================================================================= */}
-        {/* LEFT COLUMN: Main Dashboard Content (8 cols on lg)                        */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-8 space-y-6 sm:space-y-8">
-          {/* 1. Hero Welcome Banner */}
-          <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] sm:min-h-[240px] flex flex-col justify-between">
-            <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-                <Sparkles className="size-3" />
-                <span>Welcome Back</span>
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-                Keep teaching, {user?.name || "Teacher"}!
-              </h2>
-              <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-                {rawClasses.length > 0 ? (
-                  <>
-                    You are managing {rawClasses.length} active class{rawClasses.length > 1 ? "es" : ""} with{" "}
-                    {totalStudents} enrolled student{totalStudents !== 1 ? "s" : ""}.{" "}
-                    {totalWeeklyTeachingHours > 0
-                      ? `${totalWeeklyTeachingHours.toFixed(1)} scheduled teaching hours this week.`
-                      : "Schedule your class sessions to track weekly milestones."}
-                  </>
-                ) : (
-                  "Welcome to your teaching hub. Create your first class or review assignments to get started."
-                )}
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/classes"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <span>Manage Classes</span>
-                  <ArrowRight className="size-4" />
-                </Link>
-              </div>
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER SECTION: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3)   */}
+      {/* ========================================================================= */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Banner: 8 cols on lg (2/3 width) - Solid single blue, NO gradient, large image */}
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Keep teaching, {user?.name || "Teacher"}!
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Welcome to your teaching hub. Manage course schedules, track student performance, and monitor session attendance in real time.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/classes"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <span>Manage Classes</span>
+                <ArrowRight className="size-4" />
+              </Link>
             </div>
+          </div>
 
-            {/* Illustration right side */}
-            <div className="pointer-events-none absolute -bottom-2 right-2 sm:right-6 w-44 sm:w-56 md:w-64 h-40 sm:h-48 md:h-52 z-10">
-              <Image
-                src="/images/bulb-on-books.webp"
-                alt="Teacher Welcome"
-                fill
-                priority
-                className="object-contain object-bottom-right drop-shadow-md"
-              />
-            </div>
-          </section>
+          {/* Large Right Illustration filling the section */}
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/bulb-on-books.webp"
+              alt="Teacher Welcome"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
 
-          {/* 2. Four KPI Pill Cards in a single row - 100% Real Live Data */}
-          <section className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* 4 Stats Cards tightly grouped in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-2.5">
             {/* Card 1: Active Classes */}
-            <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-3.5">
-              <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <BookOpen className="size-5" />
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <BookOpen className="size-4 sm:size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
                   {activeClassesCount}
                 </p>
-                <p className="text-[11px] font-semibold text-muted-foreground truncate">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
                   Active Classes
                 </p>
               </div>
             </div>
 
             {/* Card 2: Total Assessments */}
-            <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-3.5">
-              <div className="size-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="size-5" />
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
                   {totalAssessments}
                 </p>
-                <p className="text-[11px] font-semibold text-muted-foreground truncate">
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
                   Assessments
                 </p>
               </div>
             </div>
 
             {/* Card 3: Total Enrolled Students */}
-            <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-3.5">
-              <div className="size-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                <Users className="size-5" />
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
                   {totalStudents}
                 </p>
-                <p className="text-[11px] font-semibold text-muted-foreground truncate">
-                  Enrolled Students
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Students
                 </p>
               </div>
             </div>
 
             {/* Card 4: Top Achievers */}
-            <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-3.5">
-              <div className="size-11 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-                <Trophy className="size-5" />
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <Trophy className="size-4 sm:size-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
                   {topStudentsCount}
                 </p>
-                <p className="text-[11px] font-semibold text-muted-foreground truncate">
-                  Top Achievers
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Top Performers
                 </p>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* 3. Middle Section: "Continue Teaching / Assigned Classes" (100% Real Live Classes) */}
+          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
+          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-foreground truncate">
+                {nextClassToday
+                  ? `Next: ${nextClassToday.name} (${nextClassToday.schedule?.regular?.startTime || "Today"})`
+                  : "All classes up to date"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {nextClassToday ? (
+                <Link
+                  href={`/attendance?classId=${nextClassToday.id}`}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+                  title="Take Attendance"
+                >
+                  <Laptop className="size-3" />
+                  <span>Attend</span>
+                </Link>
+              ) : null}
+              <Link
+                href="/classes"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+                title="Manage Classes"
+              >
+                <PlusCircle className="size-3 text-primary" />
+                <span>Classes</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Search bar directly beneath cards */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search classes or subjects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 2. MAIN DASHBOARD CONTENT: Left (8 cols) & Right (4 cols)                 */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+        {/* ========================================================================= */}
+        {/* LEFT COLUMN: Assigned Classes, Assessments, Teaching Hours Chart         */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-8 space-y-6 sm:space-y-8">
+          {/* Middle Section: "Assigned Classes" (100% Real Live Classes) */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-extrabold text-foreground tracking-tight">
@@ -407,7 +504,7 @@ export function TeacherDashboardView() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-                {rawClasses.slice(0, 3).map((cls, idx) => {
+                {filteredDashboardClasses.slice(0, 3).map((cls, idx) => {
                   const capacity = cls.capacity || 50;
                   const enrolled = cls.enrolledCount || 0;
                   const fillPercent = Math.min(100, Math.round((enrolled / capacity) * 100));
@@ -503,7 +600,7 @@ export function TeacherDashboardView() {
             )}
           </section>
 
-          {/* 4. Bottom Row: Lesson List / Recent Assessments (Left) & Study Hours (Right) */}
+          {/* Bottom Row: Lesson List / Recent Assessments (Left) & Study Hours (Right) */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
             {/* Left 7 cols: Real Lesson List / Assessments */}
             <div className="md:col-span-7 bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col justify-between space-y-4">
@@ -667,7 +764,7 @@ export function TeacherDashboardView() {
         </div>
 
         {/* ========================================================================= */}
-        {/* RIGHT COLUMN: Real Progress Donut & Real Schedule (4 cols on lg)         */}
+        {/* RIGHT COLUMN: Progress Donut & FULL MONTH Class Schedule Calendar         */}
         {/* ========================================================================= */}
         <div className="lg:col-span-4 space-y-6 sm:space-y-8">
           {/* 1. Student Progress (Concentric Radial Rings Card - 100% Real Live Distribution) */}
@@ -813,99 +910,159 @@ export function TeacherDashboardView() {
             </div>
           </div>
 
-          {/* 2. Schedule Card (Current Week Day Strip + Real Live Session Timeline) */}
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-5">
+          {/* 2. Full Month Class Schedule Calendar */}
+          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+            {/* Month & Navigation Header */}
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h3 className="font-extrabold text-base text-foreground">
-                Class Schedule
-              </h3>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground font-bold">
-                <span>
-                  {today.toLocaleDateString(undefined, { month: "short", year: "numeric" })}
-                </span>
+              <div>
+                <h3 className="font-extrabold text-base text-foreground">
+                  Class Schedule
+                </h3>
+                <p className="text-[11px] text-muted-foreground">
+                  {viewMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  className="size-7 rounded-full hover:bg-secondary flex items-center justify-center text-foreground transition-colors"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="size-7 rounded-full hover:bg-secondary flex items-center justify-center text-foreground transition-colors"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
               </div>
             </div>
 
-            {/* Horizontal Day Selector for the Current Week */}
-            <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1 scrollbar-none">
-              {weekDays.map((d, i) => {
+            {/* Weekday Labels Header (Su Mo Tu We Th Fr Sa) */}
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((dayName, idx) => (
+                <span
+                  key={idx}
+                  className="text-[10px] font-bold text-muted-foreground uppercase"
+                >
+                  {dayName}
+                </span>
+              ))}
+            </div>
+
+            {/* Days Grid: Class Day color vs Free Day color */}
+            <div className="grid grid-cols-7 gap-1">
+              {calendarDays.map((item, idx) => {
                 const isSelected =
-                  selectedDate.toDateString() === d.fullDate.toDateString();
+                  selectedDate.toDateString() === item.fullDate.toDateString();
 
                 return (
                   <button
-                    key={i}
+                    key={idx}
                     type="button"
-                    onClick={() => setSelectedDate(d.fullDate)}
+                    disabled={!item.isCurrentMonth}
+                    onClick={() => {
+                      if (item.isCurrentMonth) setSelectedDate(item.fullDate);
+                    }}
                     className={cn(
-                      "flex flex-col items-center justify-center size-10 rounded-2xl text-xs font-bold transition-all shrink-0",
-                      isSelected
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : d.isToday
-                        ? "border border-primary/40 text-primary hover:bg-secondary"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      "size-8 sm:size-9 mx-auto rounded-xl flex flex-col items-center justify-center text-xs transition-all relative",
+                      !item.isCurrentMonth && "opacity-20 pointer-events-none text-muted-foreground",
+                      item.isCurrentMonth && isSelected && "bg-primary text-white font-black shadow-sm scale-105 z-10",
+                      item.isCurrentMonth &&
+                        !isSelected &&
+                        item.hasClass &&
+                        "bg-[#EBF3FE] text-primary border border-primary/25 font-bold hover:bg-primary/15",
+                      item.isCurrentMonth &&
+                        !isSelected &&
+                        !item.hasClass &&
+                        "text-muted-foreground/80 hover:bg-secondary hover:text-foreground font-medium",
+                      item.isToday && !isSelected && "ring-1 ring-primary/50"
                     )}
                   >
-                    <span className="text-[10px] uppercase font-semibold">
-                      {d.label}
-                    </span>
-                    <span className="text-xs">{d.date}</span>
+                    <span>{item.dateNumber}</span>
+                    {/* Small colored indicator dot for class days */}
+                    {item.isCurrentMonth && item.hasClass && !isSelected && (
+                      <span className="size-1 rounded-full bg-primary absolute bottom-1" />
+                    )}
                   </button>
                 );
               })}
             </div>
 
-            {/* Real Sessions on Selected Day */}
-            <div className="space-y-3 pt-1">
+            {/* Calendar Legend: Class Day vs Free Day */}
+            <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground pt-1 border-t border-border/40">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-primary" />
+                <span>Class Day</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-muted-foreground/30" />
+                <span>Free Day</span>
+              </span>
+            </div>
+
+            {/* Real Sessions on Selected Day (Displayed below the Calendar) */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-foreground">
+                  {selectedDate.toLocaleDateString(undefined, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+                <span className="text-[10px] text-muted-foreground">
+                  {scheduledSessionsOnDay.length} Session{scheduledSessionsOnDay.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+
               {scheduledSessionsOnDay.length === 0 ? (
-                <div className="p-6 text-center space-y-2 border border-dashed border-border rounded-2xl">
-                  <CalendarIcon className="size-7 mx-auto text-muted-foreground/40" />
+                <div className="p-4 text-center space-y-1.5 border border-dashed border-border rounded-2xl bg-secondary/20">
+                  <CalendarIcon className="size-5 mx-auto text-muted-foreground/40" />
                   <p className="text-xs font-bold text-foreground">
-                    No classes on this day
+                    Free Day
                   </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    No classes scheduled for {selectedDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}.
+                  <p className="text-[10px] text-muted-foreground">
+                    No classes scheduled for this date.
                   </p>
-                  <div className="pt-1">
-                    <Link
-                      href="/classes"
-                      className="text-xs font-bold text-primary hover:underline"
-                    >
-                      View Timetable →
-                    </Link>
-                  </div>
                 </div>
               ) : (
-                scheduledSessionsOnDay.map((session, i) => {
-                  const startTime = session.schedule?.regular?.startTime || "09:00";
-                  const endTime = session.schedule?.regular?.endTime || "10:30";
+                <div className="space-y-2">
+                  {scheduledSessionsOnDay.map((session, i) => {
+                    const startTime = session.schedule?.regular?.startTime || "09:00";
+                    const endTime = session.schedule?.regular?.endTime || "10:30";
 
-                  return (
-                    <div
-                      key={session.id || i}
-                      className="p-3 rounded-2xl border-l-4 border-primary border bg-secondary/50 text-primary transition-all flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold opacity-80 uppercase tracking-wider">
-                          {startTime} - {endTime}
-                        </p>
-                        <h4 className="text-xs sm:text-sm font-extrabold truncate text-foreground">
-                          {session.name}
-                        </h4>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {session.subject || "General Subject"}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/attendance?classId=${session.id}`}
-                        className="size-7 rounded-xl bg-white/80 dark:bg-black/20 hover:bg-white text-primary flex items-center justify-center shrink-0 shadow-xs"
-                        title="Mark Attendance"
+                    return (
+                      <div
+                        key={session.id || i}
+                        className="p-3 rounded-2xl border-l-4 border-primary border bg-secondary/50 text-primary transition-all flex items-center justify-between gap-3"
                       >
-                        <Laptop className="size-3.5" />
-                      </Link>
-                    </div>
-                  );
-                })
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold opacity-80 uppercase tracking-wider">
+                            {startTime} - {endTime}
+                          </p>
+                          <h4 className="text-xs sm:text-sm font-extrabold truncate text-foreground">
+                            {session.name}
+                          </h4>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {session.subject || "General Subject"}
+                          </p>
+                        </div>
+                        <Link
+                          href={`/attendance?classId=${session.id}`}
+                          className="size-7 rounded-xl bg-white/80 dark:bg-black/20 hover:bg-white text-primary flex items-center justify-center shrink-0 shadow-xs"
+                          title="Mark Attendance"
+                        >
+                          <Laptop className="size-3.5" />
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

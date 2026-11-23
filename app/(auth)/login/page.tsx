@@ -61,7 +61,7 @@ export default function LoginPage() {
               <GraduationCap className="size-6 stroke-[2]" />
             </div>
             <div>
-              <span className="font-semibold text-xl tracking-tight block">Newgen LMS</span>
+              <span className="font-semibold text-xl tracking-tight block">Danuma LMS</span>
               <span className="text-xs text-muted-foreground font-medium block">
                 Education Center
               </span>

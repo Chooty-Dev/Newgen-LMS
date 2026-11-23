@@ -71,7 +71,7 @@ export function AppSidebar({
           </div>
           <div>
             <span className="font-semibold text-xl tracking-tight block text-foreground">
-              Newgen LMS
+              Danuma LMS
             </span>
             <span className="text-xs text-muted-foreground font-medium block">
               Education Center

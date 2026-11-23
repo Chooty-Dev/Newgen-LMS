@@ -144,27 +144,26 @@ export function TeacherSettingsView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300 max-w-5xl mx-auto">
-      {/* 1. Hero Welcome Banner with Teacher Profile Avatar */}
-      <section className="rounded-3xl p-6 sm:p-8 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[190px] flex flex-col sm:flex-row items-center justify-between gap-6">
+      {/* 1. Solid Blue Header Banner with Teacher Profile Avatar */}
+      <section className="rounded-3xl p-6 sm:p-8 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[190px] flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-5 z-10 text-center sm:text-left">
-          <div className="size-20 sm:size-24 rounded-full bg-white text-primary font-black text-2xl sm:text-3xl flex items-center justify-center shadow-lg ring-4 ring-white/30 shrink-0">
+          <div className="size-20 sm:size-24 rounded-full bg-white text-primary font-black text-2xl sm:text-3xl flex items-center justify-center shadow-lg ring-4 ring-white/20 shrink-0">
             {initials}
           </div>
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/20 text-[10px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-              <GraduationCap className="size-3" />
-              <span>Faculty Member</span>
-            </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
-              {user?.name}
+              {user?.name || "Teacher Profile"}
             </h2>
             <p className="text-xs sm:text-sm text-white/80 font-medium">
               {user?.email} • {user?.username}
             </p>
+            <p className="text-[11px] text-white/70 max-w-md pt-1">
+              Manage your personal credentials, contact info, and active login sessions to keep your teaching workspace secure.
+            </p>
           </div>
         </div>
 
-        <div className="z-10">
+        <div className="z-10 shrink-0">
           <span className="px-4 py-2 rounded-full bg-white/15 text-xs font-bold backdrop-blur-xs text-white border border-white/20">
             Term 2026/27 Active
           </span>

@@ -81,7 +81,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           >
             <div>
               <span className="font-extrabold text-xl text-primary tracking-tight block leading-tight">
-                Newgen LMS
+                Danuma LMS
               </span>
               <span className="text-[11px] text-muted-foreground font-medium block">
                 Learn · Grow · Achieve
@@ -101,11 +101,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition-all duration-200 ${
-                    isActive
+                  className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition-all duration-200 ${isActive
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-muted-foreground hover:text-primary hover:bg-secondary"
-                  }`}
+                    }`}
                 >
                   <Icon className="size-5 stroke-[2]" />
                   <span>{item.title}</span>

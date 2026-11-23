@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -58,6 +59,7 @@ interface StudentAnalysisData {
 export function TeacherAnalysisView() {
   const { user } = useAuth();
   const [selectedStudentId, setSelectedStudentId] = React.useState<string>("");
+  const [studentSearch, setStudentSearch] = React.useState<string>("");
 
   // Fetch list of students
   const { data: studentsData, isLoading: loadingStudents } = useQuery<{
@@ -92,55 +94,95 @@ export function TeacherAnalysisView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. Hero Welcome Banner */}
-      <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[200px] flex flex-col justify-between">
-        <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-            <Sparkles className="size-3" />
-            <span>AI Progress Insights</span>
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-            Student Performance Analysis
-          </h2>
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            Gain deep insights into individual student progress, identify learning gaps, and review guidance action plans.
-          </p>
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + Quick Controls / Summary (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Banner: 8 cols on lg (2/3 width) - Solid single blue, NO gradient, large image */}
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Student Performance Analysis
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Gain deep AI insights into individual student learning patterns, pinpoint academic weaknesses, and review personalized guidance action plans.
+            </p>
+          </div>
+
+          {/* Large Right Illustration */}
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/analytics.webp"
+              alt="Analytics"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
         </div>
 
-        {/* Right Illustration */}
-        <div className="pointer-events-none absolute -bottom-2 right-2 sm:right-6 w-44 sm:w-56 h-36 sm:h-44 z-10">
-          <Image
-            src="/images/analytics.webp"
-            alt="Analytics"
-            fill
-            priority
-            className="object-contain object-bottom-right drop-shadow-md"
-          />
-        </div>
-      </section>
+        {/* Right 4 cols: Student Selector & Quick Search */}
+        <div className="lg:col-span-4 bg-card border border-border rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col justify-between gap-2.5">
+          <div>
+            <h3 className="font-extrabold text-sm text-foreground">
+              Select Student to Inspect
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Choose a student to review scores and AI recommendations.
+            </p>
+          </div>
 
-      {/* 2. Select Student Control */}
-      <section className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="font-extrabold text-base text-foreground">
-            Select Student to Inspect
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Choose a student to review scores, strengths, weaknesses, and recommendations.
-          </p>
-        </div>
+          <div className="w-full">
+            <Select
+              value={activeStudentId}
+              onChange={(e) => setSelectedStudentId(e.target.value)}
+            >
+              {students
+                .filter(
+                  (st) =>
+                    !studentSearch ||
+                    st.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                    st.username.toLowerCase().includes(studentSearch.toLowerCase())
+                )
+                .map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} ({st.username}) - {st.grade || "No Grade"}
+                  </option>
+                ))}
+            </Select>
+          </div>
 
-        <div className="w-full sm:w-80">
-          <Select
-            value={activeStudentId}
-            onChange={(e) => setSelectedStudentId(e.target.value)}
-          >
-            {students.map((st) => (
-              <option key={st.id} value={st.id}>
-                {st.name} ({st.username}) - {st.grade || "No Grade"}
-              </option>
-            ))}
-          </Select>
+          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
+          <div className="bg-secondary/40 border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-foreground truncate">
+                {students.length} Student Profiles Active
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                href="/students"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+              >
+                <Users className="size-3" />
+                <span>Roster</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick search input right beneath selector */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search student by name..."
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-secondary border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
         </div>
       </section>
 

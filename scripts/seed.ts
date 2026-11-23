@@ -15,7 +15,7 @@ import { LeaderboardSnapshot, LeaderboardEntry, UserPreference } from "@/modules
 import { LeaderboardService } from "@/modules/leaderboard/service";
 
 export async function runSeed() {
-  console.log("🌱 Starting Newgen LMS Database Seeding...");
+  console.log("🌱 Starting Danuma LMS Database Seeding...");
   await connectDB();
 
   // Clear existing collections for a clean, deterministic seed
@@ -376,19 +376,19 @@ export async function runSeed() {
     passMark: number;
     weight: number;
   }> = [
-    { title: "Term 1 Examination", type: "exam", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 100, passMark: 40, weight: 2.0 },
-    { title: "Mid-Term Examination", type: "exam", subjectId: sciSub._id, classIds: [classScience._id], totalMarks: 100, passMark: 40, weight: 2.0 },
-    { title: "Math Monthly Unit Test", type: "test", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 50, passMark: 20, weight: 1.0 },
-    { title: "Science Electricity Unit Test", type: "test", subjectId: sciSub._id, classIds: [classScience._id], totalMarks: 50, passMark: 20, weight: 1.0 },
-    { title: "English Essay Composition", type: "paper", subjectId: engSub._id, classIds: [classEnglish._id], totalMarks: 50, passMark: 20, weight: 1.0 },
-    { title: "Physics Mechanics MCQ Quiz", type: "mcq_quiz", subjectId: phySub._id, classIds: [classPhysicsSpecial._id], totalMarks: 25, passMark: 10, weight: 0.5 },
-    { title: "Chemistry Bonding Quiz", type: "mcq_quiz", subjectId: chemSub._id, classIds: [classChemLab._id], totalMarks: 25, passMark: 10, weight: 0.5 },
-    { title: "Algebra & Graphs Quiz", type: "mcq_quiz", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 20, passMark: 8, weight: 0.5 },
-    { title: "Science Model Paper 1", type: "paper", subjectId: sciSub._id, classIds: [classScience._id], totalMarks: 100, passMark: 40, weight: 1.5 },
-    { title: "English Grammar Proficiency", type: "mcq_quiz", subjectId: engSub._id, classIds: [classEnglish._id], totalMarks: 30, passMark: 12, weight: 0.5 },
-    { title: "IT Practical Assignment", type: "assignment", subjectId: itSub._id, classIds: [classMath._id], totalMarks: 50, passMark: 20, weight: 1.0 },
-    { title: "Final Term Mock Test", type: "test", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 100, passMark: 40, weight: 1.5 },
-  ];
+      { title: "Term 1 Examination", type: "exam", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 100, passMark: 40, weight: 2.0 },
+      { title: "Mid-Term Examination", type: "exam", subjectId: sciSub._id, classIds: [classScience._id], totalMarks: 100, passMark: 40, weight: 2.0 },
+      { title: "Math Monthly Unit Test", type: "test", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 50, passMark: 20, weight: 1.0 },
+      { title: "Science Electricity Unit Test", type: "test", subjectId: sciSub._id, classIds: [classScience._id], totalMarks: 50, passMark: 20, weight: 1.0 },
+      { title: "English Essay Composition", type: "paper", subjectId: engSub._id, classIds: [classEnglish._id], totalMarks: 50, passMark: 20, weight: 1.0 },
+      { title: "Physics Mechanics MCQ Quiz", type: "mcq_quiz", subjectId: phySub._id, classIds: [classPhysicsSpecial._id], totalMarks: 25, passMark: 10, weight: 0.5 },
+      { title: "Chemistry Bonding Quiz", type: "mcq_quiz", subjectId: chemSub._id, classIds: [classChemLab._id], totalMarks: 25, passMark: 10, weight: 0.5 },
+      { title: "Algebra & Graphs Quiz", type: "mcq_quiz", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 20, passMark: 8, weight: 0.5 },
+      { title: "Science Model Paper 1", type: "paper", subjectId: sciSub._id, classIds: [classScience._id], totalMarks: 100, passMark: 40, weight: 1.5 },
+      { title: "English Grammar Proficiency", type: "mcq_quiz", subjectId: engSub._id, classIds: [classEnglish._id], totalMarks: 30, passMark: 12, weight: 0.5 },
+      { title: "IT Practical Assignment", type: "assignment", subjectId: itSub._id, classIds: [classMath._id], totalMarks: 50, passMark: 20, weight: 1.0 },
+      { title: "Final Term Mock Test", type: "test", subjectId: mathSub._id, classIds: [classMath._id], totalMarks: 100, passMark: 40, weight: 1.5 },
+    ];
 
   const assessments: IAssessment[] = [];
   for (const a of assessmentsData) {
@@ -706,7 +706,7 @@ export async function runSeed() {
   // 16. Generate Center Leaderboard Snapshot
   console.log("🏆 Generating Center Leaderboard Snapshot...");
   const syncResult = await LeaderboardService.syncLeaderboard(centerId.toString(), "cron");
-  
+
   // Add some simulated rank movements to the entries for realistic testing
   if (syncResult?.snapshot) {
     const entries = await LeaderboardEntry.find({ snapshotId: syncResult.snapshot._id }).sort({ rank: 1 });
@@ -731,7 +731,7 @@ export async function runSeed() {
 
   // Print Formatted Credentials Table
   console.log("================================================================================");
-  console.log("                     NEWGEN LMS - DEFAULT LOGIN CREDENTIALS                     ");
+  console.log("                     Danuma LMS - DEFAULT LOGIN CREDENTIALS                     ");
   console.log("================================================================================");
   console.log("Role            | Username          | Password        | Description");
   console.log("----------------+-------------------+-----------------+-------------------------");

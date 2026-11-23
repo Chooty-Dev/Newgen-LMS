@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -18,6 +19,7 @@ import {
   Code2,
   Target,
   BookOpen,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,7 @@ export function TeacherAttendanceView() {
     new Date().toISOString().slice(0, 10)
   );
   const [selectedClassId, setSelectedClassId] = React.useState<string>("");
+  const [searchStudent, setSearchStudent] = React.useState("");
   const [finishConfirmOpen, setFinishConfirmOpen] = React.useState(false);
 
   // Fetch teacher's classes
@@ -124,12 +127,10 @@ export function TeacherAttendanceView() {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleStatusChange = (index: number, newStatus: SessionStudent["status"]) => {
-    setStudents((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], status: newStatus };
-      return updated;
-    });
+  const handleStatusChange = (studentId: string, newStatus: SessionStudent["status"]) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.studentId === studentId ? { ...s, status: newStatus } : s))
+    );
   };
 
   const handleMarkAllPresent = () => {
@@ -143,98 +144,143 @@ export function TeacherAttendanceView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. Hero Welcome Banner */}
-      <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[200px] flex flex-col justify-between">
-        <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-            <Sparkles className="size-3" />
-            <span>Attendance & Schedule</span>
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-            Class Schedule & Attendance
-          </h2>
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            Mark live attendance for today&apos;s lectures and view historical presence records.
-          </p>
-          <div className="pt-2">
-            <Button
-              onClick={handleMarkAllPresent}
-              disabled={students.length === 0}
-              className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6"
-            >
-              <Check className="size-4" />
-              <span>Mark All Present</span>
-            </Button>
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Banner: 8 cols on lg (2/3 width) - Solid single blue, NO gradient, large image */}
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Class Schedule & Attendance
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Track lecture presence, mark arrival statuses, and review student attendance history. Use the one-click action to record all students as present.
+            </p>
+            <div className="pt-2">
+              <Button
+                onClick={handleMarkAllPresent}
+                disabled={students.length === 0}
+                className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Check className="size-4" />
+                <span>Mark All Present</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Large Right Illustration */}
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/schedule.webp"
+              alt="Schedule"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
           </div>
         </div>
 
-        {/* Right Illustration */}
-        <div className="pointer-events-none absolute -bottom-2 right-2 sm:right-6 w-44 sm:w-56 h-36 sm:h-44 z-10">
-          <Image
-            src="/images/schedule.webp"
-            alt="Schedule"
-            fill
-            priority
-            className="object-contain object-bottom-right drop-shadow-md"
-          />
-        </div>
-      </section>
+        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* 4 Stats Cards tightly grouped in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {students.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Class Roster
+                </p>
+              </div>
+            </div>
 
-      {/* 2. Four KPI Stat Pill Cards */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Users className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {students.length}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Class Roster
-            </p>
-          </div>
-        </div>
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {presentCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Present Today
+                </p>
+              </div>
+            </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {presentCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Present Today
-            </p>
-          </div>
-        </div>
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {lateCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Late Arrivals
+                </p>
+              </div>
+            </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-            <Clock className="size-5" />
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <CalendarCheck className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {absentCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Absent Count
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {lateCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Late Arrivals
-            </p>
-          </div>
-        </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-            <CalendarCheck className="size-5" />
+          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
+          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-foreground truncate">
+                {presentCount}/{students.length} Students Checked In
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleMarkAllPresent}
+                disabled={students.length === 0}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Check className="size-3" />
+                <span>All Present</span>
+              </button>
+              <Link
+                href="/classes"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+              >
+                <Clock className="size-3 text-primary" />
+                <span>Classes</span>
+              </Link>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {absentCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Absent Count
-            </p>
+
+          {/* Search bar directly beneath cards */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search students in session..."
+              value={searchStudent}
+              onChange={(e) => setSearchStudent(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
           </div>
         </div>
       </section>
@@ -317,28 +363,35 @@ export function TeacherAttendanceView() {
           </div>
         ) : (
           <div className="divide-y divide-border/60">
-            {students.map((st, idx) => (
-              <div
-                key={st.studentId}
-                className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 hover:bg-secondary/30 px-3 rounded-2xl transition-colors gap-3"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-xs font-black text-muted-foreground w-6 tabular-nums">
-                    #{idx + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold text-foreground truncate">{st.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{st.username}</p>
+            {students
+              .filter(
+                (s) =>
+                  !searchStudent ||
+                  s.name.toLowerCase().includes(searchStudent.toLowerCase()) ||
+                  s.username.toLowerCase().includes(searchStudent.toLowerCase())
+              )
+              .map((st, idx) => (
+                <div
+                  key={st.studentId}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 hover:bg-secondary/30 px-3 rounded-2xl transition-colors gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-black text-muted-foreground w-6 tabular-nums">
+                      #{idx + 1}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-foreground truncate">{st.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{st.username}</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Status Pills */}
-                <div className="flex items-center gap-1.5 self-end sm:self-center">
-                  {(["present", "late", "absent", "excused"] as const).map((stat) => (
-                    <button
-                      key={stat}
-                      type="button"
-                      onClick={() => handleStatusChange(idx, stat)}
+                  {/* Status Pills */}
+                  <div className="flex items-center gap-1.5 self-end sm:self-center">
+                    {(["present", "late", "absent", "excused"] as const).map((stat) => (
+                      <button
+                        key={stat}
+                        type="button"
+                        onClick={() => handleStatusChange(st.studentId, stat)}
                       className={cn(
                         "px-3.5 py-1.5 rounded-full text-xs font-bold capitalize transition-all cursor-pointer",
                         st.status === stat

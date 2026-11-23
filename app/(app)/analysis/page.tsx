@@ -196,7 +196,7 @@ function AnalysisDetailReport({
     <div className="space-y-8">
       {/* Printable Header - Visible in Print Only */}
       <div className="hidden print:block border-b border-border pb-4 mb-6">
-        <h1 className="text-2xl font-bold">Newgen LMS — Student Performance Report</h1>
+        <h1 className="text-2xl font-bold">Danuma LMS — Student Performance Report</h1>
         <div className="mt-2 text-sm text-muted-foreground flex justify-between">
           <span>Student: {analysis.student.name} ({analysis.student.username})</span>
           <span>Admission No: {analysis.student.admissionNo}</span>
@@ -214,8 +214,8 @@ function AnalysisDetailReport({
                 {analysis.group === "weak"
                   ? "Why this student needs help"
                   : analysis.group === "excellent"
-                  ? "Why this student is excelling"
-                  : "Performance Summary"}
+                    ? "Why this student is excelling"
+                    : "Performance Summary"}
               </h3>
               <p className="text-base text-foreground mb-3">{overallSummary}</p>
               {primaryReasons.length > 0 && (

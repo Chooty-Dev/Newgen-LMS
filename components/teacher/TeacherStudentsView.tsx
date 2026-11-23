@@ -62,143 +62,185 @@ export function TeacherStudentsView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. Hero Welcome Banner */}
-      <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[200px] flex flex-col justify-between">
-        <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-            <Sparkles className="size-3" />
-            <span>Student Roster</span>
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-            My Students Directory
-          </h2>
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            Monitor student standing, identify who needs extra attention, and view individual analytics.
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/analysis"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
-            >
-              <TrendingUp className="size-4" />
-              <span>Performance Insights</span>
-            </Link>
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Banner: 8 cols on lg (2/3 width) - Solid single blue, NO gradient, large image */}
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              My Students Directory
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Monitor student rankings, verify learning progress, and spot learners requiring academic support. Click below to view detailed AI performance insights.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/analysis"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <TrendingUp className="size-4" />
+                <span>Performance Insights</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Large Right Illustration */}
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/group-learn.webp"
+              alt="Students"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
           </div>
         </div>
 
-        {/* Right Illustration */}
-        <div className="pointer-events-none absolute -bottom-2 right-2 sm:right-6 w-44 sm:w-56 h-36 sm:h-44 z-10">
-          <Image
-            src="/images/group-learn.webp"
-            alt="Students"
-            fill
-            priority
-            className="object-contain object-bottom-right drop-shadow-md"
-          />
-        </div>
-      </section>
+        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* 4 Stats Cards tightly grouped in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {students.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Enrolled
+                </p>
+              </div>
+            </div>
 
-      {/* 2. Four KPI Stat Pill Cards */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Users className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {students.length}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Total Enrolled
-            </p>
-          </div>
-        </div>
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <Award className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {excellentCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  High Performers
+                </p>
+              </div>
+            </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-            <Award className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {excellentCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              High Performers
-            </p>
-          </div>
-        </div>
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
+                <UserCheck className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {mediumCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Good Standing
+                </p>
+              </div>
+            </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center shrink-0">
-            <UserCheck className="size-5" />
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <AlertCircle className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {weakCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Needs Help
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {mediumCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Good Standing
-            </p>
-          </div>
-        </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-            <AlertCircle className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {weakCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Needs Help
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Filter Bar & Tabs */}
-      <section className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: "all", label: "All Students", count: students.length },
-            { id: "excellent", label: "High Performers", count: excellentCount },
-            { id: "medium", label: "Good", count: mediumCount },
-            { id: "weak", label: "Needs Help", count: weakCount },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setGroupFilter(tab.id as any)}
-              className={cn(
-                "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
-                groupFilter === tab.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-            >
-              <span>{tab.label}</span>
-              <span
+          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
+          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-foreground truncate">
+                {students.length} Total Students Enrolled
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setGroupFilter(groupFilter === "weak" ? "all" : "weak")}
                 className={cn(
-                  "text-[10px] px-1.5 py-0.2 rounded-full",
-                  groupFilter === tab.id ? "bg-white/20 text-white" : "bg-secondary text-primary"
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all active:scale-95",
+                  groupFilter === "weak"
+                    ? "bg-amber-500 text-white shadow-xs"
+                    : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300"
                 )}
               >
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
+                <AlertCircle className="size-3" />
+                <span>Needs Help</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGroupFilter(groupFilter === "excellent" ? "all" : "excellent")}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all active:scale-95",
+                  groupFilter === "excellent"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "bg-primary/10 hover:bg-primary/20 text-primary"
+                )}
+              >
+                <Award className="size-3" />
+                <span>Top</span>
+              </button>
+            </div>
+          </div>
 
-        <div className="relative w-full sm:w-72">
-          <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search students..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
+          {/* Search bar directly beneath cards */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search students..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
         </div>
+      </section>
+
+      {/* 2. Filter Tabs */}
+      <section className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {[
+          { id: "all", label: "All Students", count: students.length },
+          { id: "excellent", label: "High Performers", count: excellentCount },
+          { id: "medium", label: "Good", count: mediumCount },
+          { id: "weak", label: "Needs Help", count: weakCount },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setGroupFilter(tab.id as any)}
+            className={cn(
+              "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
+              groupFilter === tab.id
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            <span>{tab.label}</span>
+            <span
+              className={cn(
+                "text-[10px] px-1.5 py-0.2 rounded-full",
+                groupFilter === tab.id ? "bg-white/20 text-white" : "bg-secondary text-primary"
+              )}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </section>
 
       {/* 4. Students Card Grid */}

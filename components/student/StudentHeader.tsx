@@ -36,7 +36,7 @@ export function StudentHeader() {
           </div>
           <div>
             <span className="font-extrabold text-lg text-primary tracking-tight block leading-tight">
-              Newgen LMS
+              Danuma LMS
             </span>
           </div>
         </Link>

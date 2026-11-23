@@ -177,6 +177,48 @@ export class ClassService {
     );
   }
 
+  static async updateClass(classId: string, data: {
+    name?: string;
+    subjectId?: string;
+    capacity?: number;
+    scheduleType?: "regular" | "special";
+    daysOfWeek?: number[];
+    startTime?: string;
+    endTime?: string;
+    sessions?: Array<{ date: string; startTime: string; endTime: string }>;
+    status?: "active" | "paused" | "ended";
+  }) {
+    await connectDB();
+    const updateDoc: Record<string, unknown> = {};
+    if (data.name !== undefined) updateDoc.name = data.name;
+    if (data.subjectId !== undefined) updateDoc.subjectId = new mongoose.Types.ObjectId(data.subjectId);
+    if (data.capacity !== undefined) updateDoc.capacity = data.capacity;
+    if (data.status !== undefined) updateDoc.status = data.status;
+
+    if (data.scheduleType) {
+      if (data.scheduleType === "regular") {
+        updateDoc["schedule.type"] = "regular";
+        updateDoc["schedule.regular"] = {
+          daysOfWeek: data.daysOfWeek || [1],
+          startTime: data.startTime || "14:00",
+          endTime: data.endTime || "16:00",
+        };
+      } else {
+        updateDoc["schedule.type"] = "special";
+        updateDoc["schedule.special"] = {
+          sessions: data.sessions || [],
+        };
+      }
+    }
+
+    const updated = await ClassModel.findByIdAndUpdate(
+      classId,
+      { $set: updateDoc },
+      { new: true }
+    );
+    return updated;
+  }
+
   static async deleteClass(classId: string, actorId: string) {
     await connectDB();
     await ClassModel.findByIdAndUpdate(classId, {

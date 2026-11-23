@@ -145,136 +145,167 @@ export function TeacherExamsView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. Hero Welcome Banner */}
-      <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[200px] flex flex-col justify-between">
-        <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-            <Sparkles className="size-3" />
-            <span>Examinations & Tests</span>
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-            Assignments & Exams
-          </h2>
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            Create assessment papers, track submissions, and evaluate student marks accurately.
-          </p>
-          <div className="pt-2">
-            <Button
-              onClick={() => setCreateOpen(true)}
-              className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6"
-            >
-              <Plus className="size-4" />
-              <span>Schedule Assessment</span>
-            </Button>
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Banner: 8 cols on lg (2/3 width) - Solid single blue, NO gradient, large image */}
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Assignments & Exams
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Create assessment papers, schedule examination dates, and evaluate student submissions. Click below to schedule a new quiz or term paper.
+            </p>
+            <div className="pt-2">
+              <Button
+                onClick={() => setCreateOpen(true)}
+                className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Plus className="size-4" />
+                <span>Schedule Assessment</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Large Right Illustration */}
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/exam-paper.webp"
+              alt="Exams"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
           </div>
         </div>
 
-        {/* Right Illustration */}
-        <div className="pointer-events-none absolute -bottom-2 right-2 sm:right-6 w-44 sm:w-56 h-36 sm:h-44 z-10">
-          <Image
-            src="/images/exam-paper.webp"
-            alt="Exams"
-            fill
-            priority
-            className="object-contain object-bottom-right drop-shadow-md"
-          />
+        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* 4 Stats Cards tightly grouped in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <ClipboardList className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {assessments.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Assessments
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {completedCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Finalized
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {waitingCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Pending Marks
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <Calendar className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {scheduledCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Scheduled
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
+          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-foreground truncate">
+                {scheduledCount} Assessments Scheduled
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+              >
+                <Plus className="size-3" />
+                <span>New Exam</span>
+              </button>
+              <Link
+                href="/marks"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+              >
+                <Award className="size-3 text-primary" />
+                <span>Marks</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Search bar directly beneath cards */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search assessments..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
         </div>
       </section>
 
-      {/* 2. Four KPI Stat Pill Cards */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <ClipboardList className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {assessments.length}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Total Assessments
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {completedCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Graded & Finalized
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-            <Clock className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {waitingCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Pending Marks
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-            <Calendar className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {scheduledCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Upcoming Scheduled
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Filter Bar & Tabs */}
-      <section className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: "all", label: "All Papers" },
-            { id: "exam", label: "Term Exams" },
-            { id: "test", label: "Class Tests" },
-            { id: "mcq_quiz", label: "MCQ Quizzes" },
-            { id: "assignment", label: "Assignments" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setTypeFilter(tab.id)}
-              className={cn(
-                "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap",
-                typeFilter === tab.id
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search assessments..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+      {/* 2. Filter Tabs */}
+      <section className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {[
+          { id: "all", label: "All Papers" },
+          { id: "exam", label: "Term Exams" },
+          { id: "test", label: "Class Tests" },
+          { id: "mcq_quiz", label: "MCQ Quizzes" },
+          { id: "assignment", label: "Assignments" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setTypeFilter(tab.id)}
+            className={cn(
+              "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap",
+              typeFilter === tab.id
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </section>
 
       {/* 4. Assessment Cards Grid */}

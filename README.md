@@ -1,6 +1,6 @@
-# Newgen LMS — Student Management & Analysis System
+# Danuma LMS — Student Management & Analysis System
 
-A comprehensive, production-quality education management platform built for modern learning centers. Newgen LMS provides fine-grained multi-role access control, fast keyboard-driven marks evaluation, real-time attendance tracking with automated absence resolution, and an advanced performance analysis engine that translates quantitative academic data into plain-language explanations.
+A comprehensive, production-quality education management platform built for modern learning centers. Danuma LMS provides fine-grained multi-role access control, fast keyboard-driven marks evaluation, real-time attendance tracking with automated absence resolution, and an advanced performance analysis engine that translates quantitative academic data into plain-language explanations.
 
 ---
 

@@ -109,11 +109,11 @@ export function TeacherShell({ children }: TeacherShellProps) {
 
   const initials = user?.name
     ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase()
     : "TE";
 
   // Formatted current date e.g. "Monday, 23 November 2026"
@@ -134,12 +134,9 @@ export function TeacherShell({ children }: TeacherShellProps) {
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 group"
           >
-            <div className="size-11 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-              <GraduationCap className="size-6 stroke-[2.2]" />
-            </div>
             <div>
               <span className="font-extrabold text-xl tracking-tight text-foreground block">
-                Newgen LMS
+                Danuma LMS
               </span>
               <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground block">
                 Teacher Academy

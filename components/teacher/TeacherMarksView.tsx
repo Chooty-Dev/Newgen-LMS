@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Users,
   FileCheck,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -97,103 +98,155 @@ export function TeacherMarksView() {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. Hero Welcome Banner */}
-      <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-gradient-to-r from-primary to-[#23589b] text-primary-foreground relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[200px] flex flex-col justify-between">
-        <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs text-white">
-            <Sparkles className="size-3" />
-            <span>Score Book</span>
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-            Marks & Evaluations
-          </h2>
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            Review detailed student marks, grade reports, and term performance breakdown.
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* Banner: 8 cols on lg (2/3 width) - Solid single blue, NO gradient, large image */}
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Marks & Evaluations
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Review detailed student marks, analyze term grading distributions, and monitor academic progress. Use the button below to record scores for completed tests.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/evaluate-marks"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Award className="size-4" />
+                <span>Enter New Marks</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Large Right Illustration */}
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/achivements.webp"
+              alt="Achievements"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
+
+        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* 4 Stats Cards tightly grouped in 2x2 grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <FileCheck className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {totalMarksCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Submissions
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <TrendingUp className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {avgPercentage}%
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Average Score
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Award className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {aGradesCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Grade A Results
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {studentsList.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Students
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
+          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="relative flex size-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-bold text-foreground truncate">
+                {marks.length} Marks Entries Logged
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                href="/exams"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+              >
+                <Plus className="size-3" />
+                <span>Exams</span>
+              </Link>
+              <Link
+                href="/analysis"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
+              >
+                <TrendingUp className="size-3 text-primary" />
+                <span>Analysis</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Search bar directly beneath cards */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search marks, assessments..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Controls: Select Student */}
+      <section className="bg-card border border-border rounded-3xl p-4 sm:p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="font-extrabold text-sm text-foreground">
+            Filter by Student
+          </h3>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Select a student to inspect their individual assessment performance.
           </p>
-          <div className="pt-2">
-            <Link
-              href="/evaluate-marks"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
-            >
-              <Award className="size-4" />
-              <span>Enter New Marks</span>
-            </Link>
-          </div>
         </div>
 
-        {/* Right Illustration */}
-        <div className="pointer-events-none absolute -bottom-2 right-2 sm:right-6 w-44 sm:w-56 h-36 sm:h-44 z-10">
-          <Image
-            src="/images/achivements.webp"
-            alt="Achievements"
-            fill
-            priority
-            className="object-contain object-bottom-right drop-shadow-md"
-          />
-        </div>
-      </section>
-
-      {/* 2. Four KPI Stat Pill Cards */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4">
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <FileCheck className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {totalMarksCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Total Submissions
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-            <TrendingUp className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {avgPercentage}%
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Average Score
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-            <Award className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {aGradesCount}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Grade A Results
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-3.5">
-          <div className="size-11 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-            <Users className="size-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
-              {studentsList.length}
-            </p>
-            <p className="text-[11px] font-semibold text-muted-foreground truncate">
-              Total Students
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Controls: Select Student & Search */}
-      <section className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div className="w-full sm:w-80">
           <Select
             value={activeStudentId}
@@ -205,17 +258,6 @@ export function TeacherMarksView() {
               </option>
             ))}
           </Select>
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search by assessment or subject..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-12 pl-10 pr-4 rounded-full bg-secondary border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
         </div>
       </section>
 
