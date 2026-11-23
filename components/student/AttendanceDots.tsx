@@ -26,10 +26,10 @@ export function AttendanceDots({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between text-xs">
-        <span className="font-bold text-slate-700 uppercase tracking-wider">
+        <span className="font-bold text-foreground uppercase tracking-wider">
           Recent Sessions
         </span>
-        <span className="text-slate-500 font-semibold tabular-nums">
+        <span className="text-muted-foreground font-semibold tabular-nums">
           {attendedCount} of {totalCount} attended ({percentage}%)
         </span>
       </div>
@@ -49,13 +49,13 @@ export function AttendanceDots({
                 "size-6 rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-xs",
                 isPresent && "bg-emerald-500 text-white",
                 isLate && "bg-amber-400 text-white",
-                isAbsent && "bg-slate-100 text-slate-400 border border-slate-200"
+                isAbsent && "bg-secondary text-muted-foreground border border-border"
               )}
             >
               <div
                 className={cn(
                   "size-1.5 rounded-full",
-                  isPresent || isLate ? "bg-white" : "bg-slate-300"
+                  isPresent || isLate ? "bg-white" : "bg-muted-foreground/40"
                 )}
               />
             </div>
@@ -63,7 +63,7 @@ export function AttendanceDots({
         })}
       </div>
 
-      <p className="text-xs text-slate-500 font-medium pt-0.5">
+      <p className="text-xs text-muted-foreground font-medium pt-0.5">
         Showing up regularly builds strong habits and better grades!
       </p>
     </div>

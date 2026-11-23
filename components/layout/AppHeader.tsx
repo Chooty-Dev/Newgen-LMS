@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { ThemeSwitch } from "./ThemeSwitch";
 import { useAuth } from "@/hooks/useAuth";
 import { ChevronLeft, ChevronRight, Building2, ArrowLeftRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -133,8 +132,6 @@ export function AppHeader({ onToggleSidebar, sidebarOpen = true }: AppHeaderProp
             )}
           </DropdownMenu>
         )}
-
-        <ThemeSwitch />
 
         {user && (
           <div className="flex items-center gap-3 pl-2">

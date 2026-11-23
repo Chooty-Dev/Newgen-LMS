@@ -96,7 +96,7 @@ function dotMeta(status: string) {
     return {
       Icon: Check,
       label: "Present",
-      className: "bg-[#184880] text-white",
+      className: "bg-primary text-primary-foreground",
     };
   }
   if (s === "late") {
@@ -151,7 +151,7 @@ export function StudentHomeView() {
         <button
           type="button"
           onClick={() => refetch()}
-          className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-[#184880] text-white hover:bg-[#0F2C59] text-sm font-semibold transition-all"
+          className="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold transition-all"
         >
           Try Again
         </button>
@@ -182,20 +182,20 @@ export function StudentHomeView() {
       <CelebrationDialog />
 
       {/* 1. Hero banner */}
-      <section className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] relative overflow-hidden min-h-[250px] md:min-h-[280px]">
+      <section className="bg-secondary border border-border rounded-3xl p-6 sm:p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] relative overflow-hidden min-h-[250px] md:min-h-[280px]">
         <div className="relative z-10 max-w-sm sm:max-w-md md:max-w-[48%] lg:max-w-[50%] space-y-3 sm:space-y-4 text-center md:text-left">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#184880] tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary tracking-tight leading-tight">
             Dream Big,
             <br />
             Learn More!
           </h2>
-          <p className="text-sm sm:text-base text-slate-600 font-medium">
+          <p className="text-sm sm:text-base text-muted-foreground font-medium">
             Every lesson brings you closer to your goals.
           </p>
           <div className="pt-2">
             <Link
               href="/marks"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#184880] text-white hover:bg-[#0F2C59] font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-95"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold text-sm shadow-sm transition-all hover:scale-[1.02] active:scale-95"
             >
               <span>View Marks</span>
               <ArrowRight className="size-4 shrink-0" />
@@ -223,26 +223,26 @@ export function StudentHomeView() {
         {/* Card 1: My Marks */}
         <Link
           href="/marks"
-          className="relative overflow-hidden bg-white rounded-3xl p-5 sm:p-6 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between group cursor-pointer"
+          className="relative overflow-hidden bg-card rounded-3xl p-5 sm:p-6 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between group cursor-pointer"
         >
           {/* Watermark Illustration at bottom right */}
-          <div className="pointer-events-none absolute -bottom-4 -right-4 size-48 sm:size-48 opacity-50 group-hover:opacity-30 transition-opacity">
+          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-25 group-hover:opacity-35 transition-opacity">
             <Image
               src="/images/stat-marks.webp"
               alt=""
               fill
-              className="object-contain object-bottom-right"
+              className="object-contain object-bottom-right w-full h-full"
             />
           </div>
 
           <div className="relative z-10">
-            <div className="size-11 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
+            <div className="size-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
               <Star className="size-5 fill-white shrink-0" />
             </div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               My Marks
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 tabular-nums">
+            <p className="text-2xl sm:text-3xl font-extrabold text-foreground mt-1 tabular-nums">
               {home.overallScore}%
             </p>
           </div>
@@ -254,30 +254,30 @@ export function StudentHomeView() {
         {/* Card 2: My Analysis */}
         <Link
           href="/analysis"
-          className="relative overflow-hidden bg-white rounded-3xl p-5 sm:p-6 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between group cursor-pointer"
+          className="relative overflow-hidden bg-card rounded-3xl p-5 sm:p-6 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between group cursor-pointer"
         >
           {/* Watermark Illustration at bottom right */}
-          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-30 group-hover:opacity-30 transition-opacity">
+          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-25 group-hover:opacity-35 transition-opacity">
             <Image
               src="/images/stat-analysis.webp"
               alt=""
               fill
-              className="object-contain object-bottom-right"
+              className="object-contain object-bottom-right w-full h-full"
             />
           </div>
 
           <div className="relative z-10">
-            <div className="size-11 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
+            <div className="size-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
               <BarChart3 className="size-5 shrink-0" />
             </div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               My Analysis
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-[#184880] mt-1 truncate">
+            <p className="text-2xl sm:text-3xl font-extrabold text-primary mt-1 truncate">
               {home.groupLabel || "Good"}
             </p>
           </div>
-          <p className="relative z-10 text-xs font-medium text-slate-500 mt-3">
+          <p className="relative z-10 text-xs font-medium text-muted-foreground mt-3">
             Keep it up!
           </p>
         </Link>
@@ -285,30 +285,30 @@ export function StudentHomeView() {
         {/* Card 3: Leaderboard */}
         <Link
           href="/leaderboard"
-          className="relative overflow-hidden bg-white rounded-3xl p-5 sm:p-6 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between group cursor-pointer"
+          className="relative overflow-hidden bg-card rounded-3xl p-5 sm:p-6 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between group cursor-pointer"
         >
           {/* Watermark Illustration at bottom right */}
-          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-50 group-hover:opacity-30 transition-opacity">
+          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-25 group-hover:opacity-35 transition-opacity">
             <Image
               src="/images/stat-leaderboard.webp"
               alt=""
               fill
-              className="object-contain object-bottom-right"
+              className="object-contain object-bottom-right w-full h-full"
             />
           </div>
 
           <div className="relative z-10">
-            <div className="size-11 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
+            <div className="size-11 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
               <Trophy className="size-5 fill-white shrink-0" />
             </div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Leaderboard
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl sm:text-3xl font-extrabold text-foreground mt-1">
               #{home.lmsRank || 1}
             </p>
           </div>
-          <p className="relative z-10 text-xs font-medium text-slate-500 mt-3">
+          <p className="relative z-10 text-xs font-medium text-muted-foreground mt-3">
             {home.lmsRank && home.lmsRank <= 5 ? "Top 5 Student" : "Top 10 Student"}
           </p>
         </Link>
@@ -320,30 +320,30 @@ export function StudentHomeView() {
               handleOpenNews(home.latestNews);
             }
           }}
-          className="relative overflow-hidden bg-white rounded-3xl p-5 sm:p-6 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between group cursor-pointer"
+          className="relative overflow-hidden bg-card rounded-3xl p-5 sm:p-6 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between group cursor-pointer"
         >
           {/* Watermark Illustration at bottom right */}
-          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-50 group-hover:opacity-30 transition-opacity">
+          <div className="pointer-events-none absolute -bottom-2 -right-2 size-32 sm:size-32 opacity-25 group-hover:opacity-35 transition-opacity">
             <Image
               src="/images/stat-news.webp"
               alt=""
               fill
-              className="object-contain object-bottom-right"
+              className="object-contain object-bottom-right w-full h-full"
             />
           </div>
 
           <div className="relative z-10">
-            <div className="size-11 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
+            <div className="size-11 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs mb-3 group-hover:scale-105 transition-transform">
               <Megaphone className="size-5 shrink-0" />
             </div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
               Latest News
             </p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
+            <p className="text-2xl sm:text-3xl font-extrabold text-foreground mt-1">
               {home.latestNews ? "3 New" : "All Read"}
             </p>
           </div>
-          <div className="relative z-10 text-xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1 mt-3">
+          <div className="relative z-10 text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 mt-3">
             <span>{home.latestNews ? "Read now" : "View all"}</span>
             <ArrowRight className="size-3 shrink-0" />
           </div>
@@ -353,17 +353,17 @@ export function StudentHomeView() {
       {/* 3. Bottom Row: Your Learning Progress (60%) & Quick Access (40%) */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Your Learning Progress */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="lg:col-span-7 bg-card rounded-3xl p-6 sm:p-8 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-border transition-all flex flex-col justify-between space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-border">
             <div className="flex items-center gap-2">
-              <TrendingUp className="size-5 text-[#184880] shrink-0" />
-              <h3 className="font-extrabold text-lg sm:text-xl text-slate-900">
+              <TrendingUp className="size-5 text-primary shrink-0" />
+              <h3 className="font-extrabold text-lg sm:text-xl text-foreground">
                 Your Learning Progress
               </h3>
             </div>
             <Link
               href="/analysis"
-              className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-blue-600 hover:underline"
+              className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-primary hover:underline"
             >
               <span>View Details</span>
               <ArrowRight className="size-3.5 shrink-0" />
@@ -378,25 +378,26 @@ export function StudentHomeView() {
                   cx="65"
                   cy="65"
                   r={radius}
-                  stroke="#E2E8F0"
+                  stroke="currentColor"
                   strokeWidth="12"
                   fill="transparent"
+                  className="text-border"
                 />
                 <circle
                   cx="65"
                   cy="65"
                   r={radius}
-                  stroke="#184880"
+                  stroke="currentColor"
                   strokeWidth="12"
                   strokeDasharray={circumference}
                   strokeDashoffset={strokeDashoffset}
                   strokeLinecap="round"
                   fill="transparent"
-                  className="transition-all duration-1000 ease-out"
+                  className="text-primary transition-all duration-1000 ease-out"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-3xl font-black text-slate-900 tracking-tight tabular-nums">
+                <span className="text-3xl font-black text-foreground tracking-tight tabular-nums">
                   {progressScore}%
                 </span>
               </div>
@@ -405,17 +406,17 @@ export function StudentHomeView() {
             {/* Linear Progress & Feedback */}
             <div className="flex-1 w-full space-y-3 text-center sm:text-left">
               <div>
-                <p className="font-bold text-base text-slate-800">
+                <p className="font-bold text-base text-foreground">
                   Overall Progress
                 </p>
-                <div className="h-3.5 w-full rounded-full bg-slate-100 overflow-hidden mt-2">
+                <div className="h-3.5 w-full rounded-full bg-secondary overflow-hidden mt-2">
                   <div
-                    className="h-full rounded-full bg-[#184880] transition-all duration-700"
+                    className="h-full rounded-full bg-primary transition-all duration-700"
                     style={{ width: `${progressScore}%` }}
                   />
                 </div>
               </div>
-              <p className="text-sm font-medium text-slate-600 pt-1">
+              <p className="text-sm font-medium text-muted-foreground pt-1">
                 You&apos;re doing great! Keep going! 😊
               </p>
             </div>
@@ -423,9 +424,9 @@ export function StudentHomeView() {
 
           {/* Attendance Dots in Week */}
           {home.attendance.dots.length > 0 && (
-            <div className="pt-4 border-t border-slate-100 space-y-3">
+            <div className="pt-4 border-t border-border space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Attendance History
                 </span>
                 {home.streak >= 2 && (
@@ -450,7 +451,7 @@ export function StudentHomeView() {
                       >
                         <meta.Icon className="size-4 shrink-0" />
                       </div>
-                      <span className="text-[10px] text-slate-400 font-medium">
+                      <span className="text-[10px] text-muted-foreground font-medium">
                         {dayLetter(dot.date)}
                       </span>
                     </div>
@@ -462,10 +463,10 @@ export function StudentHomeView() {
         </div>
 
         {/* Right: Quick Access */}
-        <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all flex flex-col justify-between">
-          <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-            <Sparkles className="size-5 text-[#184880] shrink-0" />
-            <h3 className="font-extrabold text-lg sm:text-xl text-slate-900">
+        <div className="lg:col-span-5 bg-card rounded-3xl p-6 sm:p-8 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-border transition-all flex flex-col justify-between">
+          <div className="flex items-center gap-2 pb-4 border-b border-border">
+            <Sparkles className="size-5 text-primary shrink-0" />
+            <h3 className="font-extrabold text-lg sm:text-xl text-foreground">
               Quick Access
             </h3>
           </div>
@@ -473,48 +474,48 @@ export function StudentHomeView() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-4">
             <Link
               href="/marks"
-              className="p-4 rounded-2xl bg-[#F0F6FF] hover:bg-[#E1EDFF] transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-blue-100/40"
+              className="p-4 rounded-2xl bg-secondary/70 hover:bg-secondary transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-border/60"
             >
-              <div className="size-11 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+              <div className="size-11 rounded-full bg-card text-primary flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                 <BookOpen className="size-5 stroke-[2.2] shrink-0" />
               </div>
-              <span className="font-bold text-xs sm:text-sm text-[#184880]">
+              <span className="font-bold text-xs sm:text-sm text-primary">
                 My Marks
               </span>
             </Link>
 
             <Link
               href="/analysis"
-              className="p-4 rounded-2xl bg-[#F0F6FF] hover:bg-[#E1EDFF] transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-blue-100/40"
+              className="p-4 rounded-2xl bg-secondary/70 hover:bg-secondary transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-border/60"
             >
-              <div className="size-11 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+              <div className="size-11 rounded-full bg-card text-primary flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                 <Sparkles className="size-5 stroke-[2.2] shrink-0" />
               </div>
-              <span className="font-bold text-xs sm:text-sm text-[#184880]">
+              <span className="font-bold text-xs sm:text-sm text-primary">
                 Activities
               </span>
             </Link>
 
             <Link
               href="/leaderboard"
-              className="p-4 rounded-2xl bg-[#F0F6FF] hover:bg-[#E1EDFF] transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-blue-100/40"
+              className="p-4 rounded-2xl bg-secondary/70 hover:bg-secondary transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-border/60"
             >
-              <div className="size-11 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+              <div className="size-11 rounded-full bg-card text-primary flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                 <Trophy className="size-5 stroke-[2.2] shrink-0" />
               </div>
-              <span className="font-bold text-xs sm:text-sm text-[#184880]">
+              <span className="font-bold text-xs sm:text-sm text-primary">
                 Leaderboard
               </span>
             </Link>
 
             <Link
               href="/settings"
-              className="p-4 rounded-2xl bg-[#F0F6FF] hover:bg-[#E1EDFF] transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-blue-100/40"
+              className="p-4 rounded-2xl bg-secondary/70 hover:bg-secondary transition-all flex flex-col items-center justify-center gap-2 text-center group cursor-pointer border border-border/60"
             >
-              <div className="size-11 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+              <div className="size-11 rounded-full bg-card text-primary flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
                 <User className="size-5 stroke-[2.2] shrink-0" />
               </div>
-              <span className="font-bold text-xs sm:text-sm text-[#184880]">
+              <span className="font-bold text-xs sm:text-sm text-primary">
                 My Profile
               </span>
             </Link>
@@ -525,12 +526,12 @@ export function StudentHomeView() {
       {/* 4. Secondary Row: Next Up Classes & Today's Tip */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Card: Next Up Classes */}
-        <div className="bg-white rounded-3xl p-6 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all space-y-4">
+        <div className="bg-card rounded-3xl p-6 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-border transition-all space-y-4">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-full bg-blue-50 text-[#184880] flex items-center justify-center">
+            <div className="size-8 rounded-full bg-secondary text-primary flex items-center justify-center">
               <Calendar className="size-4 shrink-0" />
             </div>
-            <h4 className="font-bold text-base text-slate-900">Next Up Today</h4>
+            <h4 className="font-bold text-base text-foreground">Next Up Today</h4>
           </div>
 
           {home.nextUp && home.nextUp.length > 0 ? (
@@ -538,13 +539,13 @@ export function StudentHomeView() {
               {home.nextUp.map((item) => (
                 <div
                   key={item.id}
-                  className="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 shadow-xs flex items-center justify-between"
+                  className="p-3.5 rounded-2xl bg-background/80 border border-border shadow-xs flex items-center justify-between"
                 >
                   <div className="space-y-0.5">
-                    <p className="font-bold text-sm text-slate-800">{item.title}</p>
-                    <p className="text-xs text-slate-500">{item.time}</p>
+                    <p className="font-bold text-sm text-foreground">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">{item.time}</p>
                   </div>
-                  <span className="text-[11px] font-semibold text-[#184880] px-2.5 py-0.5 rounded-full bg-[#EBF3FE] capitalize">
+                  <span className="text-[11px] font-semibold text-primary px-2.5 py-0.5 rounded-full bg-secondary capitalize">
                     {item.kind}
                   </span>
                 </div>
@@ -552,24 +553,24 @@ export function StudentHomeView() {
             </div>
           ) : (
             <div className="py-6 text-center space-y-1">
-              <p className="font-bold text-sm text-slate-700">No classes scheduled</p>
-              <p className="text-xs text-slate-400">Enjoy your study break!</p>
+              <p className="font-bold text-sm text-foreground">No classes scheduled</p>
+              <p className="text-xs text-muted-foreground">Enjoy your study break!</p>
             </div>
           )}
         </div>
 
         {/* Card: Subject Highlights */}
-        <div className="bg-white rounded-3xl p-6 border border-sky-400/20 shadow-md hover:shadow-md hover:border-blue-200 transition-all space-y-4">
+        <div className="bg-card rounded-3xl p-6 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-border transition-all space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="size-8 rounded-full bg-blue-50 text-[#184880] flex items-center justify-center">
+              <div className="size-8 rounded-full bg-secondary text-primary flex items-center justify-center">
                 <BookOpen className="size-4 shrink-0" />
               </div>
-              <h4 className="font-bold text-base text-slate-900">Subject Highlights</h4>
+              <h4 className="font-bold text-base text-foreground">Subject Highlights</h4>
             </div>
             <Link
               href="/marks"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
             >
               <span>All Subjects</span>
               <ArrowRight className="size-3 shrink-0" />
@@ -580,12 +581,12 @@ export function StudentHomeView() {
             {home.subjectHighlights.slice(0, 3).map((sub) => (
               <div key={sub.subject} className="space-y-1">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="text-slate-700">{sub.subject}</span>
-                  <span className="text-slate-900 font-bold tabular-nums">{sub.score}%</span>
+                  <span className="text-foreground">{sub.subject}</span>
+                  <span className="text-primary font-bold tabular-nums">{sub.score}%</span>
                 </div>
-                <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-2.5 w-full rounded-full bg-secondary overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-[#184880]"
+                    className="h-full rounded-full bg-primary"
                     style={{ width: `${Math.min(100, Math.max(5, sub.score))}%` }}
                   />
                 </div>
@@ -595,18 +596,18 @@ export function StudentHomeView() {
         </div>
 
         {/* Card: Focus For Today */}
-        <div className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4 flex flex-col justify-between">
+        <div className="bg-secondary/60 border border-border rounded-3xl p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4 flex flex-col justify-between">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
               <Lightbulb className="size-4 shrink-0" />
               <span>Today&apos;s Learning Tip</span>
             </div>
-            <p className="text-base sm:text-lg font-bold text-slate-800 leading-snug">
+            <p className="text-base sm:text-lg font-bold text-foreground leading-snug">
               {home.focusTip}
             </p>
           </div>
-          <div className="pt-2 border-t border-blue-200/60">
-            <span className="text-[11px] font-medium text-slate-500">
+          <div className="pt-2 border-t border-border">
+            <span className="text-[11px] font-medium text-muted-foreground">
               Personalized tip from your learning coach
             </span>
           </div>

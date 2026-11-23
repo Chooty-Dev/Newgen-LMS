@@ -70,7 +70,7 @@ export function StudentDock() {
         aria-label="Student Mobile Navigation"
         className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-full bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-xl max-w-[calc(100vw-1.5rem)] sm:max-w-xl">
+        <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-2 rounded-full bg-card/95 backdrop-blur-md border border-border shadow-xl max-w-[calc(100vw-1.5rem)] sm:max-w-xl">
           {DOCK_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -83,7 +83,7 @@ export function StudentDock() {
                   key={item.href}
                   href={item.href}
                   aria-current="page"
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#184880] text-white font-semibold text-xs sm:text-sm shadow-sm transition-all duration-200 shrink-0"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-xs sm:text-sm shadow-sm transition-all duration-200 shrink-0"
                 >
                   <Icon className="size-4 sm:size-5 stroke-[2.2]" />
                   <span className="whitespace-nowrap">{item.title}</span>
@@ -97,7 +97,7 @@ export function StudentDock() {
                 href={item.href}
                 aria-label={item.title}
                 title={item.title}
-                className="flex items-center justify-center size-9 sm:size-11 rounded-full text-slate-500 hover:text-[#184880] hover:bg-slate-100 transition-colors shrink-0"
+                className="flex items-center justify-center size-9 sm:size-11 rounded-full text-muted-foreground hover:text-primary hover:bg-secondary transition-colors shrink-0"
               >
                 <Icon className="size-4 sm:size-5 stroke-[1.8]" />
               </Link>
@@ -151,9 +151,9 @@ export function StudentDock() {
         >
           <div className="flex flex-col items-center justify-center p-8 max-w-md w-full text-center space-y-6">
             <div className="relative flex items-center justify-center size-20">
-              <div className="absolute inset-0 rounded-full border-4 border-[#184880]/20 animate-pulse" />
-              <div className="size-16 rounded-full border-4 border-transparent border-t-[#184880] border-r-[#184880] animate-spin" />
-              <LogOut className="size-7 text-[#184880] animate-pulse" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse" />
+              <div className="size-16 rounded-full border-4 border-transparent border-t-primary border-r-primary animate-spin" />
+              <LogOut className="size-7 text-primary animate-pulse" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">

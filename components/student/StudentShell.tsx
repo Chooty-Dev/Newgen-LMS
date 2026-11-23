@@ -69,11 +69,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div
-      className="light min-h-screen flex bg-white text-slate-800 font-sans w-full antialiased selection:bg-blue-100 selection:text-[#184880]"
-      style={{ colorScheme: "light" }}
+      className="min-h-screen flex bg-background text-foreground font-sans w-full antialiased selection:bg-secondary selection:text-primary"
     >
       {/* Desktop Sidebar*/}
-      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-100 p-6 shrink-0 justify-between min-h-screen sticky top-0 h-screen overflow-y-auto z-20">
+      <aside className="hidden md:flex flex-col w-64 bg-background border-r border-border p-6 shrink-0 justify-between min-h-screen sticky top-0 h-screen overflow-y-auto z-20">
         <div className="space-y-8">
           {/* Brand Logo */}
           <Link
@@ -81,10 +80,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-3 group focus-visible:outline-none"
           >
             <div>
-              <span className="font-extrabold text-xl text-[#184880] tracking-tight block leading-tight">
+              <span className="font-extrabold text-xl text-primary tracking-tight block leading-tight">
                 Newgen LMS
               </span>
-              <span className="text-[11px] text-slate-400 font-medium block">
+              <span className="text-[11px] text-muted-foreground font-medium block">
                 Learn · Grow · Achieve
               </span>
             </div>
@@ -102,10 +101,11 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition-all duration-200 ${isActive
-                    ? "bg-[#184880] text-white shadow-sm"
-                    : "text-slate-600 hover:text-[#184880] hover:bg-slate-50"
-                    }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-semibold transition-all duration-200 ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-primary hover:bg-secondary"
+                  }`}
                 >
                   <Icon className="size-5 stroke-[2]" />
                   <span>{item.title}</span>
@@ -116,25 +116,25 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Bottom Sidebar Card: Boy reading book + Encouragement */}
-        <div className="pt-6 border-t border-slate-100 flex flex-col items-center text-center">
-          <div className="relative w-28 h-28 mb-2">
+        <div className="pt-6 border-t border-border flex flex-col items-center text-center">
+          <div className="relative w-full h-36 mb-2">
             <Image
-              src="/images/kid-reading-book-1.webp"
+              src="/images/studying-girl.webp"
               alt="Keep learning"
               fill
-              className="object-contain"
-              sizes="112px"
+              className="object-contain w-full h-full"
+              sizes="200px"
             />
           </div>
-          <p className="text-xs font-bold text-slate-700 leading-snug">
+          <p className="text-xs font-bold text-foreground leading-snug">
             Keep learning,
             <br />
-            <span className="text-[#184880]">You&apos;re doing great!</span> ❤️
+            <span className="text-primary">You&apos;re doing great!</span> ❤️
           </p>
           <button
             type="button"
             onClick={() => setOpenSignOut(true)}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-2 px-4 rounded-full bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 text-xs font-semibold transition-colors"
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 py-2 px-4 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 border border-destructive/20 text-xs font-semibold transition-colors cursor-pointer"
           >
             <LogOut className="size-3.5 stroke-[2]" />
             <span>Sign Out</span>
@@ -189,9 +189,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         >
           <div className="flex flex-col items-center justify-center p-8 max-w-md w-full text-center space-y-6">
             <div className="relative flex items-center justify-center size-20">
-              <div className="absolute inset-0 rounded-full border-4 border-[#184880]/20 animate-pulse" />
-              <div className="size-16 rounded-full border-4 border-transparent border-t-[#184880] border-r-[#184880] animate-spin" />
-              <LogOut className="size-7 text-[#184880] animate-pulse" />
+              <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse" />
+              <div className="size-16 rounded-full border-4 border-transparent border-t-primary border-r-primary animate-spin" />
+              <LogOut className="size-7 text-primary animate-pulse" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">

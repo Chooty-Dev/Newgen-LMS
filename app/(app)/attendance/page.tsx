@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { TeacherAttendanceView } from "@/components/teacher/TeacherAttendanceView";
 
 interface OverviewData {
   expectedToday: number;
@@ -163,10 +165,16 @@ function SessionStudentsEditor({
                         type="button"
                         key={stat}
                         onClick={() => handleStatusChange(idx, stat)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize cursor-pointer transition-all ${
+                        className={`px-3.5 py-1.5 rounded-full text-xs font-semibold capitalize cursor-pointer transition-all ${
                           st.status === stat
-                            ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                            : "bg-muted text-foreground hover:opacity-80"
+                            ? stat === "present"
+                              ? "bg-emerald-600 text-white font-bold shadow-sm"
+                              : stat === "late"
+                              ? "bg-amber-500 text-white font-bold shadow-sm"
+                              : stat === "absent"
+                              ? "bg-rose-600 text-white font-bold shadow-sm"
+                              : "bg-primary text-primary-foreground font-bold shadow-sm"
+                            : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
                         }`}
                       >
                         {stat}
@@ -196,6 +204,11 @@ function SessionStudentsEditor({
 }
 
 export default function AttendancePage() {
+  const { user } = useAuth();
+  if (user?.role === "teacher") {
+    return <TeacherAttendanceView />;
+  }
+
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = React.useState("2026-11-20");
 

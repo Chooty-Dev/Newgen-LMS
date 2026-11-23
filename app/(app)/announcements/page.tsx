@@ -29,6 +29,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/hooks/useAuth";
 import { StudentAnnouncementsView } from "@/components/student/StudentAnnouncementsView";
+import { TeacherAnnouncementsView } from "@/components/teacher/TeacherAnnouncementsView";
 
 interface AnnouncementRecord {
   id: string;
@@ -47,6 +48,9 @@ export default function AnnouncementsPage() {
   const { user } = useAuth();
   if (user?.role === "student") {
     return <StudentAnnouncementsView />;
+  }
+  if (user?.role === "teacher") {
+    return <TeacherAnnouncementsView />;
   }
   return <StaffAnnouncementsPage />;
 }
@@ -156,7 +160,7 @@ function StaffAnnouncementsPage() {
       cell: ({ row }) => {
         const isCenter = row.original.audience === "center";
         return (
-          <span className="inline-flex rounded-full bg-muted px-4 py-1 text-sm font-semibold capitalize text-foreground">
+          <span className="inline-flex rounded-full bg-secondary text-primary border border-border px-3 py-0.5 text-xs font-bold capitalize">
             {isCenter ? "Entire Center" : row.original.classes.join(", ") || "Classes"}
           </span>
         );

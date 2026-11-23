@@ -7,9 +7,9 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-card border border-border p-6 md:p-8 shadow-sm",
-        soft: "bg-card/70 backdrop-blur-md border border-border/70 rounded-[2rem] p-6 md:p-8",
-        hero: "bg-card border-2 border-primary/20 rounded-[2.5rem] p-6 md:p-8 shadow-md",
+        default: "bg-card border border-border p-6 md:p-8 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-[0_6px_24px_-4px_rgba(24,72,128,0.09)]",
+        soft: "bg-card/80 backdrop-blur-md border border-border/80 rounded-[2rem] p-6 md:p-8 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)]",
+        hero: "bg-secondary border border-border rounded-[2.5rem] p-6 md:p-8 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.08)]",
       },
     },
     defaultVariants: {

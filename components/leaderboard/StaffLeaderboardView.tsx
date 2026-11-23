@@ -190,7 +190,7 @@ export function StaffLeaderboardView() {
                 "h-9 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 isActive
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/70 hover:bg-muted text-foreground"
+                  : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
               )}
             >
               {pill.label}
@@ -200,7 +200,7 @@ export function StaffLeaderboardView() {
       </div>
 
       {/* 3. Table Card */}
-      <Card className="rounded-3xl border border-border overflow-hidden">
+      <Card className="rounded-3xl border border-border bg-card overflow-hidden">
         <CardHeader className="pb-3 border-b border-border/60">
           <CardTitle className="text-lg font-bold flex items-center justify-between">
             <span>Rankings (Top 10)</span>
@@ -215,7 +215,7 @@ export function StaffLeaderboardView() {
         <CardContent className="p-0">
           {top10.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground space-y-2">
-              <Trophy className="size-10 mx-auto opacity-30" />
+              <Trophy className="size-10 mx-auto opacity-30 text-primary" />
               <p className="text-base font-semibold">No students eligible for Top 10 yet</p>
               <p className="text-xs">
                 Students must have at least 3 submitted assessments and 5 finalized attendance sessions.
@@ -237,17 +237,17 @@ export function StaffLeaderboardView() {
                 return (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between p-4 sm:p-5 hover:bg-muted/30 transition-colors gap-4"
+                    className="flex items-center justify-between p-4 sm:p-5 hover:bg-secondary/40 transition-colors gap-4"
                   >
                     {/* Left: Rank, Avatar, Name, Grade */}
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div className="w-8 flex items-center justify-center shrink-0">
                         {isTop1 ? (
-                          <Crown className="size-6 text-yellow-600 dark:text-yellow-400 stroke-[2.2]" />
+                          <Crown className="size-6 text-amber-500 stroke-[2.2]" />
                         ) : displayRank === 2 ? (
-                          <Medal className="size-5 text-slate-600 dark:text-slate-300 stroke-[2.2]" />
+                          <Medal className="size-5 text-slate-500 stroke-[2.2]" />
                         ) : displayRank === 3 ? (
-                          <Medal className="size-5 text-amber-700 dark:text-amber-400 stroke-[2.2]" />
+                          <Medal className="size-5 text-amber-700 stroke-[2.2]" />
                         ) : (
                           <span className="text-sm font-black text-muted-foreground tabular-nums">
                             #{displayRank}
@@ -256,7 +256,7 @@ export function StaffLeaderboardView() {
                       </div>
 
                       <Avatar className="size-10 shrink-0 border border-border">
-                        <AvatarFallback className="text-xs font-bold bg-muted text-foreground">
+                        <AvatarFallback className="text-xs font-bold bg-secondary text-primary">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
@@ -269,13 +269,13 @@ export function StaffLeaderboardView() {
                           {/* Movement */}
                           <span className="inline-flex items-center text-xs font-semibold shrink-0">
                             {entry.movement === "up" && (
-                              <span className="text-emerald-600 dark:text-emerald-400 flex items-center">
+                              <span className="text-emerald-600 flex items-center">
                                 <ArrowUp className="size-3.5 stroke-[2.5]" />
                                 {entry.movementDelta}
                               </span>
                             )}
                             {entry.movement === "down" && (
-                              <span className="text-amber-600 dark:text-amber-400 flex items-center">
+                              <span className="text-rose-600 flex items-center">
                                 <ArrowDown className="size-3.5 stroke-[2.5]" />
                                 {entry.movementDelta}
                               </span>

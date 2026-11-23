@@ -59,18 +59,18 @@ export function ScoreHistoryLineChart({
     <div className={cn("space-y-4 flex flex-col justify-between", className)}>
       {/* Top Filter Buttons */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Score Timeline
         </span>
-        <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100 border border-slate-200">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-card border border-border shadow-xs">
           <button
             type="button"
             onClick={() => setRange("7d")}
             className={cn(
               "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
               range === "7d"
-                ? "bg-[#184880] text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             Last Week
@@ -81,8 +81,8 @@ export function ScoreHistoryLineChart({
             className={cn(
               "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
               range === "30d"
-                ? "bg-[#184880] text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             Last Month
@@ -93,8 +93,8 @@ export function ScoreHistoryLineChart({
             className={cn(
               "px-3.5 py-1 rounded-full text-xs font-bold transition-all",
               range === "90d"
-                ? "bg-[#184880] text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             Last 3 Months
@@ -134,16 +134,16 @@ export function ScoreHistoryLineChart({
                   if (active && payload && payload.length) {
                     const dataPoint = payload[0].payload as ScoreHistoryPoint;
                     return (
-                      <div className="rounded-2xl border border-slate-100 bg-white p-3 shadow-md text-xs space-y-1">
-                        <span className="font-bold text-slate-500 block">
+                      <div className="rounded-2xl border border-border bg-card p-3 shadow-md text-xs space-y-1">
+                        <span className="font-bold text-muted-foreground block">
                           {dataPoint.date}
                         </span>
-                        <div className="flex items-center gap-1.5 font-black text-slate-900 text-sm">
+                        <div className="flex items-center gap-1.5 font-black text-foreground text-sm">
                           <span>Score:</span>
-                          <span className="text-[#184880]">{dataPoint.score}%</span>
+                          <span className="text-primary">{dataPoint.score}%</span>
                         </div>
                         {dataPoint.eventText && (
-                          <p className="text-[11px] text-slate-500 font-medium">
+                          <p className="text-[11px] text-muted-foreground font-medium">
                             {dataPoint.eventText}
                           </p>
                         )}

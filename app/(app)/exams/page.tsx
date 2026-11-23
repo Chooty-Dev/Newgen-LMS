@@ -23,6 +23,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Plus, Trash2, ClipboardList, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { TeacherExamsView } from "@/components/teacher/TeacherExamsView";
+import { cn } from "@/lib/utils";
 
 interface AssessmentRecord {
   id: string;
@@ -44,6 +47,11 @@ interface AssessmentRecord {
 }
 
 export default function ExamsPage() {
+  const { user } = useAuth();
+  if (user?.role === "teacher") {
+    return <TeacherExamsView />;
+  }
+
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("");
@@ -182,7 +190,11 @@ export default function ExamsPage() {
           t === "mcq_quiz"
             ? "MCQ Quiz"
             : t.charAt(0).toUpperCase() + t.slice(1);
-        return <span className="font-medium text-foreground">{display}</span>;
+        return (
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary text-primary border border-border">
+            {display}
+          </span>
+        );
       },
     },
     {
@@ -215,10 +227,21 @@ export default function ExamsPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const st = row.original.status.replace(/_/g, " ");
+        const st = row.original.status;
+        const isDone = st === "completed";
+        const isOngoing = st === "ongoing" || st === "waiting_marks";
         return (
-          <span className="inline-flex rounded-full bg-muted px-4 py-1 text-sm font-semibold capitalize text-foreground">
-            {st}
+          <span
+            className={cn(
+              "inline-flex rounded-full px-3.5 py-1 text-xs font-bold capitalize",
+              isDone
+                ? "bg-emerald-100 text-emerald-700"
+                : isOngoing
+                ? "bg-amber-100 text-amber-700"
+                : "bg-secondary text-primary border border-border"
+            )}
+          >
+            {st.replace(/_/g, " ")}
           </span>
         );
       },

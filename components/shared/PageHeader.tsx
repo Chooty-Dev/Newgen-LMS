@@ -21,11 +21,11 @@ export function PageHeader({
         className
       )}
     >
-      <div className="space-y-1">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
+      <div className="space-y-1.5">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground">
           {title}
         </h1>
-        <p className="text-base text-muted-foreground">{description}</p>
+        <p className="text-sm sm:text-base text-muted-foreground font-medium">{description}</p>
       </div>
       {children && (
         <div className="flex flex-wrap items-center gap-3">{children}</div>

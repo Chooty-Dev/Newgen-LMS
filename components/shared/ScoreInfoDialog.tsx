@@ -62,7 +62,7 @@ export function ScoreInfoDialog({
           type="button"
           aria-label="How is my score calculated?"
           className={cn(
-            "size-8 rounded-full flex items-center justify-center text-slate-400 hover:text-[#184880] hover:bg-slate-100 transition-colors shrink-0",
+            "size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary transition-colors shrink-0",
             className
           )}
         >
@@ -71,14 +71,13 @@ export function ScoreInfoDialog({
       </DialogTrigger>
 
       <DialogContent
-        data-student-portal=""
-        className="student-portal max-w-md rounded-3xl p-6 sm:p-8 !bg-white !text-slate-800 border border-slate-100 shadow-2xl space-y-5"
+        className="max-w-md rounded-3xl p-6 sm:p-8 bg-card text-foreground border border-border shadow-2xl space-y-5"
       >
         <DialogHeader className="space-y-1.5 text-left">
-          <DialogTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+          <DialogTitle className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
             How your score is made
           </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm text-slate-500">
+          <DialogDescription className="text-xs sm:text-sm text-muted-foreground">
             Your performance score combines your test marks and classroom attendance.
           </DialogDescription>
         </DialogHeader>
@@ -91,43 +90,43 @@ export function ScoreInfoDialog({
         ) : (
           <div className="space-y-3">
             {/* Marks Weight Box */}
-            <div className="p-4 rounded-2xl bg-[#EBF3FE] border border-blue-100 flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-secondary border border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="size-10 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs">
+                <div className="size-10 rounded-full bg-card text-primary flex items-center justify-center shadow-xs">
                   <BookOpen className="size-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900">Test Marks</h4>
-                  <p className="text-[11px] text-slate-500">
+                  <h4 className="font-bold text-sm text-foreground">Test Marks</h4>
+                  <p className="text-[11px] text-muted-foreground">
                     Accounts for {explanation.weights?.marks || 70}% of your total score
                   </p>
                 </div>
               </div>
-              <span className="text-lg font-black text-[#184880] tabular-nums">
+              <span className="text-lg font-black text-primary tabular-nums">
                 {explanation.marksScore}%
               </span>
             </div>
 
             {/* Attendance Weight Box */}
-            <div className="p-4 rounded-2xl bg-[#F0F6FF] border border-blue-100 flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-secondary/70 border border-border flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="size-10 rounded-full bg-white text-[#184880] flex items-center justify-center shadow-xs">
+                <div className="size-10 rounded-full bg-card text-primary flex items-center justify-center shadow-xs">
                   <Calendar className="size-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-slate-900">Attendance</h4>
-                  <p className="text-[11px] text-slate-500">
+                  <h4 className="font-bold text-sm text-foreground">Attendance</h4>
+                  <p className="text-[11px] text-muted-foreground">
                     Accounts for {explanation.weights?.attendance || 30}% of your total score
                   </p>
                 </div>
               </div>
-              <span className="text-lg font-black text-[#184880] tabular-nums">
+              <span className="text-lg font-black text-primary tabular-nums">
                 {explanation.attendanceScore}%
               </span>
             </div>
 
             {/* Simple Tip */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 leading-relaxed">
+            <div className="p-3.5 rounded-2xl bg-background border border-border text-xs text-muted-foreground leading-relaxed">
               💡 {explanation.tip || "Regular attendance and daily revision will boost your score!"}
             </div>
           </div>
@@ -137,7 +136,7 @@ export function ScoreInfoDialog({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="w-full h-11 rounded-full text-sm font-bold bg-[#184880] hover:bg-[#0F2C59] text-white shadow-sm transition-all"
+            className="w-full h-11 rounded-full text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all cursor-pointer"
           >
             Got it, thanks!
           </button>

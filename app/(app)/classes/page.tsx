@@ -23,6 +23,8 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Plus, Trash2, Users, School, Calendar, Clock, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { TeacherClassesView } from "@/components/teacher/TeacherClassesView";
 
 interface ClassRecord {
   id: string;
@@ -52,6 +54,11 @@ interface ClassRecord {
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function ClassesPage() {
+  const { user } = useAuth();
+  if (user?.role === "teacher") {
+    return <TeacherClassesView />;
+  }
+
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("");
@@ -295,9 +302,26 @@ export default function ClassesPage() {
       accessorKey: "enrolledCount",
       header: "Students",
       cell: ({ row }) => (
-        <span className="font-semibold tabular-nums text-foreground">
-          {row.original.enrolledCount} / {row.original.capacity}
-        </span>
+        <div className="space-y-1 min-w-[100px]">
+          <span className="font-bold tabular-nums text-foreground text-sm">
+            {row.original.enrolledCount} / {row.original.capacity}
+          </span>
+          <div className="w-24 h-1.5 rounded-full bg-secondary overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.round(
+                    ((row.original.enrolledCount || 0) /
+                      (row.original.capacity || 1)) *
+                      100
+                  )
+                )}%`,
+              }}
+            />
+          </div>
+        </div>
       ),
     },
     {

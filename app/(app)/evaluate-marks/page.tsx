@@ -186,8 +186,8 @@ function EvaluationGridEditor({
                       onClick={() => toggleAbsent(idx)}
                       className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all ${
                         isAbsent
-                          ? "bg-destructive text-destructive-foreground"
-                          : "bg-muted text-foreground hover:opacity-80"
+                          ? "bg-rose-100 text-rose-700 border border-rose-200"
+                          : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                       }`}
                     >
                       {isAbsent ? "Absent" : "Present"}
@@ -213,7 +213,7 @@ function EvaluationGridEditor({
                     {entry.percentage}%
                   </td>
                   <td className="py-4 text-center font-bold">
-                    <span className="inline-block size-8 rounded-full bg-muted/60 leading-8 text-foreground text-center">
+                    <span className="inline-block size-8 rounded-full bg-secondary text-primary font-bold leading-8 text-center">
                       {entry.grade}
                     </span>
                   </td>

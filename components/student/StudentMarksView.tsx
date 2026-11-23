@@ -113,29 +113,29 @@ export function StudentMarksView() {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       {/* 1. Hero Banner with Exam Paper Illustration */}
-      <section className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] relative overflow-hidden">
+      <section className="bg-secondary border border-border rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] relative overflow-hidden min-h-[220px]">
         <div className="space-y-2.5 max-w-lg text-center md:text-left z-10">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#184880] tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary tracking-tight leading-tight">
             My Marks & Results
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium">
             Explore your tests, exam marks, and teacher feedback.
           </p>
 
           <div className="flex items-center justify-center md:justify-start gap-3 pt-1">
-            <div className="bg-white rounded-2xl px-4 py-2 border border-blue-100/60 shadow-xs text-center">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+            <div className="bg-card rounded-2xl px-4 py-2 border border-border shadow-xs text-center">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground block tracking-wider">
                 Average
               </span>
-              <span className="text-xl sm:text-2xl font-black text-[#184880] tabular-nums">
+              <span className="text-xl sm:text-2xl font-black text-primary tabular-nums">
                 {overallAverage}%
               </span>
             </div>
-            <div className="bg-white rounded-2xl px-4 py-2 border border-blue-100/60 shadow-xs text-center">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+            <div className="bg-card rounded-2xl px-4 py-2 border border-border shadow-xs text-center">
+              <span className="text-[10px] font-bold uppercase text-muted-foreground block tracking-wider">
                 Assessments
               </span>
-              <span className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+              <span className="text-xl sm:text-2xl font-black text-foreground tabular-nums">
                 {rawMarks.length}
               </span>
             </div>
@@ -143,14 +143,14 @@ export function StudentMarksView() {
         </div>
 
         {/* Right Illustration: Exam paper with A+ */}
-        <div className="relative w-40 h-40 sm:w-48 sm:h-48 shrink-0 z-10">
+        <div className="relative w-full h-44 sm:h-52 md:h-full md:absolute md:right-4 md:top-0 md:bottom-0 md:w-56 lg:w-64 flex items-center justify-center md:justify-end shrink-0 z-10">
           <Image
             src="/images/exam-paper.webp"
             alt="My Marks"
             fill
             priority
-            className="object-contain drop-shadow-sm"
-            sizes="(max-width: 768px) 160px, 192px"
+            className="object-contain w-full h-full drop-shadow-sm"
+            sizes="(max-width: 768px) 100vw, 256px"
           />
         </div>
       </section>
@@ -159,14 +159,14 @@ export function StudentMarksView() {
       {subjectTiles.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-base sm:text-lg font-bold text-slate-900">
+            <h3 className="text-base sm:text-lg font-bold text-foreground">
               My Subjects
             </h3>
             {selectedSubject && (
               <button
                 type="button"
                 onClick={() => setSelectedSubject("")}
-                className="text-xs font-semibold text-blue-600 hover:underline rounded-full px-3 py-1 bg-white border border-slate-200"
+                className="text-xs font-semibold text-primary hover:underline rounded-full px-3 py-1 bg-card border border-border"
               >
                 Show All
               </button>
@@ -180,32 +180,32 @@ export function StudentMarksView() {
                 <div
                   key={tile.name}
                   onClick={() => setSelectedSubject(isSelected ? "" : tile.name)}
-                  className={`relative overflow-hidden p-5 rounded-3xl transition-all cursor-pointer flex flex-col justify-between space-y-3 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] ${isSelected
-                    ? "border-2 border-[#184880] ring-2 ring-[#184880]/20 bg-[#F0F6FF]"
-                    : "bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 border border-blue-100/60 hover:border-blue-200"
+                  className={`relative overflow-hidden p-5 rounded-3xl transition-all cursor-pointer flex flex-col justify-between space-y-3 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md ${isSelected
+                    ? "border-2 border-primary ring-2 ring-primary/20 bg-secondary"
+                    : "bg-card border border-border hover:border-primary/30"
                     }`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-bold text-base text-slate-900">
+                      <h4 className="font-bold text-base text-foreground">
                         {tile.name}
                       </h4>
-                      <span className="text-xs font-medium text-slate-500">
+                      <span className="text-xs font-medium text-muted-foreground">
                         {tile.count} assessments
                       </span>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-2xl font-black text-slate-900 tabular-nums block">
+                      <span className="text-2xl font-black text-foreground tabular-nums block">
                         {tile.average}%
                       </span>
-                      <span className="text-[11px] font-bold text-[#184880] uppercase tracking-wide">
+                      <span className="text-[11px] font-bold text-primary uppercase tracking-wide">
                         {tile.trendWord}
                       </span>
                     </div>
                   </div>
 
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                     {tile.tip}
                   </p>
                 </div>
@@ -219,25 +219,25 @@ export function StudentMarksView() {
       <section className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pt-1">
         {/* Search Pill */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search test or subject..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-11 pl-11 pr-4 rounded-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#184880]"
+            className="w-full h-11 pl-11 pr-4 rounded-full bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 p-1 rounded-full bg-slate-100 border border-slate-200 self-end sm:self-auto">
+        <div className="flex items-center gap-1 p-1 rounded-full bg-card border border-border self-end sm:self-auto">
           <button
             type="button"
             onClick={() => setViewMode("cards")}
             aria-label="Cards View"
             className={`flex items-center gap-1.5 px-4 h-9 rounded-full text-xs font-bold transition-all ${viewMode === "cards"
-              ? "bg-[#184880] text-white shadow-xs"
-              : "text-slate-600 hover:text-slate-900"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
               }`}
           >
             <LayoutGrid className="size-3.5" />
@@ -248,8 +248,8 @@ export function StudentMarksView() {
             onClick={() => setViewMode("table")}
             aria-label="Table View"
             className={`flex items-center gap-1.5 px-4 h-9 rounded-full text-xs font-bold transition-all ${viewMode === "table"
-              ? "bg-[#184880] text-white shadow-xs"
-              : "text-slate-600 hover:text-slate-900"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
               }`}
           >
             <ListIcon className="size-3.5" />
@@ -268,8 +268,8 @@ export function StudentMarksView() {
               type="button"
               onClick={() => setSelectedType(pill.value)}
               className={`h-10 px-5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${isActive
-                ? "bg-[#184880] text-white shadow-xs"
-                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"
                 }`}
             >
               {pill.label}
@@ -280,13 +280,13 @@ export function StudentMarksView() {
 
       {/* 5. Marks Content */}
       {filteredMarks.length === 0 ? (
-        <div className="rounded-3xl p-10 text-center space-y-3 bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)]">
-          <div className="size-14 rounded-full bg-blue-50 text-[#184880] flex items-center justify-center mx-auto">
+        <div className="rounded-3xl p-10 text-center space-y-3 bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)]">
+          <div className="size-14 rounded-full bg-secondary text-primary flex items-center justify-center mx-auto">
             <BookOpen className="size-6" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-lg font-bold text-slate-900">No marks found</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <h4 className="text-lg font-bold text-foreground">No marks found</h4>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
               No assessments match your current filters.
             </p>
           </div>
@@ -297,7 +297,7 @@ export function StudentMarksView() {
               setSelectedSubject("");
               setSearchTerm("");
             }}
-            className="rounded-full h-9 px-5 text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="rounded-full h-9 px-5 text-xs font-semibold bg-card border border-border text-foreground hover:bg-secondary"
           >
             Clear Filters
           </button>
@@ -309,18 +309,18 @@ export function StudentMarksView() {
             <div
               key={mark.id}
               onClick={() => handleOpenMark(mark)}
-              className="group relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/50 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] hover:shadow-[0_14px_30px_-5px_rgba(24,72,128,0.09)] hover:border-blue-200 cursor-pointer transition-all flex flex-col justify-between space-y-4"
+              className="group relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 cursor-pointer transition-all flex flex-col justify-between space-y-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1 flex-1 min-w-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#184880] px-2.5 py-0.5 rounded-full bg-[#EBF3FE] inline-block">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-primary px-2.5 py-0.5 rounded-full bg-secondary inline-block">
                     {mark.subject}
                   </span>
-                  <h4 className="text-base sm:text-lg font-bold text-slate-900 truncate group-hover:text-[#184880] transition-colors mt-1">
+                  <h4 className="text-base sm:text-lg font-bold text-foreground truncate group-hover:text-primary transition-colors mt-1">
                     {mark.title}
                   </h4>
-                  <p className="text-xs text-slate-500 flex items-center gap-1.5 pt-0.5">
-                    <Calendar className="size-3 text-slate-400" />
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 pt-0.5">
+                    <Calendar className="size-3 text-muted-foreground" />
                     <span>{mark.date}</span>
                     <span>•</span>
                     <span className="capitalize">{mark.type.replace("_", " ")}</span>
@@ -329,20 +329,20 @@ export function StudentMarksView() {
 
                 {/* Score badge */}
                 <div className="text-right shrink-0">
-                  <div className="text-2xl font-black text-slate-900 group-hover:text-[#184880] transition-colors tabular-nums">
+                  <div className="text-2xl font-black text-foreground group-hover:text-primary transition-colors tabular-nums">
                     {mark.percentage}%
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-500">
+                  <span className="text-[11px] font-semibold text-muted-foreground">
                     Grade {mark.grade}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                <span className="font-medium text-slate-500">
+              <div className="flex items-center justify-between pt-3 border-t border-border text-xs">
+                <span className="font-medium text-muted-foreground">
                   Score: {mark.score} / {mark.totalMarks}
                 </span>
-                <span className="font-bold text-[#184880] flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                <span className="font-bold text-primary flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
                   View details <ChevronRight className="size-3.5" />
                 </span>
               </div>
@@ -351,11 +351,11 @@ export function StudentMarksView() {
         </div>
       ) : (
         /* Table View */
-        <div className="rounded-3xl p-4 md:p-6 overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/30 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)]">
+        <div className="rounded-3xl p-4 md:p-6 overflow-hidden bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)]">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider">
                   <th className="pb-3 px-4">Subject</th>
                   <th className="pb-3 px-4">Assessment</th>
                   <th className="pb-3 px-4">Date</th>
@@ -364,30 +364,32 @@ export function StudentMarksView() {
                   <th className="pb-3 px-4 text-center">Grade</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-border">
                 {filteredMarks.map((mark) => (
                   <tr
                     key={mark.id}
                     onClick={() => handleOpenMark(mark)}
-                    className="hover:bg-blue-50/40 cursor-pointer transition-colors"
+                    className="hover:bg-secondary/50 cursor-pointer transition-colors"
                   >
-                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                    <td className="py-3.5 px-4 font-bold text-foreground">
                       {mark.subject}
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-700">
+                    <td className="py-3.5 px-4 font-medium text-foreground">
                       {mark.title}
                     </td>
-                    <td className="py-3.5 px-4 text-xs text-slate-500">
+                    <td className="py-3.5 px-4 text-xs text-muted-foreground">
                       {mark.date}
                     </td>
-                    <td className="py-3.5 px-4 text-center tabular-nums text-slate-700">
+                    <td className="py-3.5 px-4 text-center font-semibold text-foreground tabular-nums">
                       {mark.score} / {mark.totalMarks}
                     </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-[#184880] tabular-nums">
+                    <td className="py-3.5 px-4 text-center font-bold text-primary tabular-nums">
                       {mark.percentage}%
                     </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                      {mark.grade}
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="inline-block px-2 py-0.5 text-xs font-bold rounded-full bg-secondary text-primary">
+                        {mark.grade}
+                      </span>
                     </td>
                   </tr>
                 ))}

@@ -130,58 +130,58 @@ export function StudentSettingsView() {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       {/* 1. Hero Banner */}
-      <section className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] relative overflow-hidden">
+      <section className="bg-secondary border border-border rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] relative overflow-hidden min-h-[220px]">
         <div className="space-y-2.5 max-w-lg text-center md:text-left z-10">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#184880] tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary tracking-tight leading-tight">
             My Profile & Details
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium">
             Manage your personal profile, keep your login secure, and view account details.
           </p>
         </div>
 
-        <div className="relative w-40 h-36 sm:w-48 sm:h-40 shrink-0 z-10">
+        <div className="relative w-full h-44 sm:h-52 md:h-full md:absolute md:right-4 md:top-0 md:bottom-0 md:w-56 lg:w-64 flex items-center justify-center md:justify-end shrink-0 z-10">
           <Image
             src="/images/kid-reading-4.webp"
             alt="My Profile"
             fill
             priority
-            className="object-contain drop-shadow-sm"
+            className="object-contain w-full h-full drop-shadow-sm"
             sizes="(max-width: 768px) 160px, 192px"
           />
         </div>
       </section>
 
       {/* 2. Profile Overview Card */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-white via-white to-[#F0F6FF]/70 rounded-3xl p-6 sm:p-7 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)]">
+      <section className="relative overflow-hidden bg-card rounded-3xl p-6 sm:p-7 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)]">
         <div className="flex flex-col md:flex-row items-center justify-between gap-5 text-center md:text-left">
           {/* Avatar & Info */}
           <div className="flex flex-col sm:flex-row items-center gap-5">
-            <div className="size-20 sm:size-24 rounded-full bg-[#EBF3FE] text-[#184880] flex items-center justify-center font-black text-2xl sm:text-3xl border-2 border-white ring-4 ring-blue-50 shrink-0">
+            <div className="size-20 sm:size-24 rounded-full bg-secondary text-primary flex items-center justify-center font-black text-2xl sm:text-3xl border-2 border-border shrink-0 shadow-sm">
               {initials}
             </div>
 
             <div className="space-y-1.5">
               <div className="flex flex-col sm:flex-row items-center gap-2">
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+                <h3 className="text-xl sm:text-2xl font-extrabold text-foreground">
                   {user?.name}
                 </h3>
                 {lmsRank && (
                   <div className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
                     {lmsRank === 1 ? (
-                      <Crown className="size-3.5 text-yellow-600 fill-yellow-500" />
+                      <Crown className="size-3.5 text-amber-600 fill-amber-500" />
                     ) : lmsRank <= 3 ? (
                       <Medal className="size-3.5 text-amber-600" />
                     ) : (
-                      <Trophy className="size-3.5 text-slate-500" />
+                      <Trophy className="size-3.5 text-muted-foreground" />
                     )}
                     <span>#{lmsRank} in LMS</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 text-xs text-slate-500 font-medium">
-                <span className="flex items-center gap-1 font-semibold text-[#184880]">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 text-xs text-muted-foreground font-medium">
+                <span className="flex items-center gap-1 font-semibold text-primary">
                   <GraduationCap className="size-4" />
                   {grade}
                 </span>
@@ -191,16 +191,16 @@ export function StudentSettingsView() {
                 <span>{studentHome?.student?.centerName || "Main Center"}</span>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-muted-foreground">
                 {user?.email && (
                   <span className="flex items-center gap-1">
-                    <Mail className="size-3.5 text-slate-400" />
+                    <Mail className="size-3.5 text-muted-foreground" />
                     {user.email}
                   </span>
                 )}
                 {user?.phone && (
                   <span className="flex items-center gap-1">
-                    <Phone className="size-3.5 text-slate-400" />
+                    <Phone className="size-3.5 text-muted-foreground" />
                     {user.phone}
                   </span>
                 )}
@@ -209,15 +209,15 @@ export function StudentSettingsView() {
           </div>
 
           {/* Right: Academic Rating Box */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#EBF3FE] border border-blue-100/60 text-center min-w-[140px]">
-            <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-[#184880]">
+          <div className="p-4 sm:p-5 rounded-2xl bg-secondary border border-border text-center min-w-[140px]">
+            <div className="flex items-center justify-center gap-1 text-[10px] font-bold uppercase text-primary">
               <span>Performance</span>
               <ScoreInfoDialog studentId={user?.id} />
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-[#184880] tabular-nums mt-0.5">
+            <div className="text-2xl sm:text-3xl font-black text-primary tabular-nums mt-0.5">
               {displayScore !== null ? `${displayScore}%` : "—"}
             </div>
-            <span className="text-xs font-semibold text-slate-600 block mt-0.5">
+            <span className="text-xs font-semibold text-muted-foreground block mt-0.5">
               {groupLabel}
             </span>
           </div>
@@ -226,17 +226,17 @@ export function StudentSettingsView() {
 
       {/* 3. Account Details Cards */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        <div className="p-5 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/50 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Full Name</span>
-          <p className="text-sm sm:text-base font-bold text-slate-800">{user?.name}</p>
+        <div className="p-5 rounded-3xl bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-1">
+          <span className="text-[10px] font-bold uppercase text-muted-foreground">Full Name</span>
+          <p className="text-sm sm:text-base font-bold text-foreground">{user?.name}</p>
         </div>
-        <div className="p-5 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/50 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Class / Grade</span>
-          <p className="text-sm sm:text-base font-bold text-slate-800">{grade}</p>
+        <div className="p-5 rounded-3xl bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-1">
+          <span className="text-[10px] font-bold uppercase text-muted-foreground">Class / Grade</span>
+          <p className="text-sm sm:text-base font-bold text-foreground">{grade}</p>
         </div>
-        <div className="p-5 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/50 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-1">
-          <span className="text-[10px] font-bold uppercase text-slate-400">Role Status</span>
-          <p className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-1.5">
+        <div className="p-5 rounded-3xl bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-1">
+          <span className="text-[10px] font-bold uppercase text-muted-foreground">Role Status</span>
+          <p className="text-sm sm:text-base font-bold text-foreground flex items-center gap-1.5">
             <CheckCircle2 className="size-4 text-emerald-600" />
             <span>Active Student</span>
           </p>
@@ -244,14 +244,14 @@ export function StudentSettingsView() {
       </section>
 
       {/* 4. Password Security Form */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/40 rounded-3xl p-6 sm:p-7 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-4">
-        <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+      <section className="relative overflow-hidden bg-card rounded-3xl p-6 sm:p-7 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+        <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
           <KeyRound className="size-4" />
           <span>Security & Password</span>
         </div>
         <div>
-          <h4 className="text-lg font-bold text-slate-900">Change Password</h4>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h4 className="text-lg font-bold text-foreground">Change Password</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Update your secret password to keep your student account safe.
           </p>
         </div>
@@ -264,7 +264,7 @@ export function StudentSettingsView() {
           className="space-y-4 pt-1 max-w-lg"
         >
           <div>
-            <label className="text-xs font-bold text-slate-700 mb-1 block">
+            <label className="text-xs font-bold text-foreground mb-1 block">
               Current Password
             </label>
             <input
@@ -272,13 +272,13 @@ export function StudentSettingsView() {
               placeholder="••••••••"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full h-11 px-5 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#184880]"
+              className="w-full h-11 px-5 rounded-full bg-background border border-border text-foreground placeholder:text-muted-foreground text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               required
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 mb-1 block">
+            <label className="text-xs font-bold text-foreground mb-1 block">
               New Password
             </label>
             <input
@@ -286,13 +286,13 @@ export function StudentSettingsView() {
               placeholder="At least 6 characters"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full h-11 px-5 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#184880]"
+              className="w-full h-11 px-5 rounded-full bg-background border border-border text-foreground placeholder:text-muted-foreground text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               required
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-slate-700 mb-1 block">
+            <label className="text-xs font-bold text-foreground mb-1 block">
               Confirm New Password
             </label>
             <input
@@ -300,7 +300,7 @@ export function StudentSettingsView() {
               placeholder="Repeat your new password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full h-11 px-5 rounded-full bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#184880]"
+              className="w-full h-11 px-5 rounded-full bg-background border border-border text-foreground placeholder:text-muted-foreground text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               required
             />
           </div>
@@ -309,7 +309,7 @@ export function StudentSettingsView() {
             <button
               type="submit"
               disabled={passwordMutation.isPending}
-              className="h-11 rounded-full px-7 text-sm font-semibold bg-[#184880] text-white hover:bg-[#0F2C59] shadow-sm transition-all disabled:opacity-50"
+              className="h-11 rounded-full px-7 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
             >
               {passwordMutation.isPending ? "Updating..." : "Update Password"}
             </button>
@@ -318,9 +318,9 @@ export function StudentSettingsView() {
       </section>
 
       {/* 5. Active Devices / Sessions */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-white to-[#F0F6FF]/40 rounded-3xl p-6 sm:p-7 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] space-y-4">
+      <section className="relative overflow-hidden bg-card rounded-3xl p-6 sm:p-7 border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
             <ShieldCheck className="size-4" />
             <span>Active Devices</span>
           </div>
@@ -330,7 +330,7 @@ export function StudentSettingsView() {
               type="button"
               onClick={() => terminateOtherSessionsMutation.mutate()}
               disabled={terminateOtherSessionsMutation.isPending}
-              className="rounded-full h-9 px-4 text-xs font-bold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              className="rounded-full h-9 px-4 text-xs font-bold bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <LogOut className="size-3.5" />
               <span>Log Out Other Devices</span>
@@ -339,8 +339,8 @@ export function StudentSettingsView() {
         </div>
 
         <div>
-          <h4 className="text-lg font-bold text-slate-900">Signed In Devices</h4>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h4 className="text-lg font-bold text-foreground">Signed In Devices</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Devices that currently have active login sessions for your account.
           </p>
         </div>
@@ -351,10 +351,10 @@ export function StudentSettingsView() {
             return (
               <div
                 key={sess.id}
-                className="p-4 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center justify-between gap-4"
+                className="p-4 rounded-2xl bg-background border border-border shadow-xs flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-10 rounded-full bg-blue-50 text-[#184880] flex items-center justify-center shrink-0">
+                  <div className="size-10 rounded-full bg-secondary text-primary flex items-center justify-center shrink-0">
                     {isMobile ? (
                       <Smartphone className="size-5" />
                     ) : (
@@ -363,16 +363,16 @@ export function StudentSettingsView() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900 truncate">
+                      <span className="font-bold text-sm text-foreground truncate">
                         {isMobile ? "Mobile Device" : "Computer / Browser"}
                       </span>
                       {sess.isCurrent && (
-                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-[#EBF3FE] text-[#184880]">
+                        <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-secondary text-primary">
                           This device
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 truncate pt-0.5">
+                    <p className="text-xs text-muted-foreground truncate pt-0.5">
                       Last active: {new Date(sess.lastActiveAt).toLocaleString()}
                     </p>
                   </div>

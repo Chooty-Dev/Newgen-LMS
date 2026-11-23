@@ -55,6 +55,7 @@ interface StudentAnalysisData {
 }
 
 import { StudentAnalysisView } from "@/components/student/StudentAnalysisView";
+import { TeacherAnalysisView } from "@/components/teacher/TeacherAnalysisView";
 
 export default function AnalysisPage() {
   const { user } = useAuth();
@@ -62,6 +63,10 @@ export default function AnalysisPage() {
 
   if (isStudent) {
     return <StudentAnalysisView />;
+  }
+
+  if (user?.role === "teacher") {
+    return <TeacherAnalysisView />;
   }
 
   return <TeacherAdminAnalysisView />;

@@ -6,9 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth, SessionUser } from "@/hooks/useAuth";
-import { useTheme } from "next-themes";
 import { toast } from "sonner";
-import { Monitor, Moon, Sun, Smartphone, Laptop, LogOut } from "lucide-react";
+import { Smartphone, Laptop, LogOut } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ActiveSession {
@@ -112,26 +111,22 @@ function ProfileDetailsSection({
 }
 
 import { StudentSettingsView } from "@/components/student/StudentSettingsView";
+import { TeacherSettingsView } from "@/components/teacher/TeacherSettingsView";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   if (user?.role === "student") {
     return <StudentSettingsView />;
   }
+  if (user?.role === "teacher") {
+    return <TeacherSettingsView />;
+  }
   return <StaffSettingsPage />;
 }
-
-const emptySubscribe = () => () => {};
 
 function StaffSettingsPage() {
   const queryClient = useQueryClient();
   const { user, refetchUser } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const mounted = React.useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
 
   // Password form
   const [currentPassword, setCurrentPassword] = React.useState("");
@@ -202,54 +197,6 @@ function StaffSettingsPage() {
         user={user}
         onUpdated={refetchUser}
       />
-
-      {/* Theme Preference Card */}
-      <Card className="rounded-3xl border-border bg-card p-6 md:p-8">
-        <CardHeader>
-          <CardTitle>Appearance Theme</CardTitle>
-          <CardDescription>Select your preferred dashboard color appearance.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <button
-              type="button"
-              onClick={() => setTheme("light")}
-              className={`p-6 rounded-3xl border text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                mounted && theme === "light"
-                  ? "border-primary bg-primary text-primary-foreground shadow-md"
-                  : "border-border bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              <Sun className="size-8" />
-              <span className="font-semibold text-base">Light Mode</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("dark")}
-              className={`p-6 rounded-3xl border text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                mounted && theme === "dark"
-                  ? "border-primary bg-primary text-primary-foreground shadow-md"
-                  : "border-border bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              <Moon className="size-8" />
-              <span className="font-semibold text-base">Dark Mode</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTheme("system")}
-              className={`p-6 rounded-3xl border text-center flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                mounted && theme === "system"
-                  ? "border-primary bg-primary text-primary-foreground shadow-md"
-                  : "border-border bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              <Monitor className="size-8" />
-              <span className="font-semibold text-base">System Default</span>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Security & Password Card */}
       <Card className="rounded-3xl border-border bg-card p-6 md:p-8">

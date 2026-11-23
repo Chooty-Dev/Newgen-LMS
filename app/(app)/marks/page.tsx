@@ -51,11 +51,15 @@ interface StudentItem {
 }
 
 import { StudentMarksView } from "@/components/student/StudentMarksView";
+import { TeacherMarksView } from "@/components/teacher/TeacherMarksView";
 
 export default function MarksPage() {
   const { user } = useAuth();
   if (user?.role === "student") {
     return <StudentMarksView />;
+  }
+  if (user?.role === "teacher") {
+    return <TeacherMarksView />;
   }
   return <StaffMarksPage />;
 }

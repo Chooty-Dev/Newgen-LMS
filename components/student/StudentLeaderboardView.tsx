@@ -106,27 +106,27 @@ export function StudentLeaderboardView() {
       <CelebrationDialog />
 
       {/* 1. Hero Banner */}
-      <section className="bg-sky-400/20 border border-blue-100/80 rounded-3xl p-5 sm:p-7 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] relative overflow-hidden">
+      <section className="bg-secondary border border-border rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] relative overflow-hidden min-h-[220px]">
         <div className="space-y-2.5 max-w-lg text-center md:text-left z-10">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#184880] tracking-tight leading-tight">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary tracking-tight leading-tight">
             Top 10 Leaderboard
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 font-medium">
+          <p className="text-xs sm:text-sm text-muted-foreground font-medium">
             Celebrating the top learners. Track your standing and aim high!
           </p>
-          <p className="text-xs text-slate-400 font-medium pt-0.5">
+          <p className="text-xs text-muted-foreground font-medium pt-0.5">
             Updated at {formattedSyncTime}
           </p>
         </div>
 
         {/* Right Illustration */}
-        <div className="relative w-40 h-40 sm:w-48 sm:h-48 shrink-0 z-10">
+        <div className="relative w-full h-44 sm:h-52 md:h-full md:absolute md:right-4 md:top-0 md:bottom-0 md:w-56 lg:w-64 flex items-center justify-center md:justify-end shrink-0 z-10">
           <Image
             src="/images/achivements.webp"
             alt="Leaderboard Achievements"
             fill
             priority
-            className="object-contain drop-shadow-sm"
+            className="object-contain w-full h-full drop-shadow-sm"
             sizes="(max-width: 768px) 160px, 192px"
           />
         </div>
@@ -142,8 +142,8 @@ export function StudentLeaderboardView() {
               type="button"
               onClick={() => setSelectedGrade(pill.value)}
               className={`h-10 px-5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${isActive
-                ? "bg-[#184880] text-white shadow-xs"
-                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-card border border-border text-muted-foreground hover:bg-secondary"
                 }`}
             >
               {pill.label}
@@ -154,18 +154,18 @@ export function StudentLeaderboardView() {
 
       {/* 3. Status Card for Current Student (if outside Top 10) */}
       {myEntry && (!isUserInTop10 || !myEntry.entry) && (
-        <section className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-white via-white to-[#F0F6FF]/70 border-2 border-blue-200 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)]">
+        <section className="relative overflow-hidden p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Sparkles className="size-4 text-[#184880]" />
-                <span className="text-base font-bold text-slate-900">
+                <Sparkles className="size-4 text-primary" />
+                <span className="text-base font-bold text-foreground">
                   {myEntry.entry
                     ? `Your place: #${selectedGrade === "all" ? myEntry.entry.rank : myEntry.entry.gradeRank} in LMS`
                     : "Your place in LMS"}
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {myEntry.hasEnoughData
                   ? myEntry.distanceToTop10
                     ? `${myEntry.distanceToTop10} points away from Top 10. Keep going!`
@@ -175,10 +175,10 @@ export function StudentLeaderboardView() {
             </div>
             {myEntry.entry && (
               <div className="text-right shrink-0">
-                <span className="text-2xl font-black tabular-nums text-slate-900">
+                <span className="text-2xl font-black tabular-nums text-foreground">
                   {myEntry.entry.score}
                 </span>
-                <span className="text-[11px] text-slate-400 block font-medium">
+                <span className="text-[11px] text-muted-foreground block font-medium">
                   out of 100
                 </span>
               </div>
@@ -200,7 +200,7 @@ export function StudentLeaderboardView() {
               return (
                 <div
                   key={item.rank}
-                  className={`rounded-3xl border border-dashed border-slate-200 p-6 text-center text-slate-400 bg-white/50 ${isFirst ? "order-1 md:order-2 md:-mt-4" : isSecond ? "order-2 md:order-1" : "order-3"
+                  className={`rounded-3xl border border-dashed border-border p-6 text-center text-muted-foreground bg-card/50 ${isFirst ? "order-1 md:order-2 md:-mt-4" : isSecond ? "order-2 md:order-1" : "order-3"
                     }`}
                 >
                   <Icon className="size-6 mx-auto mb-1.5 opacity-30" />
@@ -220,27 +220,27 @@ export function StudentLeaderboardView() {
             return (
               <div
                 key={entry.id}
-                className={`relative overflow-hidden flex flex-col items-center p-6 sm:p-7 rounded-3xl border shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] text-center transition-all ${isFirst
-                  ? "order-1 md:order-2 md:-translate-y-4 bg-gradient-to-b from-white via-white to-[#FFF9EE]/90 border-yellow-300 py-9 shadow-[0_14px_30px_-5px_rgba(24,72,128,0.12)]"
+                className={`relative overflow-hidden flex flex-col items-center p-6 sm:p-7 rounded-3xl border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] text-center transition-all bg-card ${isFirst
+                  ? "order-1 md:order-2 md:-translate-y-4 border-amber-300 py-9 shadow-[0_6px_25px_-4px_rgba(24,72,128,0.12)]"
                   : isSecond
-                    ? "order-2 md:order-1 bg-gradient-to-b from-white via-white to-[#F0F6FF]/60 border-slate-200"
-                    : "order-3 bg-gradient-to-b from-white via-white to-[#FFF6EE]/70 border-amber-200"
-                  } ${entry.isCurrentUser ? "ring-2 ring-[#184880]" : ""}`}
+                    ? "order-2 md:order-1"
+                    : "order-3 border-amber-200"
+                  } ${entry.isCurrentUser ? "ring-2 ring-primary" : ""}`}
               >
                 {/* Crown / Medal Icon */}
                 <div className="mb-2">
                   <Icon
-                    className={`size-8 stroke-[2.2] ${item.color} ${isFirst ? "size-10 fill-yellow-400" : ""
+                    className={`size-8 stroke-[2.2] ${item.color} ${isFirst ? "size-10 fill-amber-400" : ""
                       }`}
                   />
                 </div>
 
                 {/* Avatar */}
                 <Avatar
-                  className={`mb-2 border-2 ${isFirst ? "size-16 border-yellow-400 shadow-xs" : "size-14 border-slate-200"
+                  className={`mb-2 border-2 ${isFirst ? "size-16 border-amber-400 shadow-xs" : "size-14 border-border"
                     }`}
                 >
-                  <AvatarFallback className="text-sm font-bold bg-[#EBF3FE] text-[#184880]">
+                  <AvatarFallback className="text-sm font-bold bg-secondary text-primary">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -248,33 +248,33 @@ export function StudentLeaderboardView() {
                 {/* Rank Badge */}
                 <span
                   className={`text-xs font-bold uppercase tracking-wider mb-1 px-3 py-0.5 rounded-full ${isFirst
-                    ? "bg-yellow-100 text-yellow-800"
+                    ? "bg-amber-100 text-amber-800"
                     : isSecond
-                      ? "bg-slate-100 text-slate-700"
-                      : "bg-amber-100 text-amber-800"
+                      ? "bg-secondary text-primary"
+                      : "bg-amber-50 text-amber-800"
                     }`}
                 >
                   {item.label} Place
                 </span>
 
                 {/* Student Name */}
-                <h4 className="font-bold text-slate-900 truncate max-w-full px-2 text-base mt-0.5">
+                <h4 className="font-bold text-foreground truncate max-w-full px-2 text-base mt-0.5">
                   {entry.studentName}
                   {entry.isCurrentUser && (
-                    <span className="text-xs text-[#184880] font-normal block">(You)</span>
+                    <span className="text-xs text-primary font-normal block">(You)</span>
                   )}
                 </h4>
 
-                <p className="text-xs text-slate-500 font-medium mb-3">
+                <p className="text-xs text-muted-foreground font-medium mb-3">
                   {entry.grade}
                 </p>
 
                 {/* Score */}
                 <div className="mt-auto pt-1">
-                  <span className="text-3xl font-black tabular-nums tracking-tight text-slate-900">
+                  <span className="text-3xl font-black tabular-nums tracking-tight text-foreground">
                     {entry.score}
                   </span>
-                  <span className="text-[11px] font-medium text-slate-400 block">
+                  <span className="text-[11px] font-medium text-muted-foreground block">
                     pts / 100
                   </span>
                 </div>
@@ -287,10 +287,10 @@ export function StudentLeaderboardView() {
       {/* 5. Ranks 4 to 10 List */}
       {restEntries.length > 0 && (
         <section className="space-y-3">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 px-1">
+          <h3 className="text-base sm:text-lg font-bold text-foreground px-1">
             Ranks 4 to 10
           </h3>
-          <div className="divide-y divide-slate-100 rounded-3xl bg-gradient-to-b from-white via-white to-[#F0F6FF]/30 border border-blue-100/60 shadow-[0_10px_25px_-5px_rgba(24,72,128,0.06),0_4px_10px_-4px_rgba(24,72,128,0.03)] overflow-hidden">
+          <div className="divide-y divide-border rounded-3xl bg-card border border-border shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] overflow-hidden">
             {restEntries.map((e) => {
               const displayRank = selectedGrade === "all" ? e.rank : e.gradeRank;
               const initials = e.studentName
@@ -303,26 +303,26 @@ export function StudentLeaderboardView() {
               return (
                 <div
                   key={e.id}
-                  className={`flex items-center justify-between p-4 sm:p-5 transition-colors ${e.isCurrentUser ? "bg-[#F0F6FF]" : "hover:bg-blue-50/40"
+                  className={`flex items-center justify-between p-4 sm:p-5 transition-colors ${e.isCurrentUser ? "bg-secondary/60" : "hover:bg-secondary/40"
                     }`}
                 >
                   {/* Left: Rank & Avatar & Name */}
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <span className="w-7 text-center text-sm sm:text-base font-black tabular-nums text-slate-400">
+                    <span className="w-7 text-center text-sm sm:text-base font-black tabular-nums text-muted-foreground">
                       #{displayRank}
                     </span>
 
-                    <Avatar className="size-10 border border-slate-200 shrink-0">
-                      <AvatarFallback className="text-xs font-bold bg-[#EBF3FE] text-[#184880]">
+                    <Avatar className="size-10 border border-border shrink-0">
+                      <AvatarFallback className="text-xs font-bold bg-secondary text-primary">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
 
                     <div className="min-w-0">
-                      <p className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                      <p className="text-sm sm:text-base font-bold text-foreground truncate">
                         {e.studentName}
                         {e.isCurrentUser && (
-                          <span className="text-xs text-[#184880] font-medium ml-1.5">
+                          <span className="text-xs text-primary font-medium ml-1.5">
                             (You)
                           </span>
                         )}
@@ -355,7 +355,7 @@ export function StudentLeaderboardView() {
                         </span>
                       )}
                       {e.movement === "new" && (
-                        <span className="text-[#184880] text-[10px] font-bold uppercase tracking-wider">
+                        <span className="text-primary text-[10px] font-bold uppercase tracking-wider">
                           New
                         </span>
                       )}

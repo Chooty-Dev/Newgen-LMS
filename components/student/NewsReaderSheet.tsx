@@ -42,34 +42,33 @@ export function NewsReaderSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        data-student-portal=""
         side="bottom"
-        className="student-portal sm:max-w-xl mx-auto rounded-t-3xl !bg-white !text-slate-800 border-t border-slate-100 p-6 sm:p-8"
+        className="sm:max-w-xl mx-auto rounded-t-3xl bg-card text-foreground border-t border-border p-6 sm:p-8"
       >
         <SheetHeader className="text-left space-y-2">
-          <div className="flex items-center gap-2 text-[#184880] font-bold text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
             <Megaphone className="size-4" />
             <span>Center News</span>
           </div>
-          <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 leading-snug">
+          <SheetTitle className="text-xl sm:text-2xl font-black tracking-tight text-foreground leading-snug">
             {announcement.title}
           </SheetTitle>
-          <SheetDescription className="text-xs text-slate-500 flex flex-wrap items-center gap-3">
+          <SheetDescription className="text-xs text-muted-foreground flex flex-wrap items-center gap-3">
             {announcement.authorName && (
-              <span className="flex items-center gap-1 font-medium text-slate-700">
-                <User className="size-3.5 text-slate-400" />
+              <span className="flex items-center gap-1 font-medium text-foreground">
+                <User className="size-3.5 text-muted-foreground" />
                 {announcement.authorName}
               </span>
             )}
             <span className="flex items-center gap-1">
-              <Calendar className="size-3.5 text-slate-400" />
+              <Calendar className="size-3.5 text-muted-foreground" />
               {dateStr}
             </span>
           </SheetDescription>
         </SheetHeader>
 
         {/* Content Body */}
-        <div className="my-6 p-5 rounded-3xl bg-slate-50 border border-slate-100 text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+        <div className="my-6 p-5 rounded-3xl bg-background border border-border text-sm text-foreground leading-relaxed whitespace-pre-line">
           {announcement.body}
         </div>
 
@@ -77,7 +76,7 @@ export function NewsReaderSheet({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="w-full h-11 rounded-full text-sm font-bold bg-[#184880] hover:bg-[#0F2C59] text-white shadow-sm transition-all"
+            className="w-full h-11 rounded-full text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all cursor-pointer"
           >
             Close Notice
           </button>

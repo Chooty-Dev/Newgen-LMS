@@ -23,6 +23,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Plus, Download, KeyRound, Trash2, Edit, Copy, Check, Users, Award, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { TeacherStudentsView } from "@/components/teacher/TeacherStudentsView";
+import { cn } from "@/lib/utils";
 
 interface StudentRecord {
   id: string;
@@ -39,6 +42,11 @@ interface StudentRecord {
 }
 
 export default function StudentsPage() {
+  const { user } = useAuth();
+  if (user?.role === "teacher") {
+    return <TeacherStudentsView />;
+  }
+
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
@@ -245,9 +253,20 @@ export default function StudentsPage() {
       header: "Status",
       cell: ({ row }) => {
         const g = row.original.group;
-        const label = g === "excellent" ? "Excellent" : g === "medium" ? "Good" : "Needs Help";
+        const isEx = g === "excellent";
+        const isWeak = g === "weak";
+        const label = isEx ? "Excellent" : isWeak ? "Needs Help" : "Good";
         return (
-          <span className="inline-flex rounded-full bg-muted px-4 py-1 text-sm font-semibold text-foreground">
+          <span
+            className={cn(
+              "inline-flex rounded-full px-3 py-0.5 text-xs font-bold",
+              isEx
+                ? "bg-emerald-100 text-emerald-700"
+                : isWeak
+                ? "bg-amber-100 text-amber-700"
+                : "bg-secondary text-primary border border-border"
+            )}
+          >
             {label}
           </span>
         );

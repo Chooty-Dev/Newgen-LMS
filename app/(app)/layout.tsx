@@ -8,6 +8,7 @@ import { IdleTimeout } from "@/components/layout/IdleTimeout";
 import { CenterSwitchOverlay } from "@/components/layout/CenterSwitchOverlay";
 import { FloatingSignOut } from "@/components/layout/FloatingSignOut";
 import { StudentShell } from "@/components/student/StudentShell";
+import { TeacherShell } from "@/components/teacher/TeacherShell";
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -30,9 +31,14 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // If role is student, use StudentShell (No floating sign out on student portal)
+  // If role is student, use StudentShell
   if (user?.role === "student") {
     return <StudentShell>{children}</StudentShell>;
+  }
+
+  // If role is teacher, use dedicated TeacherShell
+  if (user?.role === "teacher") {
+    return <TeacherShell>{children}</TeacherShell>;
   }
 
   // Staff, Teacher, Admin, Super Admin Shell

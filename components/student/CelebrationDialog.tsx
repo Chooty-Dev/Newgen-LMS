@@ -126,21 +126,20 @@ export function CelebrationDialog() {
 
       <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
         <DialogContent
-          data-student-portal=""
-          className="student-portal max-w-sm text-center p-8 rounded-3xl !bg-white !text-slate-800 border border-slate-100 shadow-2xl space-y-5"
+          className="max-w-sm text-center p-8 rounded-3xl bg-card text-foreground border border-border shadow-2xl space-y-5"
         >
           <DialogHeader className="items-center text-center space-y-3">
             <div
               className={`size-20 rounded-full flex items-center justify-center mx-auto border ${
                 isFirst
-                  ? "bg-yellow-50 text-yellow-500 border-yellow-200"
+                  ? "bg-amber-50 text-amber-500 border-amber-200"
                   : cel.rank === 2
                   ? "bg-slate-50 text-slate-500 border-slate-200"
                   : "bg-amber-50 text-amber-600 border-amber-200"
               }`}
             >
               {isFirst ? (
-                <Crown className="size-11 stroke-[2.2] fill-yellow-400" />
+                <Crown className="size-11 stroke-[2.2] fill-amber-400" />
               ) : cel.rank <= 3 ? (
                 <Medal className="size-11 stroke-[2.2]" />
               ) : (
@@ -150,20 +149,20 @@ export function CelebrationDialog() {
 
             <DialogTitle
               className={`text-2xl font-black tracking-tight ${
-                isFirst ? "text-yellow-600" : "text-slate-900"
+                isFirst ? "text-amber-600" : "text-foreground"
               }`}
             >
               {isFirst ? "You are #1 in LMS!" : "You made the Top 10!"}
             </DialogTitle>
 
-            <DialogDescription className="text-sm text-slate-500 leading-relaxed">
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
               {isFirst
                 ? `Great job, ${cel.name}! You are holding the top spot in our education center today.`
                 : `Congratulations, ${cel.name}! You are ranked #${cel.rank} across the center.`}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-3.5 rounded-2xl bg-[#EBF3FE] text-xs font-bold text-[#184880]">
+          <div className="p-3.5 rounded-2xl bg-secondary text-xs font-bold text-primary">
             {isFirst
               ? "Be a role model and keep up your outstanding learning habits!"
               : "Keep going to stay strong in the Top 10!"}
@@ -172,7 +171,7 @@ export function CelebrationDialog() {
           <button
             type="button"
             onClick={handleClose}
-            className="w-full h-11 rounded-full text-sm font-bold bg-[#184880] hover:bg-[#0F2C59] text-white shadow-sm transition-all"
+            className="w-full h-11 rounded-full text-sm font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all cursor-pointer"
           >
             Awesome!
           </button>

@@ -112,7 +112,7 @@ export function AppSidebar({
                   "flex items-center gap-3.5 px-5 py-3 rounded-full text-base font-medium transition-all shrink-0",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-sm font-semibold"
-                    : "text-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-primary"
                 )}
               >
                 <Icon className="size-5 shrink-0 stroke-[1.9]" />
@@ -161,7 +161,7 @@ export function AppSidebar({
       {/* Desktop Collapsible Sidebar */}
       <aside
         className={cn(
-          "hidden md:block shrink-0 h-screen sticky top-0 transition-all duration-300 ease-in-out overflow-hidden",
+          "hidden md:block shrink-0 h-screen sticky top-0 transition-all duration-300 ease-in-out overflow-hidden border-r border-border bg-background",
           openDesktop ? "w-72" : "w-0 border-none"
         )}
       >

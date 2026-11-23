@@ -51,152 +51,68 @@
 }
 
 /* =========================================
-   LIGHT THEME
+   LIGHT THEME (NEWGEN BLUE & WHITE UNIFIED)
 ========================================= */
 
-:root {
-  color-scheme: light;
-
-  --background: #E1DCC9;
-  --foreground: #1F150C;
-
-  --card: #F3F0E5;
-  --card-foreground: #1F150C;
-
-  --popover: #F3F0E5;
-  --popover-foreground: #1F150C;
-
-  --primary: #000000;
-  --primary-foreground: #E1DCC9;
-
-  --secondary: #412D15;
-  --secondary-foreground: #E1DCC9;
-
-  --muted: #D4CEBA;
-  --muted-foreground: #5C4A34;
-
-  --accent: #E1DCC9;
-  --accent-foreground: #412D15;
-
-  --destructive: #A83232;
-  --destructive-foreground: #FFFFFF;
-
-  --border: #C8BFA8;
-  --input: #C8BFA8;
-  --ring: #412D15;
-
-  /* Charts */
-  --chart-1: #000000;
-  --chart-2: #1F150C;
-  --chart-3: #412D15;
-  --chart-4: #A99B7A;
-  --chart-5: #E1DCC9;
-
-  /* Sidebar */
-  --sidebar: #F3F0E5;
-  --sidebar-foreground: #1F150C;
-
-  --sidebar-primary: #000000;
-  --sidebar-primary-foreground: #E1DCC9;
-
-  --sidebar-accent: #E1DCC9;
-  --sidebar-accent-foreground: #412D15;
-
-  --sidebar-border: #C8BFA8;
-  --sidebar-ring: #412D15;
-
-  --radius: 1.5rem;
-}
-
-/* =========================================
-   STUDENT PORTAL LIGHT THEME (EDULEARN)
-========================================= */
+:root,
+.dark,
 .student-portal,
 [data-student-portal] {
   color-scheme: light;
-  --background: #F5F8FC;
+
+  /* Pure White Background */
+  --background: #FFFFFF;
   --foreground: #0F172A;
 
-  --card: #FFFFFF;
+  /* Card: Soft light blue tint, cleanly elevated against pure white background */
+  --card: #F4F8FD;
   --card-foreground: #0F172A;
 
   --popover: #FFFFFF;
   --popover-foreground: #0F172A;
 
+  /* Primary: EduLearn Deep Navy Blue */
   --primary: #184880;
   --primary-foreground: #FFFFFF;
 
+  /* Secondary: Soft Sky Blue */
   --secondary: #EBF3FE;
   --secondary-foreground: #184880;
 
-  --muted: #F1F5F9;
-  --muted-foreground: #64748B;
+  /* Muted: Subtle sky-tinted slate */
+  --muted: #EDF4FC;
+  --muted-foreground: #627D98;
 
-  --accent: #EBF3FE;
+  /* Accent: Clean sky blue highlight */
+  --accent: #E2EEFC;
   --accent-foreground: #184880;
 
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
 
-  --border: #E2E8F0;
-  --input: #E2E8F0;
+  /* Borders & Inputs: Soft light blue border */
+  --border: #DDE8F8;
+  --input: #DDE8F8;
   --ring: #184880;
-}
-
-/* =========================================
-   DARK THEME
-========================================= */
-
-.dark {
-  color-scheme: dark;
-
-  --background: #000000;
-  --foreground: #E1DCC9;
-
-  --card: #1F150C;
-  --card-foreground: #E1DCC9;
-
-  --popover: #1F150C;
-  --popover-foreground: #E1DCC9;
-
-  --primary: #E1DCC9;
-  --primary-foreground: #000000;
-
-  --secondary: #412D15;
-  --secondary-foreground: #E1DCC9;
-
-  --muted: #292016;
-  --muted-foreground: #C5B99E;
-
-  --accent: #412D15;
-  --accent-foreground: #E1DCC9;
-
-  --destructive: #D85A5A;
-  --destructive-foreground: #FFFFFF;
-
-  --border: #493722;
-  --input: #493722;
-  --ring: #A99B7A;
 
   /* Charts */
-  --chart-1: #E1DCC9;
-  --chart-2: #C5B99E;
-  --chart-3: #A99B7A;
-  --chart-4: #795A32;
-  --chart-5: #412D15;
+  --chart-1: #184880;
+  --chart-2: #0284C7;
+  --chart-3: #38BDF8;
+  --chart-4: #60A5FA;
+  --chart-5: #93C5FD;
 
   /* Sidebar */
-  --sidebar: #1F150C;
-  --sidebar-foreground: #E1DCC9;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #184880;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #EBF3FE;
+  --sidebar-accent-foreground: #184880;
+  --sidebar-border: #DDE8F8;
+  --sidebar-ring: #184880;
 
-  --sidebar-primary: #E1DCC9;
-  --sidebar-primary-foreground: #000000;
-
-  --sidebar-accent: #412D15;
-  --sidebar-accent-foreground: #E1DCC9;
-
-  --sidebar-border: #493722;
-  --sidebar-ring: #A99B7A;
+  --radius: 1.5rem;
 }
 
 /* =========================================
