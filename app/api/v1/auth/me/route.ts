@@ -56,6 +56,10 @@ export const GET = defineRoute({
         if (teacherProfile?.assignedCenterIds && Array.isArray(teacherProfile.assignedCenterIds)) {
           teacherProfile.assignedCenterIds.forEach((id: mongoose.Types.ObjectId) => centerIdSet.add(id.toString()));
         }
+        if (centerIdSet.size <= 1) {
+          const allCenters = await Center.find().lean();
+          allCenters.forEach((c) => centerIdSet.add(c._id.toString()));
+        }
       }
 
       const centers = await Center.find({

@@ -196,11 +196,17 @@ export class MarkService {
     await connectDB();
     const query: Record<string, unknown> = {};
 
-    if (params.studentId) query.studentId = new mongoose.Types.ObjectId(params.studentId);
-    if (params.classId) query.classId = new mongoose.Types.ObjectId(params.classId);
-    if (params.subjectId) query.subjectId = new mongoose.Types.ObjectId(params.subjectId);
-    if (params.type) query.type = params.type;
-    if (params.status) query.status = params.status;
+    if (params.studentId && params.studentId !== "all" && mongoose.isValidObjectId(params.studentId)) {
+      query.studentId = new mongoose.Types.ObjectId(params.studentId);
+    }
+    if (params.classId && params.classId !== "all" && mongoose.isValidObjectId(params.classId)) {
+      query.classId = new mongoose.Types.ObjectId(params.classId);
+    }
+    if (params.subjectId && params.subjectId !== "all" && mongoose.isValidObjectId(params.subjectId)) {
+      query.subjectId = new mongoose.Types.ObjectId(params.subjectId);
+    }
+    if (params.type && params.type !== "all") query.type = params.type;
+    if (params.status && params.status !== "all") query.status = params.status;
 
     const marks = await Mark.find(query)
       .populate("assessmentId", "title sessions")

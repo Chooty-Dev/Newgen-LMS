@@ -35,6 +35,8 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
     "staff.update",
     "staff.delete",
     "staff.assign",
+    "staff.resetPassword",
+    "marks.evaluate",
     "marks.view",
     "marks.update",
     "marks.export",

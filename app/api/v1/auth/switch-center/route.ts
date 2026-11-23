@@ -68,6 +68,8 @@ export const POST = defineRoute({
         if (teacherProfile?.assignedCenterIds) {
           allowedCenterIds.push(...teacherProfile.assignedCenterIds.map((id) => id.toString()));
         }
+        const allCenters = await Center.find().select("_id").lean();
+        allowedCenterIds.push(...allCenters.map((c) => c._id.toString()));
       }
 
       const isAllowed = allowedCenterIds.includes(body.centerId);

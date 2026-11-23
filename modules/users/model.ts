@@ -19,6 +19,7 @@ export interface IUser extends Document {
   failedLoginCount: number;
   lockUntil?: Date;
   permissionsVersion: number;
+  createdBy?: mongoose.Types.ObjectId;
   deletedAt?: Date;
   deletedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -48,6 +49,7 @@ const UserSchema = new Schema<IUser>(
     failedLoginCount: { type: Number, default: 0 },
     lockUntil: { type: Date },
     permissionsVersion: { type: Number, default: 1 },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", index: true },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: "User" },
   },

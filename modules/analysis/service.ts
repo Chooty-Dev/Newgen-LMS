@@ -2,6 +2,7 @@ import { Mark } from "@/modules/marks/model";
 import { Attendance } from "@/modules/attendance/model";
 import { PerformanceSnapshot } from "./model";
 import { User, StudentProfile } from "@/modules/users/model";
+import { ClassModel, Enrollment } from "@/modules/classes/model";
 import {
   explainStudent,
   MarkItem,
@@ -27,6 +28,9 @@ export class AnalysisService {
   // Get complete analysis for a student
   static async getStudentAnalysis(studentId: string) {
     await connectDB();
+    if (!studentId || !mongoose.isValidObjectId(studentId)) {
+      throw new Error("Student not found");
+    }
     const sId = new mongoose.Types.ObjectId(studentId);
 
     const user = await User.findById(sId).lean();
@@ -193,8 +197,8 @@ export class AnalysisService {
     };
   }
 
-  // Teacher & Admin Dashboard & Analytics data
-  static async getTeacherAnalytics(centerId?: string) {
+  // Teacher & Admin Dashboard & Analytics data (Strictly scoped when teacherId is passed)
+  static async getTeacherAnalytics(centerId?: string, teacherId?: string) {
     await connectDB();
 
     const centerObjId =
@@ -202,15 +206,68 @@ export class AnalysisService {
         ? new mongoose.Types.ObjectId(centerId)
         : null;
 
-    // Fetch students list with snapshots
-    const students = await User.find({
+    let studentFilter: Record<string, unknown> = {
       role: "student",
       deletedAt: null,
       ...(centerObjId ? { centerId: centerObjId } : {}),
-    })
-      .select("_id name username")
+    };
+
+    const studentClassMap = new Map<string, string>();
+
+    if (teacherId) {
+      const teacherObjId = new mongoose.Types.ObjectId(teacherId);
+
+      // Find teacher's active classes
+      const myClasses = await ClassModel.find({
+        teacherId: teacherObjId,
+        deletedAt: null,
+      }).select("_id name").lean();
+
+      const myClassIds = myClasses.map((c) => c._id);
+      const classNameMap = new Map(myClasses.map((c) => [c._id.toString(), c.name]));
+
+      // Find active enrollments in those classes
+      const enrollments = myClassIds.length > 0
+        ? await Enrollment.find({
+            classId: { $in: myClassIds },
+            status: "active",
+          }).lean()
+        : [];
+
+      enrollments.forEach((e) => {
+        studentClassMap.set(e.studentId.toString(), classNameMap.get(e.classId.toString()) || "Class");
+      });
+
+      const enrolledStudentIds = enrollments.map((e) => e.studentId);
+
+      // Include students created by this teacher
+      const createdStudents = await User.find({
+        createdBy: teacherObjId,
+        role: "student",
+        deletedAt: null,
+      }).select("_id").lean();
+
+      const createdIds = createdStudents.map((u) => u._id);
+
+      const validIds = Array.from(
+        new Set([...enrolledStudentIds.map((id) => id.toString()), ...createdIds.map((id) => id.toString())])
+      ).map((id) => new mongoose.Types.ObjectId(id));
+
+      studentFilter._id = { $in: validIds };
+    }
+
+    // Fetch students list
+    const students = await User.find(studentFilter)
+      .select("_id name username createdAt")
       .lean();
+
     const studentIds = students.map((s) => s._id);
+
+    // Fetch student profiles for grade info
+    const profiles = studentIds.length > 0
+      ? await StudentProfile.find({ userId: { $in: studentIds } }).select("userId grade").lean()
+      : [];
+    const gradeMap = new Map(profiles.map((p) => [p.userId.toString(), p.grade || "Grade 11"]));
 
     const snapshots =
       studentIds.length > 0
@@ -232,7 +289,9 @@ export class AnalysisService {
         id: st._id.toString(),
         name: st.name,
         username: st.username,
-        score: snap?.score ?? 68,
+        grade: gradeMap.get(st._id.toString()) || "Grade 11",
+        className: studentClassMap.get(st._id.toString()) || "Class Batch",
+        score: snap?.score ?? 70,
         group: snap?.group ?? "medium",
       };
     });
@@ -245,18 +304,16 @@ export class AnalysisService {
     // Top students (highest ranking)
     const topStudents = [...studentScores].sort((a, b) => b.score - a.score).slice(0, 5);
 
-    // Low performing students
-    const lowPerformers = [...studentScores].filter((s) => s.group === "weak" || s.score < 55).slice(0, 5);
+    // Low performing students (sorted lowest score first)
+    const lowPerformers = [...studentScores]
+      .filter((s) => s.group === "weak" || s.score < 55)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 6);
 
-    // Low performing student trends for multi-line area chart (at least 3 students)
-    const sampleLowPerformers = studentScores
-      .filter((s) => s.group === "weak")
-      .slice(0, 3);
-
-    // If less than 3 weak, fallback to lowest 3
+    // 3 most recent low-performing students for trend chart
     const targetLowStudents =
-      sampleLowPerformers.length >= 3
-        ? sampleLowPerformers
+      lowPerformers.length >= 3
+        ? lowPerformers.slice(0, 3)
         : [...studentScores].sort((a, b) => a.score - b.score).slice(0, 3);
 
     const lowStudentTrends = targetLowStudents.map((st) => {
@@ -266,14 +323,12 @@ export class AnalysisService {
         .slice(-6);
 
       const history =
-        stSnapshots.length >= 3
+        stSnapshots.length >= 2
           ? stSnapshots.map((s) => ({ period: s.period, score: s.score }))
           : [
-              { period: "Week 1", score: st.score + 18 },
-              { period: "Week 2", score: st.score + 12 },
-              { period: "Week 3", score: st.score + 8 },
-              { period: "Week 4", score: st.score + 3 },
-              { period: "Week 5", score: st.score },
+              { period: "Week 1", score: Math.min(100, st.score + 10) },
+              { period: "Week 2", score: Math.min(100, st.score + 6) },
+              { period: "Week 3", score: st.score },
             ];
 
       return {
@@ -283,15 +338,45 @@ export class AnalysisService {
       };
     });
 
+    // Teacher Profile Card Stats
+    let teacherProfile = null;
+    if (teacherId) {
+      const teacherUser = await User.findById(teacherId).lean();
+      if (teacherUser) {
+        const diffMonths = Math.max(
+          1,
+          Math.round((Date.now() - new Date(teacherUser.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30))
+        );
+        const classAvg =
+          studentScores.length > 0
+            ? Math.round(studentScores.reduce((sum, s) => sum + s.score, 0) / studentScores.length)
+            : 0;
+        const passRate =
+          studentScores.length > 0
+            ? Math.round(((excellentCount + mediumCount) / studentScores.length) * 100)
+            : 100;
+
+        teacherProfile = {
+          name: teacherUser.name,
+          email: teacherUser.email,
+          accountAgeMonths: diffMonths,
+          classAverageScore: classAvg,
+          overallResultRate: passRate,
+          totalEnrolledStudents: students.length,
+        };
+      }
+    }
+
     return {
       groupDistribution: [
-        { name: "Excellent", count: excellentCount, color: "var(--chart-1)" },
-        { name: "Good", count: mediumCount, color: "var(--chart-2)" },
-        { name: "Needs Help", count: weakCount, color: "var(--chart-3)" },
+        { name: "Excellent", count: excellentCount, value: excellentCount, color: "#184880" },
+        { name: "Good", count: mediumCount, value: mediumCount, color: "#0284c7" },
+        { name: "Needs Help", count: weakCount, value: weakCount, color: "#f59e0b" },
       ],
       topStudents,
       lowPerformers,
       lowStudentTrends,
+      teacherProfile,
     };
   }
 }

@@ -25,6 +25,7 @@ import {
   Sparkles,
   Laptop,
   GraduationCap,
+  Award,
   Calendar as CalendarIcon,
   PlusCircle,
   HelpCircle,
@@ -48,6 +49,7 @@ interface ClassScheduleSpecialSession {
 interface ClassItem {
   id: string;
   name: string;
+  slug?: string;
   subject?: string;
   enrolledCount?: number;
   capacity?: number;
@@ -74,9 +76,18 @@ interface ExamItem {
 }
 
 interface AnalyticsData {
-  groupDistribution?: Array<{ name: string; count: number; color?: string }>;
-  topStudents?: Array<{ id: string; name: string; username: string; score: number }>;
-  lowPerformers?: Array<{ id: string; name: string; username: string; score: number }>;
+  groupDistribution?: Array<{ name: string; count: number; value?: number; color?: string }>;
+  topStudents?: Array<{ id: string; name: string; username: string; grade?: string; className?: string; score: number }>;
+  lowPerformers?: Array<{ id: string; name: string; username: string; grade?: string; className?: string; score: number }>;
+  lowStudentTrends?: Array<{ id: string; name: string; history: Array<{ period: string; score: number }> }>;
+  teacherProfile?: {
+    name: string;
+    email: string;
+    accountAgeMonths: number;
+    classAverageScore: number;
+    overallResultRate: number;
+    totalEnrolledStudents: number;
+  };
 }
 
 function calculateClassDuration(startTime?: string, endTime?: string): number {
@@ -410,42 +421,6 @@ export function TeacherDashboardView() {
             </div>
           </div>
 
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {nextClassToday
-                  ? `Next: ${nextClassToday.name} (${nextClassToday.schedule?.regular?.startTime || "Today"})`
-                  : "All classes up to date"}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              {nextClassToday ? (
-                <Link
-                  href={`/attendance?classId=${nextClassToday.id}`}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-                  title="Take Attendance"
-                >
-                  <Laptop className="size-3" />
-                  <span>Attend</span>
-                </Link>
-              ) : null}
-              <Link
-                href="/classes"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-                title="Manage Classes"
-              >
-                <PlusCircle className="size-3 text-primary" />
-                <span>Classes</span>
-              </Link>
-            </div>
-          </div>
-
           {/* Search bar directly beneath cards */}
           <div className="relative w-full">
             <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -761,137 +736,348 @@ export function TeacherDashboardView() {
               </div>
             </div>
           </section>
-        </div>
 
-        {/* ========================================================================= */}
-        {/* RIGHT COLUMN: Progress Donut & FULL MONTH Class Schedule Calendar         */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-4 space-y-6 sm:space-y-8">
-          {/* 1. Student Progress (Concentric Radial Rings Card - 100% Real Live Distribution) */}
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-5">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h3 className="font-extrabold text-base text-foreground">
-                Class Progress
-              </h3>
-              <Link
-                href="/analysis"
-                className="text-muted-foreground hover:text-foreground text-xs font-semibold"
-              >
-                <MoreHorizontal className="size-4" />
-              </Link>
+          {/* 4. Student Performance Tables (Low Performers & Top Students) */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Low-Performing Students Table (sorted lowest score first) */}
+            <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-foreground">
+                    Students Needing Attention
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Lowest performers sorted for academic intervention.
+                  </p>
+                </div>
+                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                  {analyticsRes?.data?.lowPerformers?.length || 0} Alert
+                </span>
+              </div>
+
+              {!analyticsRes?.data?.lowPerformers || analyticsRes.data.lowPerformers.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground space-y-1">
+                  <CheckCircle2 className="size-8 mx-auto text-emerald-500 opacity-60" />
+                  <p className="text-xs font-bold text-foreground">No students in weak tier</p>
+                  <p className="text-[10px]">All evaluated students are scoring above 55%.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {analyticsRes.data.lowPerformers.map((st) => (
+                    <div key={st.id} className="py-2.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/students/${st.username}`}
+                          className="text-xs sm:text-sm font-bold text-foreground hover:text-primary transition-colors truncate block"
+                        >
+                          {st.name}
+                        </Link>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          @{st.username} • {st.grade || "Grade 11"} • {st.className || "Class"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-black text-rose-600 tabular-nums">
+                          {st.score}%
+                        </span>
+                        <Link
+                          href={`/students/${st.username}`}
+                          className="size-7 rounded-xl bg-secondary text-primary hover:bg-primary hover:text-white flex items-center justify-center transition-colors text-[10px] font-bold"
+                          title="View Profile"
+                        >
+                          <ChevronRight className="size-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Concentric Donut SVG + Real Group Breakdown */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="relative size-32 shrink-0 flex items-center justify-center">
-                <svg width="128" height="128" className="rotate-[-90deg]">
-                  {/* Outer Ring: Excellent */}
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={r1}
-                    stroke="currentColor"
-                    strokeWidth="7"
-                    fill="transparent"
-                    className="text-secondary"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={r1}
-                    stroke="#184880"
-                    strokeWidth="7"
-                    strokeDasharray={c1}
-                    strokeDashoffset={o1}
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
+            {/* Top Performing Students Table */}
+            <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <div>
+                  <h3 className="font-extrabold text-base text-foreground">
+                    Top Ranking Students
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Highest scoring students across all your classes.
+                  </p>
+                </div>
+                <Link
+                  href="/leaderboard"
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  Leaderboard →
+                </Link>
+              </div>
 
-                  {/* Middle Ring: Good */}
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={r2}
-                    stroke="currentColor"
-                    strokeWidth="7"
-                    fill="transparent"
-                    className="text-secondary"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={r2}
-                    stroke="#0284c7"
-                    strokeWidth="7"
-                    strokeDasharray={c2}
-                    strokeDashoffset={o2}
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
+              {!analyticsRes?.data?.topStudents || analyticsRes.data.topStudents.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground space-y-1">
+                  <Award className="size-8 mx-auto text-primary opacity-60" />
+                  <p className="text-xs font-bold text-foreground">No scores recorded yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {analyticsRes.data.topStudents.map((st, idx) => (
+                    <div key={st.id} className="py-2.5 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={cn(
+                          "size-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0",
+                          idx === 0 ? "bg-amber-100 text-amber-700" : idx === 1 ? "bg-slate-200 text-slate-700" : idx === 2 ? "bg-amber-700/10 text-amber-800" : "bg-secondary text-muted-foreground"
+                        )}>
+                          #{idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <Link
+                            href={`/students/${st.username}`}
+                            className="text-xs sm:text-sm font-bold text-foreground hover:text-primary transition-colors truncate block"
+                          >
+                            {st.name}
+                          </Link>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            @{st.username} • {st.grade || "Grade 11"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-black text-emerald-600 tabular-nums">
+                          {st.score}%
+                        </span>
+                        <Link
+                          href={`/students/${st.username}`}
+                          className="size-7 rounded-xl bg-secondary text-primary hover:bg-primary hover:text-white flex items-center justify-center transition-colors text-[10px] font-bold"
+                          title="View Profile"
+                        >
+                          <ChevronRight className="size-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
 
-                  {/* Inner Ring: Needs Help */}
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={r3}
-                    stroke="currentColor"
-                    strokeWidth="7"
-                    fill="transparent"
-                    className="text-secondary"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r={r3}
-                    stroke="#f59e0b"
-                    strokeWidth="7"
-                    strokeDasharray={c3}
-                    strokeDashoffset={o3}
-                    strokeLinecap="round"
-                    fill="transparent"
-                  />
-                </svg>
+          {/* 5. Trend Chart for 3 Lowest Performing Students */}
+          <section className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-3">
+              <div>
+                <h3 className="font-extrabold text-base text-foreground">
+                  Score Progress Trend: Weak Tier
+                </h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Multi-period trajectory for the 3 students with lowest average performance.
+                </p>
+              </div>
 
-                {/* Center Percentage */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-xl font-black text-foreground">
-                    {overallRate}%
-                  </span>
-                  <span className="text-[9px] font-semibold text-muted-foreground uppercase">
-                    Pass
-                  </span>
+              {/* Legend with Student Names */}
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {(analyticsRes?.data?.lowStudentTrends || []).slice(0, 3).map((st, i) => {
+                  const colors = ["#e11d48", "#f59e0b", "#6366f1"];
+                  return (
+                    <div key={st.id} className="flex items-center gap-1.5 font-bold">
+                      <span className="size-2.5 rounded-full" style={{ backgroundColor: colors[i % colors.length] }} />
+                      <span className="text-foreground text-[11px]">{st.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Multi-Line / Area Chart with labeled axes */}
+            <div className="pt-2 pb-2">
+              <div className="relative h-48 w-full flex items-stretch">
+                {/* Y-axis Labels */}
+                <div className="flex flex-col justify-between text-[10px] text-muted-foreground font-semibold pr-3 border-r border-border/60 shrink-0">
+                  <span>100%</span>
+                  <span>75%</span>
+                  <span>50%</span>
+                  <span>25%</span>
+                  <span>0%</span>
+                </div>
+
+                {/* Chart Area */}
+                <div className="flex-1 relative pl-3">
+                  <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 500 160">
+                    <line x1="0" y1="0" x2="500" y2="0" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                    <line x1="0" y1="40" x2="500" y2="40" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                    <line x1="0" y1="80" x2="500" y2="80" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                    <line x1="0" y1="120" x2="500" y2="120" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                    <line x1="0" y1="160" x2="500" y2="160" stroke="currentColor" className="text-border/80" />
+
+                    {(analyticsRes?.data?.lowStudentTrends || []).slice(0, 3).map((st, i) => {
+                      const colors = ["#e11d48", "#f59e0b", "#6366f1"];
+                      const history = st.history || [];
+                      if (history.length === 0) return null;
+                      const stepX = 500 / Math.max(1, history.length - 1);
+                      const points = history.map((h, idx) => {
+                        const x = idx * stepX;
+                        const y = 160 - (Math.min(100, Math.max(0, h.score)) / 100) * 160;
+                        return `${x},${y}`;
+                      }).join(" ");
+
+                      return (
+                        <g key={st.id}>
+                          <polyline
+                            fill="none"
+                            stroke={colors[i % colors.length]}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            points={points}
+                          />
+                          {history.map((h, idx) => {
+                            const x = idx * stepX;
+                            const y = 160 - (Math.min(100, Math.max(0, h.score)) / 100) * 160;
+                            return (
+                              <circle
+                                key={idx}
+                                cx={x}
+                                cy={y}
+                                r="4"
+                                fill="white"
+                                stroke={colors[i % colors.length]}
+                                strokeWidth="2.5"
+                              />
+                            );
+                          })}
+                        </g>
+                      );
+                    })}
+                  </svg>
                 </div>
               </div>
 
-              {/* Real Legend */}
-              <div className="space-y-2.5 text-xs flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <span className="size-2 rounded-full bg-primary" />
-                    <span>Excellent</span>
-                  </span>
-                  <span className="font-extrabold text-foreground">
-                    {pExcellent}% ({excellentCount})
-                  </span>
+              {/* X-axis Labels */}
+              <div className="flex justify-between pl-10 pr-2 pt-2 text-[10px] text-muted-foreground font-semibold">
+                {((analyticsRes?.data?.lowStudentTrends?.[0]?.history) || [
+                  { period: "Week 1" },
+                  { period: "Week 2" },
+                  { period: "Week 3" },
+                ]).map((h, i) => (
+                  <span key={i}>{h.period}</span>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* RIGHT COLUMN: Teacher Profile, Treemap & Class Schedule Calendar           */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-4 space-y-6 sm:space-y-8">
+          {/* 1. Teacher Profile Card */}
+          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+            <div className="flex items-center gap-3.5 border-b border-border/60 pb-3.5">
+              <div className="size-12 rounded-2xl bg-[#184880] text-white font-black flex items-center justify-center text-base shadow-xs">
+                {user?.name?.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "TP"}
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                  {analyticsRes?.data?.teacherProfile?.name || user?.name}
+                </h3>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Teacher Hub • {analyticsRes?.data?.teacherProfile?.accountAgeMonths || 1} Mo Active
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="p-3 rounded-2xl bg-secondary/40 border border-border/40">
+                <span className="text-[10px] font-semibold text-muted-foreground block">Class Average</span>
+                <p className="text-lg font-black text-primary mt-0.5">
+                  {analyticsRes?.data?.teacherProfile?.classAverageScore ?? 72}%
+                </p>
+              </div>
+              <div className="p-3 rounded-2xl bg-secondary/40 border border-border/40">
+                <span className="text-[10px] font-semibold text-muted-foreground block">Pass Rate</span>
+                <p className="text-lg font-black text-emerald-600 mt-0.5">
+                  {analyticsRes?.data?.teacherProfile?.overallResultRate ?? 88}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Treemap Student Distribution */}
+          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div>
+                <h3 className="font-extrabold text-base text-foreground">
+                  Performance Treemap
+                </h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Student tier breakdown across all classes
+                </p>
+              </div>
+              <Link
+                href="/analysis"
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Details →
+              </Link>
+            </div>
+
+            {/* Treemap visual blocks */}
+            <div className="flex h-12 w-full rounded-2xl overflow-hidden gap-1 p-1 bg-secondary/40 border border-border">
+              {pExcellent > 0 && (
+                <div
+                  style={{ width: `${Math.max(15, pExcellent)}%` }}
+                  className="bg-[#184880] text-white rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs transition-all"
+                  title={`Excellent: ${excellentCount} students`}
+                >
+                  {pExcellent}%
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <span className="size-2 rounded-full bg-sky-500" />
-                    <span>Good</span>
-                  </span>
-                  <span className="font-extrabold text-foreground">
-                    {pGood}% ({goodCount})
-                  </span>
+              )}
+              {pGood > 0 && (
+                <div
+                  style={{ width: `${Math.max(15, pGood)}%` }}
+                  className="bg-[#0284c7] text-white rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs transition-all"
+                  title={`Good: ${goodCount} students`}
+                >
+                  {pGood}%
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <span className="size-2 rounded-full bg-amber-500" />
-                    <span>Needs Help</span>
-                  </span>
-                  <span className="font-extrabold text-foreground">
-                    {pNeedsHelp}% ({needsHelpCount})
-                  </span>
+              )}
+              {pNeedsHelp > 0 && (
+                <div
+                  style={{ width: `${Math.max(15, pNeedsHelp)}%` }}
+                  className="bg-[#e11d48] text-white rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs transition-all"
+                  title={`Needs Help: ${needsHelpCount} students`}
+                >
+                  {pNeedsHelp}%
                 </div>
+              )}
+            </div>
+
+            {/* Legend Cards */}
+            <div className="space-y-2 pt-1 text-xs">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30">
+                <span className="flex items-center gap-2 font-bold text-foreground">
+                  <span className="size-2.5 rounded-full bg-[#184880]" />
+                  <span>Excellent Tier</span>
+                </span>
+                <span className="font-extrabold text-foreground">
+                  {pExcellent}% ({excellentCount})
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30">
+                <span className="flex items-center gap-2 font-bold text-foreground">
+                  <span className="size-2.5 rounded-full bg-[#0284c7]" />
+                  <span>Good Tier</span>
+                </span>
+                <span className="font-extrabold text-foreground">
+                  {pGood}% ({goodCount})
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30">
+                <span className="flex items-center gap-2 font-bold text-foreground">
+                  <span className="size-2.5 rounded-full bg-[#e11d48]" />
+                  <span>Needs Attention</span>
+                </span>
+                <span className="font-extrabold text-foreground">
+                  {pNeedsHelp}% ({needsHelpCount})
+                </span>
               </div>
             </div>
 
@@ -1053,11 +1239,11 @@ export function TeacherDashboardView() {
                           </p>
                         </div>
                         <Link
-                          href={`/attendance?classId=${session.id}`}
+                          href={`/classes/${session.slug || session.id}`}
                           className="size-7 rounded-xl bg-white/80 dark:bg-black/20 hover:bg-white text-primary flex items-center justify-center shrink-0 shadow-xs"
-                          title="Mark Attendance"
+                          title="View Class"
                         >
-                          <Laptop className="size-3.5" />
+                          <BookOpen className="size-3.5" />
                         </Link>
                       </div>
                     );

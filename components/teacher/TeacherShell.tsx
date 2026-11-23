@@ -8,22 +8,35 @@ import {
   GraduationCap,
   LayoutDashboard,
   BookOpen,
-  Calendar,
+  CheckSquare,
+  TrendingUp,
   FileCheck,
+  BookMarked,
   Bell,
   Award,
   Trophy,
   Settings,
-  ShieldCheck,
   LogOut,
-  Search,
   Menu,
   X,
   ChevronDown,
   Sparkles,
   Users,
+  UserCheck,
+  Building2,
+  ArrowLeftRight,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { CenterSwitchOverlay } from "@/components/layout/CenterSwitchOverlay";
 
 interface TeacherShellProps {
   children: React.ReactNode;
@@ -32,12 +45,11 @@ interface TeacherShellProps {
 export function TeacherShell({ children }: TeacherShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, switchCenter, isSwitchingCenter } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState("");
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -50,16 +62,46 @@ export function TeacherShell({ children }: TeacherShellProps) {
     }
   };
 
-  const navMenuItems = [
+  const navMenuItems: Array<{
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+  }> = [
     {
       label: "Dashboard",
       href: "/dashboard",
       icon: LayoutDashboard,
     },
     {
-      label: "My Classes",
+      label: "Marks",
+      href: "/marks",
+      icon: CheckSquare,
+    },
+    {
+      label: "Analysis",
+      href: "/analysis",
+      icon: TrendingUp,
+    },
+    {
+      label: "Classes",
       href: "/classes",
       icon: BookOpen,
+    },
+    {
+      label: "Exams & Tests",
+      href: "/exams",
+      icon: FileCheck,
+    },
+    {
+      label: "Subjects",
+      href: "/subjects",
+      icon: BookMarked,
+    },
+    {
+      label: "Announcements",
+      href: "/announcements",
+      icon: Bell,
     },
     {
       label: "Students",
@@ -67,25 +109,9 @@ export function TeacherShell({ children }: TeacherShellProps) {
       icon: Users,
     },
     {
-      label: "Schedule",
-      href: "/attendance",
-      icon: Calendar,
-    },
-    {
-      label: "Assignments",
-      href: "/exams",
-      icon: FileCheck,
-    },
-    {
-      label: "Messages",
-      href: "/announcements",
-      icon: Bell,
-      badge: "3",
-    },
-    {
-      label: "Performance",
-      href: "/analysis",
-      icon: Award,
+      label: "Staff Members",
+      href: "/staff",
+      icon: UserCheck,
     },
     {
       label: "Leaderboard",
@@ -99,11 +125,6 @@ export function TeacherShell({ children }: TeacherShellProps) {
       label: "Settings",
       href: "/settings",
       icon: Settings,
-    },
-    {
-      label: "Security",
-      href: "/security",
-      icon: ShieldCheck,
     },
   ];
 
@@ -308,16 +329,94 @@ export function TeacherShell({ children }: TeacherShellProps) {
             </div>
           </div>
 
-          {/* Search bar in the center */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4 relative">
-            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search classes, lessons, students..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-secondary/80 hover:bg-secondary focus:bg-background border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            />
+          {/* Center Switcher (replacing search bar) */}
+          <div className="flex-1 flex justify-center max-w-md mx-2 sm:mx-4">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={isSwitchingCenter}
+                  className={cn(
+                    "group inline-flex h-10 items-center gap-2 sm:gap-2.5 rounded-full border border-border bg-secondary/70 hover:bg-secondary px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer active:scale-98",
+                    isSwitchingCenter && "opacity-50 cursor-not-allowed"
+                  )}
+                  title="Switch Active Education Center"
+                >
+                  <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Building2 className="size-3.5 shrink-0" />
+                  </div>
+                  <span className="max-w-[130px] sm:max-w-[200px] truncate text-foreground font-bold">
+                    {user.centerName || "Education Center"}
+                  </span>
+                  {user.assignedCenters && user.assignedCenters.length > 1 && (
+                    <div className="flex items-center gap-1 text-muted-foreground ml-0.5">
+                      <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded-md bg-white border border-border hidden sm:inline-block">
+                        Campus
+                      </span>
+                      <ArrowLeftRight className="size-3 shrink-0 group-hover:text-primary transition-colors" />
+                    </div>
+                  )}
+                </DropdownMenuTrigger>
+
+                {user.assignedCenters && user.assignedCenters.length > 0 && (
+                  <DropdownMenuContent
+                    align="center"
+                    className="w-72 rounded-3xl p-2.5 bg-card border-border shadow-2xl z-50"
+                  >
+                    <DropdownMenuLabel className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-muted-foreground font-black flex items-center justify-between">
+                      <span>Assigned Campuses</span>
+                      <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        {user.assignedCenters.length} {user.assignedCenters.length === 1 ? "Center" : "Centers"}
+                      </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="my-1.5" />
+
+                    <div className="max-h-60 overflow-y-auto space-y-1.5 py-1 pr-1">
+                      {user.assignedCenters.map((c) => {
+                        const isActive = c.id === user.centerId;
+                        return (
+                          <DropdownMenuItem
+                            key={c.id}
+                            disabled={isActive || isSwitchingCenter}
+                            onClick={() => {
+                              if (!isActive) {
+                                switchCenter(c.id, c.name);
+                              }
+                            }}
+                            className={cn(
+                              "flex items-center justify-between px-3.5 py-2.5 rounded-2xl cursor-pointer text-xs font-bold transition-all",
+                              isActive
+                                ? "bg-primary text-primary-foreground font-extrabold shadow-xs cursor-default"
+                                : "hover:bg-secondary text-foreground"
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <div
+                                className={cn(
+                                  "size-7 rounded-xl flex items-center justify-center shrink-0",
+                                  isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                                )}
+                              >
+                                <Building2 className="size-3.5" />
+                              </div>
+                              <span className="truncate">{c.name}</span>
+                            </div>
+                            {isActive ? (
+                              <span className="size-5 rounded-full bg-white/20 flex items-center justify-center ml-2 shrink-0">
+                                <Check className="size-3 stroke-[3]" />
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground font-semibold uppercase opacity-0 group-hover:opacity-100 transition-opacity">
+                                Switch
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
+                  </DropdownMenuContent>
+                )}
+              </DropdownMenu>
+            )}
           </div>
 
           {/* Right quick actions & Profile pill */}
@@ -371,14 +470,6 @@ export function TeacherShell({ children }: TeacherShellProps) {
                     <Settings className="size-3.5" />
                     <span>Settings</span>
                   </Link>
-                  <Link
-                    href="/security"
-                    onClick={() => setProfileDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary"
-                  >
-                    <ShieldCheck className="size-3.5" />
-                    <span>Security</span>
-                  </Link>
                   <button
                     type="button"
                     onClick={() => {
@@ -426,6 +517,8 @@ export function TeacherShell({ children }: TeacherShellProps) {
           </div>
         </div>
       )}
+      {/* Education Center Switch Transition Overlay */}
+      <CenterSwitchOverlay />
     </div>
   );
 }

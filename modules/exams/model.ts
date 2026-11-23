@@ -13,6 +13,7 @@ export interface IAssessment extends Document {
   _id: mongoose.Types.ObjectId;
   centerId: mongoose.Types.ObjectId;
   title: string;
+  slug?: string;
   type: AssessmentType;
   subjectId: mongoose.Types.ObjectId;
   classIds: mongoose.Types.ObjectId[];
@@ -34,6 +35,7 @@ const AssessmentSchema = new Schema<IAssessment>(
   {
     centerId: { type: Schema.Types.ObjectId, ref: "Center", required: true, index: true },
     title: { type: String, required: true, trim: true },
+    slug: { type: String, unique: true, sparse: true, trim: true, index: true },
     type: {
       type: String,
       enum: ["exam", "test", "mcq_quiz", "paper", "assignment"],

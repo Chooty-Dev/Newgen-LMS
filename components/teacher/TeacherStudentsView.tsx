@@ -3,22 +3,41 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
   Users,
   Award,
   AlertCircle,
   TrendingUp,
   Search,
-  Sparkles,
   ArrowRight,
   UserCheck,
-  CheckCircle2,
+  Plus,
+  Edit,
+  Trash2,
+  KeyRound,
+  Copy,
+  Check,
+  ExternalLink,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface StudentRecord {
   id: string;
@@ -26,25 +45,310 @@ interface StudentRecord {
   username: string;
   admissionNo: string;
   grade: string;
+  email?: string;
+  phone?: string;
+  status?: "active" | "disabled";
   performanceScore: number;
   group: "weak" | "medium" | "excellent";
+  guardian?: {
+    name?: string;
+    phone?: string;
+    relation?: string;
+  };
 }
+
+interface ClassOption {
+  id: string;
+  name: string;
+}
+
+const registerStudentSchema = z.object({
+  name: z.string().min(2, "Full name must be at least 2 characters").trim(),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username cannot exceed 30 characters")
+    .regex(/^[a-z0-9_-]+$/, "Use lowercase letters, numbers, hyphens or underscores only")
+    .trim(),
+  password: z
+    .string()
+    .refine((val) => !val || val.length >= 8, {
+      message: "Password must be at least 8 characters",
+    })
+    .optional(),
+  grade: z.string().optional(),
+  classId: z.string().optional(),
+  email: z
+    .string()
+    .trim()
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: "Please enter a valid email address",
+    })
+    .optional(),
+  phone: z.string().optional(),
+  guardianName: z.string().optional(),
+  guardianPhone: z.string().optional(),
+});
+
+type RegisterStudentFormValues = z.infer<typeof registerStudentSchema>;
+
+const editStudentSchema = z.object({
+  name: z.string().min(2, "Full name must be at least 2 characters").trim(),
+  email: z
+    .string()
+    .trim()
+    .refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), {
+      message: "Please enter a valid email address",
+    })
+    .optional(),
+  phone: z.string().optional(),
+  grade: z.string().optional(),
+  status: z.enum(["active", "disabled"]),
+  guardianName: z.string().optional(),
+  guardianPhone: z.string().optional(),
+});
+
+type EditStudentFormValues = z.infer<typeof editStudentSchema>;
 
 export function TeacherStudentsView() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = React.useState("");
   const [groupFilter, setGroupFilter] = React.useState<"all" | "excellent" | "medium" | "weak">("all");
 
+  // Modals state
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [editStudent, setEditStudent] = React.useState<StudentRecord | null>(null);
+  const [deleteStudent, setDeleteStudent] = React.useState<StudentRecord | null>(null);
+  const [resetStudent, setResetStudent] = React.useState<StudentRecord | null>(null);
+  const [tempPassword, setTempPassword] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
+
+  // RHF Forms
+  const registerForm = useForm<RegisterStudentFormValues>({
+    mode: "all",
+    resolver: zodResolver(registerStudentSchema) as any,
+    defaultValues: {
+      name: "",
+      username: "",
+      password: "",
+      grade: "",
+      classId: "",
+      email: "",
+      phone: "",
+      guardianName: "",
+      guardianPhone: "",
+    },
+  });
+
+  const editForm = useForm<EditStudentFormValues>({
+    mode: "all",
+    resolver: zodResolver(editStudentSchema) as any,
+    defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      grade: "",
+      status: "active",
+      guardianName: "",
+      guardianPhone: "",
+    },
+  });
+
+  // Fetch students
   const { data, isLoading } = useQuery({
     queryKey: ["students", "teacher-directory", user?.centerId],
     queryFn: async () => {
-      const res = await fetch("/api/v1/students?limit=200");
+      const res = await fetch("/api/v1/students?limit=250");
       if (!res.ok) throw new Error("Failed to load students");
       return res.json();
     },
   });
 
   const students: StudentRecord[] = data?.data || [];
+
+  // Fetch teacher's classes for enrollment dropdown
+  const { data: classesData } = useQuery({
+    queryKey: ["classes", "teacher", user?.centerId],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/classes");
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const teacherClasses: ClassOption[] = (classesData?.data || []).map(
+    (c: { id: string; name: string }) => ({ id: c.id, name: c.name })
+  );
+
+  // Create Student Mutation
+  const createMutation = useMutation({
+    mutationFn: async (values: RegisterStudentFormValues) => {
+      const payload = {
+        name: values.name,
+        username: values.username.toLowerCase().trim(),
+        password: values.password || undefined,
+        email: values.email || undefined,
+        phone: values.phone || undefined,
+        grade: values.grade || undefined,
+        classId: values.classId || undefined,
+        guardian: values.guardianName
+          ? { name: values.guardianName, phone: values.guardianPhone || "", relation: "Parent" }
+          : undefined,
+        role: "student",
+      };
+
+      const res = await fetch("/api/v1/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to register student");
+        error.fields = json.error?.fields;
+        throw error;
+      }
+      return json;
+    },
+    onSuccess: (resData) => {
+      toast.success("Student registered successfully");
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["analysis"] });
+      setCreateOpen(false);
+      registerForm.reset();
+      if (resData.data?.temporaryPassword) {
+        setTempPassword(resData.data.temporaryPassword);
+      }
+    },
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          registerForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      } else if (err.message) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes("username")) {
+          registerForm.setError("username", { message: err.message });
+        } else if (msg.includes("email")) {
+          registerForm.setError("email", { message: err.message });
+        } else if (msg.includes("phone")) {
+          registerForm.setError("phone", { message: err.message });
+        } else if (msg.includes("name")) {
+          registerForm.setError("name", { message: err.message });
+        }
+      }
+      toast.error(err.message || "Failed to register student");
+    },
+  });
+
+  // Edit Student Mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: EditStudentFormValues }) => {
+      const payload: Record<string, unknown> = {
+        name: values.name,
+        email: values.email || undefined,
+        phone: values.phone || undefined,
+        grade: values.grade || undefined,
+        status: values.status,
+        guardian: values.guardianName
+          ? { name: values.guardianName, phone: values.guardianPhone || "", relation: "Parent" }
+          : undefined,
+      };
+
+      const res = await fetch(`/api/v1/students/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to update student");
+        error.fields = json.error?.fields;
+        throw error;
+      }
+      return json;
+    },
+    onSuccess: () => {
+      toast.success("Student updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      setEditStudent(null);
+    },
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          editForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      } else if (err.message) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes("email")) {
+          editForm.setError("email", { message: err.message });
+        } else if (msg.includes("phone")) {
+          editForm.setError("phone", { message: err.message });
+        } else if (msg.includes("name")) {
+          editForm.setError("name", { message: err.message });
+        }
+      }
+      toast.error(err.message || "Failed to update student");
+    },
+  });
+
+  // Delete Student Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/students/${id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to delete student");
+      return json;
+    },
+    onSuccess: () => {
+      toast.success("Student removed successfully");
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      setDeleteStudent(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Reset Password Mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/students/${id}/reset-password`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to reset password");
+      return json;
+    },
+    onSuccess: (resData) => {
+      toast.success("Password reset successfully");
+      setTempPassword(resData.data?.temporaryPassword || null);
+      setResetStudent(null);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const handleOpenEdit = (st: StudentRecord) => {
+    setEditStudent(st);
+    editForm.reset({
+      name: st.name || "",
+      email: st.email || "",
+      phone: st.phone || "",
+      grade: st.grade || "",
+      status: st.status || "active",
+      guardianName: st.guardian?.name || "",
+      guardianPhone: st.guardian?.phone || "",
+    });
+  };
+
+  const handleCopy = () => {
+    if (tempPassword) {
+      navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Password copied to clipboard");
+    }
+  };
 
   const filtered = students.filter((s) => {
     const matchesSearch =
@@ -71,12 +375,33 @@ export function TeacherStudentsView() {
               My Students Directory
             </h2>
             <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-              Monitor student rankings, verify learning progress, and spot learners requiring academic support. Click below to view detailed AI performance insights.
+              Register new students, assign batches, monitor performance standings, and manage profile credentials seamlessly.
             </p>
-            <div className="pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  registerForm.reset({
+                    name: "",
+                    username: "",
+                    password: "",
+                    grade: "",
+                    classId: teacherClasses.length > 0 ? teacherClasses[0].id : "",
+                    email: "",
+                    phone: "",
+                    guardianName: "",
+                    guardianPhone: "",
+                  });
+                  setCreateOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <Plus className="size-4" />
+                <span>Register Student</span>
+              </button>
               <Link
                 href="/analysis"
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm transition-all backdrop-blur-xs"
               >
                 <TrendingUp className="size-4" />
                 <span>Performance Insights</span>
@@ -157,47 +482,6 @@ export function TeacherStudentsView() {
             </div>
           </div>
 
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {students.length} Total Students Enrolled
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setGroupFilter(groupFilter === "weak" ? "all" : "weak")}
-                className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all active:scale-95",
-                  groupFilter === "weak"
-                    ? "bg-amber-500 text-white shadow-xs"
-                    : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300"
-                )}
-              >
-                <AlertCircle className="size-3" />
-                <span>Needs Help</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setGroupFilter(groupFilter === "excellent" ? "all" : "excellent")}
-                className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold transition-all active:scale-95",
-                  groupFilter === "excellent"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "bg-primary/10 hover:bg-primary/20 text-primary"
-                )}
-              >
-                <Award className="size-3" />
-                <span>Top</span>
-              </button>
-            </div>
-          </div>
-
           {/* Search bar directly beneath cards */}
           <div className="relative w-full">
             <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -226,15 +510,15 @@ export function TeacherStudentsView() {
             className={cn(
               "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
               groupFilter === tab.id
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/60"
             )}
           >
             <span>{tab.label}</span>
             <span
               className={cn(
-                "text-[10px] px-1.5 py-0.2 rounded-full",
-                groupFilter === tab.id ? "bg-white/20 text-white" : "bg-secondary text-primary"
+                "px-1.5 py-0.5 rounded-full text-[10px]",
+                groupFilter === tab.id ? "bg-white/20 text-white" : "bg-secondary text-muted-foreground"
               )}
             >
               {tab.count}
@@ -243,9 +527,9 @@ export function TeacherStudentsView() {
         ))}
       </section>
 
-      {/* 4. Students Card Grid */}
+      {/* 3. Students Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           <Skeleton className="h-44 rounded-3xl" />
           <Skeleton className="h-44 rounded-3xl" />
           <Skeleton className="h-44 rounded-3xl" />
@@ -278,55 +562,465 @@ export function TeacherStudentsView() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="size-12 rounded-2xl bg-secondary text-primary font-black text-sm flex items-center justify-center border border-border shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <Link
+                      href={`/students/${st.username}`}
+                      className="size-12 rounded-2xl bg-secondary text-primary font-black text-sm flex items-center justify-center border border-border shrink-0 shadow-xs group-hover:scale-105 transition-transform"
+                    >
                       {initials}
-                    </div>
+                    </Link>
                     <div className="min-w-0">
-                      <h4 className="font-extrabold text-sm sm:text-base text-foreground truncate group-hover:text-primary transition-colors">
-                        {st.name}
-                      </h4>
+                      <Link
+                        href={`/students/${st.username}`}
+                        className="font-extrabold text-sm sm:text-base text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1.5"
+                      >
+                        <span className="truncate">{st.name}</span>
+                        <ExternalLink className="size-3 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
                       <p className="text-xs text-muted-foreground font-medium">
-                        {st.username}
+                        @{st.username} {st.admissionNo ? `• ${st.admissionNo}` : ""}
                       </p>
                     </div>
                   </div>
 
-                  <span
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0",
-                      isEx
-                        ? "bg-emerald-100 text-emerald-700"
-                        : isWeak
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-secondary text-primary border border-border"
-                    )}
-                  >
-                    {isEx ? "Excellent" : isWeak ? "Needs Help" : "Good"}
-                  </span>
+                  {/* Actions Group */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(st)}
+                      className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/60 transition-colors"
+                      title="Edit Student"
+                    >
+                      <Edit className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetStudent(st)}
+                      className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
+                      title="Reset Password"
+                    >
+                      <KeyRound className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteStudent(st)}
+                      className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
+                      title="Delete Student"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Score & Standing */}
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-bold">
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Standing Score</span>
-                    <span className="text-lg font-black text-foreground tabular-nums">
-                      {st.performanceScore || 70}/100
-                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-lg font-black text-foreground tabular-nums">
+                        {st.performanceScore || 70}/100
+                      </span>
+                      <span
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-[10px] font-extrabold",
+                          isEx
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            : isWeak
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                            : "bg-secondary text-primary border border-border"
+                        )}
+                      >
+                        {isEx ? "Excellent" : isWeak ? "Needs Help" : "Good"}
+                      </span>
+                    </div>
                   </div>
 
-                  <Link
-                    href={`/analysis?studentId=${st.id}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-colors text-xs font-bold border border-border"
-                  >
-                    <span>Inspect</span>
-                    <ArrowRight className="size-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/analysis?studentId=${st.id}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-colors text-xs font-bold border border-border"
+                      title="View Analysis"
+                    >
+                      <span>Analysis</span>
+                      <TrendingUp className="size-3" />
+                    </Link>
+                    <Link
+                      href={`/students/${st.username}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-xs font-bold"
+                      title="Student Profile"
+                    >
+                      <span>Profile</span>
+                      <ArrowRight className="size-3" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {/* Register Student Dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => {
+        setCreateOpen(open);
+        if (!open) registerForm.reset();
+      }}>
+        <DialogContent className="sm:max-w-lg rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-foreground">Register New Student</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={registerForm.handleSubmit((values) => createMutation.mutate(values), () => toast.error("Please fill in all required fields correctly"))} className="space-y-3.5 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel label="Full Name" required />
+                <input
+                  type="text"
+                  placeholder="e.g. Kasun Bandara"
+                  {...registerForm.register("name")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.name)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.name?.message} />
+              </div>
+              <div>
+                <FormLabel label="Username" required />
+                <input
+                  type="text"
+                  placeholder="e.g. kasun2026"
+                  {...registerForm.register("username")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.username)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.username?.message} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel label="Initial Password" optional />
+                <input
+                  type="password"
+                  placeholder="e.g. Min 8 chars (or leave empty)"
+                  {...registerForm.register("password")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.password)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.password?.message} />
+              </div>
+              <div>
+                <FormLabel label="Grade / Level" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. Grade 11"
+                  {...registerForm.register("grade")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.grade)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.grade?.message} />
+              </div>
+            </div>
+
+            {/* Class Assignment Dropdown */}
+            <div>
+              <FormLabel label="Enroll into Class" optional>
+                <GraduationCap className="size-3.5 text-primary" />
+              </FormLabel>
+              <select
+                {...registerForm.register("classId")}
+                className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+              >
+                <option value="">-- No class enrollment now --</option>
+                {teacherClasses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel label="Email Address" optional />
+                <input
+                  type="email"
+                  placeholder="e.g. kasun@example.com"
+                  {...registerForm.register("email")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.email)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.email?.message} />
+              </div>
+              <div>
+                <FormLabel label="Phone Number" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. 077 1234567"
+                  {...registerForm.register("phone")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.phone)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.phone?.message} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1 border-t border-border/60">
+              <div>
+                <FormLabel label="Guardian Name" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. S. Bandara"
+                  {...registerForm.register("guardianName")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.guardianName)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.guardianName?.message} />
+              </div>
+              <div>
+                <FormLabel label="Guardian Phone" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. 071 9876543"
+                  {...registerForm.register("guardianPhone")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!registerForm.formState.errors.guardianPhone)
+                  )}
+                />
+                <FormError message={registerForm.formState.errors.guardianPhone?.message} />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="rounded-full text-xs">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="rounded-full bg-primary text-primary-foreground font-bold text-xs"
+              >
+                {createMutation.isPending ? "Registering..." : "Register Student"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Student Dialog */}
+      <Dialog open={!!editStudent} onOpenChange={(open) => {
+        if (!open) {
+          setEditStudent(null);
+          editForm.reset();
+        }
+      }}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-foreground">Edit Student Information</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={editForm.handleSubmit(
+              (values) => {
+                if (editStudent) {
+                  updateMutation.mutate({ id: editStudent.id, values });
+                }
+              },
+              () => toast.error("Please fill in all required fields correctly")
+            )}
+            className="space-y-3 py-2"
+          >
+            <div>
+              <FormLabel label="Full Name" required />
+              <input
+                type="text"
+                placeholder="e.g. Kasun Bandara"
+                {...editForm.register("name")}
+                className={cn(
+                  "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                  inputErrorClass(!!editForm.formState.errors.name)
+                )}
+              />
+              <FormError message={editForm.formState.errors.name?.message} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel label="Email" optional />
+                <input
+                  type="email"
+                  placeholder="e.g. kasun@example.com"
+                  {...editForm.register("email")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!editForm.formState.errors.email)
+                  )}
+                />
+                <FormError message={editForm.formState.errors.email?.message} />
+              </div>
+              <div>
+                <FormLabel label="Phone" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. 077 1234567"
+                  {...editForm.register("phone")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!editForm.formState.errors.phone)
+                  )}
+                />
+                <FormError message={editForm.formState.errors.phone?.message} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FormLabel label="Grade / Level" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. Grade 11"
+                  {...editForm.register("grade")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!editForm.formState.errors.grade)
+                  )}
+                />
+                <FormError message={editForm.formState.errors.grade?.message} />
+              </div>
+              <div>
+                <FormLabel label="Status" required />
+                <select
+                  {...editForm.register("status")}
+                  className="w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                >
+                  <option value="active">Active</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/60">
+              <div>
+                <FormLabel label="Guardian Name" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. S. Bandara"
+                  {...editForm.register("guardianName")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!editForm.formState.errors.guardianName)
+                  )}
+                />
+                <FormError message={editForm.formState.errors.guardianName?.message} />
+              </div>
+              <div>
+                <FormLabel label="Guardian Phone" optional />
+                <input
+                  type="text"
+                  placeholder="e.g. 071 9876543"
+                  {...editForm.register("guardianPhone")}
+                  className={cn(
+                    "w-full h-9 px-3 rounded-xl bg-secondary/50 border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary",
+                    inputErrorClass(!!editForm.formState.errors.guardianPhone)
+                  )}
+                />
+                <FormError message={editForm.formState.errors.guardianPhone?.message} />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setEditStudent(null)} className="rounded-full text-xs">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="rounded-full bg-primary text-primary-foreground font-bold text-xs"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Student Confirmation */}
+      <ConfirmDialog
+        open={!!deleteStudent}
+        onOpenChange={(open) => { if (!open) setDeleteStudent(null); }}
+        title="Remove Student"
+        description={`Are you sure you want to remove student "${deleteStudent?.name}" (@${deleteStudent?.username})? Their class enrollments will be set to inactive.`}
+        confirmLabel="Remove Student"
+        cancelLabel="Cancel"
+        isDestructive={true}
+        onConfirm={() => {
+          if (deleteStudent) {
+            deleteMutation.mutate(deleteStudent.id);
+          }
+        }}
+      />
+
+      {/* Reset Password Confirmation */}
+      <ConfirmDialog
+        open={!!resetStudent}
+        onOpenChange={(open) => { if (!open) setResetStudent(null); }}
+        title="Reset Student Password"
+        description={`Generate a new temporary password for "${resetStudent?.name}" (@${resetStudent?.username})?`}
+        confirmLabel="Generate New Password"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (resetStudent) {
+            resetPasswordMutation.mutate(resetStudent.id);
+          }
+        }}
+      />
+
+      {/* Temporary Password Display Dialog */}
+      <Dialog open={!!tempPassword} onOpenChange={() => setTempPassword(null)}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-foreground">Temporary Credentials</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Please copy and securely deliver this temporary password to the student. They will be prompted to choose a new password upon initial sign in.
+            </p>
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-secondary/80 border border-border">
+              <span className="font-mono font-bold text-sm text-foreground select-all tracking-wider">
+                {tempPassword}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                className="rounded-full gap-1.5 text-xs text-primary font-bold hover:bg-primary/10"
+              >
+                {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                <span>{copied ? "Copied" : "Copy"}</span>
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => setTempPassword(null)}
+              className="w-full rounded-full bg-primary text-primary-foreground font-bold text-xs"
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

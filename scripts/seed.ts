@@ -13,6 +13,7 @@ import { Setting } from "@/modules/settings/model";
 import { PerformanceSnapshot } from "@/modules/analysis/model";
 import { LeaderboardSnapshot, LeaderboardEntry, UserPreference } from "@/modules/leaderboard/model";
 import { LeaderboardService } from "@/modules/leaderboard/service";
+import { generateSlug } from "@/lib/slug";
 
 export async function runSeed() {
   console.log("🌱 Starting Danuma LMS Database Seeding...");
@@ -42,14 +43,22 @@ export async function runSeed() {
   ]);
 
   // 1. Create Center
-  console.log("🏢 Seeding Center...");
+  console.log("🏢 Seeding Centers...");
   const center = await Center.create({
-    name: "Newgen Education Center",
+    name: "Newgen Education Center - Colombo",
     address: "123 Galle Road, Colombo 03, Sri Lanka",
     phone: "+94 11 234 5678",
     timezone: "Asia/Colombo",
   });
   const centerId = center._id;
+
+  const centerKandy = await Center.create({
+    name: "Newgen Excellence Campus - Kandy",
+    address: "45 Peradeniya Road, Kandy, Sri Lanka",
+    phone: "+94 81 222 3344",
+    timezone: "Asia/Colombo",
+  });
+  const centerKandyId = centerKandy._id;
 
   // 2. Hash default passwords
   console.log("🔐 Hashing passwords (cost 12)...");
@@ -86,6 +95,7 @@ export async function runSeed() {
   console.log("👨‍🏫 Seeding Teachers...");
   const teacherMath = await User.create({
     centerId,
+    assignedCenterIds: [centerId, centerKandyId],
     username: "teacher_math",
     passwordHash: teacherPasswordHash,
     name: "Samantha Perera",
@@ -97,6 +107,7 @@ export async function runSeed() {
   await TeacherProfile.create({
     userId: teacherMath._id,
     centerId,
+    assignedCenterIds: [centerId, centerKandyId],
     title: "Senior Mathematics Lecturer",
   });
 
@@ -211,6 +222,7 @@ export async function runSeed() {
   const classMath = await ClassModel.create({
     centerId,
     name: "Grade 11 Mathematics",
+    slug: generateSlug("Grade 11 Mathematics"),
     subjectId: mathSub._id,
     teacherId: teacherMath._id,
     staffIds: [staff1._id],
@@ -225,9 +237,46 @@ export async function runSeed() {
     status: "active",
   });
 
+  const classMath2 = await ClassModel.create({
+    centerId,
+    name: "Grade 10 Pure Mathematics",
+    slug: generateSlug("Grade 10 Pure Mathematics"),
+    subjectId: mathSub._id,
+    teacherId: teacherMath._id,
+    staffIds: [staff1._id],
+    schedule: {
+      type: "regular",
+      regular: {
+        daysOfWeek: [3, 5], // Wednesday & Friday
+        startTime: "15:00",
+        endTime: "17:00",
+      },
+    },
+    status: "active",
+  });
+
+  const classMathSpecial = await ClassModel.create({
+    centerId,
+    name: "O/L Mathematics Target Seminar",
+    slug: generateSlug("OL Mathematics Target Seminar"),
+    subjectId: mathSub._id,
+    teacherId: teacherMath._id,
+    staffIds: [staff2._id],
+    schedule: {
+      type: "special",
+      special: {
+        sessions: [
+          { date: "2026-11-27", startTime: "08:30", endTime: "12:30" },
+        ],
+      },
+    },
+    status: "active",
+  });
+
   const classScience = await ClassModel.create({
     centerId,
     name: "Grade 11 Science",
+    slug: generateSlug("Grade 11 Science"),
     subjectId: sciSub._id,
     teacherId: teacherScience._id,
     staffIds: [staff2._id],
@@ -245,6 +294,7 @@ export async function runSeed() {
   const classEnglish = await ClassModel.create({
     centerId,
     name: "Grade 11 English",
+    slug: generateSlug("Grade 11 English"),
     subjectId: engSub._id,
     teacherId: teacherEnglish._id,
     staffIds: [staff3._id],
@@ -262,6 +312,7 @@ export async function runSeed() {
   const classPhysicsSpecial = await ClassModel.create({
     centerId,
     name: "Physics Revision Workshop",
+    slug: generateSlug("Physics Revision Workshop"),
     subjectId: phySub._id,
     teacherId: teacherScience._id,
     staffIds: [staff1._id],
@@ -280,6 +331,7 @@ export async function runSeed() {
   const classChemLab = await ClassModel.create({
     centerId,
     name: "Chemistry Lab Practical",
+    slug: generateSlug("Chemistry Lab Practical"),
     subjectId: chemSub._id,
     teacherId: teacherScience._id,
     staffIds: [staff2._id],
@@ -326,6 +378,7 @@ export async function runSeed() {
       phone: `+94 71 ${String(2000000 + idx)}`,
       role: "student",
       status: "active",
+      createdBy: teacherMath._id,
     });
 
     await StudentProfile.create({
@@ -358,9 +411,11 @@ export async function runSeed() {
     enrollments.push({ centerId, classId: classEnglish._id, studentId: st.id, status: "active" });
     if (st.idx % 2 === 0) {
       enrollments.push({ centerId, classId: classPhysicsSpecial._id, studentId: st.id, status: "active" });
+      enrollments.push({ centerId, classId: classMath2._id, studentId: st.id, status: "active" });
     }
     if (st.idx % 3 === 0) {
       enrollments.push({ centerId, classId: classChemLab._id, studentId: st.id, status: "active" });
+      enrollments.push({ centerId, classId: classMathSpecial._id, studentId: st.id, status: "active" });
     }
   }
   await Enrollment.insertMany(enrollments);
@@ -395,6 +450,7 @@ export async function runSeed() {
     const created = await Assessment.create({
       centerId,
       title: a.title,
+      slug: generateSlug(a.title),
       type: a.type,
       subjectId: a.subjectId,
       classIds: a.classIds,

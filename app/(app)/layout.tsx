@@ -68,7 +68,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AppContent>{children}</AppContent>
+      <React.Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <AppContent>{children}</AppContent>
+      </React.Suspense>
       <IdleTimeout />
       <CenterSwitchOverlay />
     </AuthProvider>

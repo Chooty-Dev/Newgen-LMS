@@ -1,6 +1,6 @@
 import { UserRole } from "./permissions";
 import { User, IUser } from "@/modules/users/model";
-import { ClassModel } from "@/modules/classes/model";
+import { ClassModel, Enrollment } from "@/modules/classes/model";
 import { Assessment } from "@/modules/exams/model";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
@@ -17,6 +17,49 @@ export function canManageRole(actorRole: UserRole, targetRole: UserRole): boolea
   return ROLE_RANK[actorRole] > ROLE_RANK[targetRole];
 }
 
+export async function canAccessStudent(
+  actor: { id: string; role: UserRole },
+  studentId: string
+): Promise<boolean> {
+  if (actor.role === "super_admin" || actor.role === "admin") return true;
+
+  if (actor.role === "student") {
+    return actor.id === studentId;
+  }
+
+  if (actor.role === "staff") {
+    return true;
+  }
+
+  if (actor.role === "teacher") {
+    await connectDB();
+    const actorObjId = new mongoose.Types.ObjectId(actor.id);
+    const studentObjId = new mongoose.Types.ObjectId(studentId);
+
+    // Check if teacher created this student
+    const studentDoc = await User.findById(studentObjId).select("createdBy").lean();
+    if (studentDoc?.createdBy && studentDoc.createdBy.equals(actorObjId)) {
+      return true;
+    }
+
+    // Check if enrolled in any of teacher's active classes
+    const teacherClasses = await ClassModel.find({
+      teacherId: actorObjId,
+      deletedAt: null,
+    }).select("_id");
+
+    const hasEnrollment = await Enrollment.exists({
+      classId: { $in: teacherClasses.map((c) => c._id) },
+      studentId: studentObjId,
+      status: "active",
+    });
+
+    return !!hasEnrollment;
+  }
+
+  return false;
+}
+
 export async function canMutateUser(
   actor: { id: string; role: UserRole },
   targetUserId: string
@@ -26,7 +69,7 @@ export async function canMutateUser(
   }
 
   await connectDB();
-  const target = await User.findById(targetUserId).lean() as IUser | null;
+  const target = (await User.findById(targetUserId).lean()) as IUser | null;
   if (!target) {
     return { allowed: false, reason: "User not found" };
   }
@@ -34,6 +77,17 @@ export async function canMutateUser(
   // Hierarchy check: actor must have strictly higher role
   if (!canManageRole(actor.role, target.role)) {
     return { allowed: false, reason: "You can only manage users with a lower role" };
+  }
+
+  // Teacher scoping: teacher can only mutate students enrolled in their classes or created by them
+  if (actor.role === "teacher" && target.role === "student") {
+    const studentAccess = await canAccessStudent(actor, targetUserId);
+    if (!studentAccess) {
+      return {
+        allowed: false,
+        reason: "You can only manage students enrolled in your classes or created by you",
+      };
+    }
   }
 
   // Protect last super admin

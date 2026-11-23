@@ -3,8 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
   BookOpen,
   Calendar,
@@ -42,6 +47,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface ClassRecord {
   id: string;
   name: string;
+  slug?: string;
   subject?: string;
   subjectId?: string;
   teacher?: string;
@@ -64,7 +70,63 @@ interface ClassRecord {
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+const addClassSchema = z
+  .object({
+    name: z.string().min(2, "Class batch name must be at least 2 characters").trim(),
+    subjectId: z.string().min(1, "Please select a subject"),
+    scheduleType: z.enum(["regular", "special"]),
+    daysOfWeek: z.array(z.number()).optional(),
+    startTime: z.string().min(1, "Start time is required"),
+    endTime: z.string().min(1, "End time is required"),
+    specialDate: z.string().optional(),
+    capacity: z.coerce.number().min(1, "Capacity must be at least 1 student"),
+  })
+  .refine(
+    (data) => {
+      if (data.scheduleType === "special") return !!data.specialDate;
+      return true;
+    },
+    { message: "Special session date is required", path: ["specialDate"] }
+  )
+  .refine(
+    (data) => {
+      if (data.scheduleType === "regular") return Array.isArray(data.daysOfWeek) && data.daysOfWeek.length > 0;
+      return true;
+    },
+    { message: "Please select at least one weekly day", path: ["daysOfWeek"] }
+  );
+type AddClassFormData = z.infer<typeof addClassSchema>;
+
+const editClassSchema = z
+  .object({
+    name: z.string().min(2, "Class batch name must be at least 2 characters").trim(),
+    subjectId: z.string().min(1, "Please select a subject"),
+    status: z.enum(["active", "paused", "ended"]),
+    scheduleType: z.enum(["regular", "special"]),
+    daysOfWeek: z.array(z.number()).optional(),
+    startTime: z.string().min(1, "Start time is required"),
+    endTime: z.string().min(1, "End time is required"),
+    specialDate: z.string().optional(),
+    capacity: z.coerce.number().min(1, "Capacity must be at least 1 student"),
+  })
+  .refine(
+    (data) => {
+      if (data.scheduleType === "special") return !!data.specialDate;
+      return true;
+    },
+    { message: "Special session date is required", path: ["specialDate"] }
+  )
+  .refine(
+    (data) => {
+      if (data.scheduleType === "regular") return Array.isArray(data.daysOfWeek) && data.daysOfWeek.length > 0;
+      return true;
+    },
+    { message: "Please select at least one weekly day", path: ["daysOfWeek"] }
+  );
+type EditClassFormData = z.infer<typeof editClassSchema>;
+
 export function TeacherClassesView() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -75,30 +137,45 @@ export function TeacherClassesView() {
 
   // Edit class state
   const [editClass, setEditClass] = React.useState<ClassRecord | null>(null);
-  const [editName, setEditName] = React.useState("");
-  const [editSubjectId, setEditSubjectId] = React.useState("");
-  const [editScheduleType, setEditScheduleType] = React.useState<"regular" | "special">("regular");
-  const [editDays, setEditDays] = React.useState<number[]>([1]);
-  const [editStartTime, setEditStartTime] = React.useState("14:00");
-  const [editEndTime, setEditEndTime] = React.useState("16:00");
-  const [editSpecialDate, setEditSpecialDate] = React.useState("");
-  const [editCapacity, setEditCapacity] = React.useState(50);
-  const [editStatus, setEditStatus] = React.useState<"active" | "paused" | "ended">("active");
 
   // Delete class state
   const [deleteClassId, setDeleteClassId] = React.useState<string | null>(null);
   const [deleteClassName, setDeleteClassName] = React.useState("");
 
-  // Create form states
-  const [name, setName] = React.useState("");
-  const [subjectId, setSubjectId] = React.useState("");
-  const [scheduleType, setScheduleType] = React.useState<"regular" | "special">("regular");
-  const [selectedDays, setSelectedDays] = React.useState<number[]>([1, 3]);
-  const [startTime, setStartTime] = React.useState("14:00");
-  const [endTime, setEndTime] = React.useState("16:00");
-  const [specialDate, setSpecialDate] = React.useState("");
-  const [capacity, setCapacity] = React.useState(50);
   const [selectedStudentToAdd, setSelectedStudentToAdd] = React.useState("");
+
+  // React Hook Form for Add Class
+  const addForm = useForm<AddClassFormData>({
+    mode: "all",
+    resolver: zodResolver(addClassSchema) as any,
+    defaultValues: {
+      name: "",
+      subjectId: "",
+      scheduleType: "regular",
+      daysOfWeek: [1, 3],
+      startTime: "14:00",
+      endTime: "16:00",
+      specialDate: "",
+      capacity: 50,
+    },
+  });
+
+  // React Hook Form for Edit Class
+  const editForm = useForm<EditClassFormData>({
+    mode: "all",
+    resolver: zodResolver(editClassSchema) as any,
+    defaultValues: {
+      name: "",
+      subjectId: "",
+      status: "active",
+      scheduleType: "regular",
+      daysOfWeek: [1],
+      startTime: "14:00",
+      endTime: "16:00",
+      specialDate: "",
+      capacity: 50,
+    },
+  });
 
   // Fetch teacher's classes
   const { data, isLoading } = useQuery({
@@ -138,63 +215,85 @@ export function TeacherClassesView() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: AddClassFormData) => {
       const res = await fetch("/api/v1/classes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          subjectId,
+          name: data.name,
+          subjectId: data.subjectId,
           teacherId: user?.id,
           staffIds: [],
-          scheduleType,
-          daysOfWeek: scheduleType === "regular" ? selectedDays : undefined,
-          startTime,
-          endTime,
+          scheduleType: data.scheduleType,
+          daysOfWeek: data.scheduleType === "regular" ? data.daysOfWeek : undefined,
+          startTime: data.startTime,
+          endTime: data.endTime,
           sessions:
-            scheduleType === "special" && specialDate
-              ? [{ date: specialDate, startTime, endTime }]
+            data.scheduleType === "special" && data.specialDate
+              ? [{ date: data.specialDate, startTime: data.startTime, endTime: data.endTime }]
               : undefined,
-          capacity,
+          capacity: data.capacity,
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to create class");
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to create class");
+        error.fields = json.error?.fields;
+        throw error;
+      }
       return json.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       setCreateOpen(false);
-      setName("");
+      addForm.reset();
       toast.success("Class created successfully!");
+      if (data?.slug || data?.id) {
+        router.push(`/classes/${data.slug || data.id}?tab=students`);
+      }
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          addForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      } else if (err.message) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes("name") || msg.includes("batch")) addForm.setError("name", { message: err.message });
+        else if (msg.includes("subject")) addForm.setError("subjectId", { message: err.message });
+      }
+      toast.error(err.message || "Failed to create class");
+    },
   });
 
   // Edit mutation
   const updateMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: EditClassFormData) => {
       if (!editClass) return;
       const res = await fetch(`/api/v1/classes/${editClass.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: editName,
-          subjectId: editSubjectId,
-          scheduleType: editScheduleType,
-          daysOfWeek: editScheduleType === "regular" ? editDays : undefined,
-          startTime: editStartTime,
-          endTime: editEndTime,
+          name: data.name,
+          subjectId: data.subjectId,
+          scheduleType: data.scheduleType,
+          daysOfWeek: data.scheduleType === "regular" ? data.daysOfWeek : undefined,
+          startTime: data.startTime,
+          endTime: data.endTime,
           sessions:
-            editScheduleType === "special" && editSpecialDate
-              ? [{ date: editSpecialDate, startTime: editStartTime, endTime: editEndTime }]
+            data.scheduleType === "special" && data.specialDate
+              ? [{ date: data.specialDate, startTime: data.startTime, endTime: data.endTime }]
               : undefined,
-          capacity: editCapacity,
-          status: editStatus,
+          capacity: data.capacity,
+          status: data.status,
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to update class");
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to update class");
+        error.fields = json.error?.fields;
+        throw error;
+      }
       return json.data;
     },
     onSuccess: () => {
@@ -202,7 +301,18 @@ export function TeacherClassesView() {
       setEditClass(null);
       toast.success("Class updated successfully!");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          editForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      } else if (err.message) {
+        const msg = err.message.toLowerCase();
+        if (msg.includes("name") || msg.includes("batch")) editForm.setError("name", { message: err.message });
+        else if (msg.includes("subject")) editForm.setError("subjectId", { message: err.message });
+      }
+      toast.error(err.message || "Failed to update class");
+    },
   });
 
   // Delete mutation
@@ -247,15 +357,17 @@ export function TeacherClassesView() {
   // Open edit modal
   const handleOpenEdit = (cls: ClassRecord) => {
     setEditClass(cls);
-    setEditName(cls.name);
-    setEditSubjectId(cls.subjectId || "");
-    setEditScheduleType(cls.schedule?.type || "regular");
-    setEditDays(cls.schedule?.regular?.daysOfWeek || [1]);
-    setEditStartTime(cls.schedule?.regular?.startTime || "14:00");
-    setEditEndTime(cls.schedule?.regular?.endTime || "16:00");
-    setEditSpecialDate(cls.schedule?.special?.sessions?.[0]?.date || "");
-    setEditCapacity(cls.capacity || 50);
-    setEditStatus(cls.status || "active");
+    editForm.reset({
+      name: cls.name,
+      subjectId: cls.subjectId || "",
+      scheduleType: cls.schedule?.type || "regular",
+      daysOfWeek: cls.schedule?.regular?.daysOfWeek || [1],
+      startTime: cls.schedule?.regular?.startTime || "14:00",
+      endTime: cls.schedule?.regular?.endTime || "16:00",
+      specialDate: cls.schedule?.special?.sessions?.[0]?.date || "",
+      capacity: cls.capacity || 50,
+      status: cls.status || "active",
+    });
   };
 
   // Open delete confirm
@@ -377,36 +489,6 @@ export function TeacherClassesView() {
                   Enrolled Students
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {classes.length} Active Batches Running
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Plus className="size-3" />
-                <span>New Class</span>
-              </button>
-              <Link
-                href="/attendance"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Clock className="size-3 text-primary" />
-                <span>Attendance</span>
-              </Link>
             </div>
           </div>
 
@@ -579,24 +661,22 @@ export function TeacherClassesView() {
                   </div>
                 </div>
 
-                {/* Card Action Buttons (Manage Students, Attendance, Edit, Delete) */}
+                {/* Card Action Buttons (Manage Students, Details, Edit, Delete) */}
                 <div className="pt-2 flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEnrollClassId(cls.id)}
-                    className="flex-1 rounded-full text-xs font-bold h-9"
+                  <Link
+                    href={`/classes/${cls.slug || cls.id}?tab=students`}
+                    className="flex-1 inline-flex items-center justify-center rounded-full text-xs font-bold h-9 bg-secondary hover:bg-secondary/80 text-foreground transition-colors border border-border"
                   >
                     <Users className="size-3.5 mr-1.5" />
                     <span>Students</span>
-                  </Button>
+                  </Link>
 
                   <Link
-                    href={`/attendance?classId=${cls.id}`}
+                    href={`/classes/${cls.slug || cls.id}`}
                     className="inline-flex items-center justify-center size-9 rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-colors border border-border shrink-0"
-                    title="Mark Attendance"
+                    title="View Class Details"
                   >
-                    <Clock className="size-4" />
+                    <BookOpen className="size-4" />
                   </Link>
 
                   <Button
@@ -626,7 +706,7 @@ export function TeacherClassesView() {
       )}
 
       {/* Modal 1: Create New Class */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) addForm.reset(); }}>
         <DialogContent className="max-w-lg rounded-3xl p-6 sm:p-8 bg-card border-border shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-extrabold text-foreground">
@@ -637,25 +717,28 @@ export function TeacherClassesView() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
+          <form
+            onSubmit={addForm.handleSubmit(
+              (data) => createMutation.mutate(data),
+              () => toast.error("Please fill in all required fields correctly")
+            )}
+            className="space-y-4 pt-2"
+          >
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Class Name
-              </label>
+              <FormLabel label="Class Batch Name" required />
               <Input
-                placeholder="e.g. Grade 11 - Advanced Mathematics"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Grade 11 - Combined Mathematics"
+                {...addForm.register("name")}
+                className={inputErrorClass(addForm.formState.errors.name)}
               />
+              <FormError message={addForm.formState.errors.name?.message} />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Subject
-              </label>
+              <FormLabel label="Curriculum Subject" required />
               <Select
-                value={subjectId}
-                onChange={(e) => setSubjectId(e.target.value)}
+                {...addForm.register("subjectId")}
+                className={inputErrorClass(addForm.formState.errors.subjectId)}
               >
                 <option value="">Select subject...</option>
                 {subjectsData?.data?.map((s: any) => (
@@ -664,50 +747,52 @@ export function TeacherClassesView() {
                   </option>
                 ))}
               </Select>
+              <FormError message={addForm.formState.errors.subjectId?.message} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Schedule Type
-                </label>
+                <FormLabel label="Schedule Type" required />
                 <Select
-                  value={scheduleType}
-                  onChange={(e) => setScheduleType(e.target.value as any)}
+                  {...addForm.register("scheduleType")}
+                  className={inputErrorClass(addForm.formState.errors.scheduleType)}
                 >
                   <option value="regular">Regular (Weekly)</option>
                   <option value="special">Special (One-off)</option>
                 </Select>
+                <FormError message={addForm.formState.errors.scheduleType?.message} />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Student Capacity
-                </label>
+                <FormLabel label="Student Capacity" required />
                 <Input
                   type="number"
                   min={1}
-                  value={capacity}
-                  onChange={(e) => setCapacity(Number(e.target.value))}
+                  placeholder="e.g. 50"
+                  {...addForm.register("capacity")}
+                  className={inputErrorClass(addForm.formState.errors.capacity)}
                 />
+                <FormError message={addForm.formState.errors.capacity?.message} />
               </div>
             </div>
 
-            {scheduleType === "regular" ? (
+            {addForm.watch("scheduleType") === "regular" ? (
               <div className="space-y-3 p-4 rounded-2xl bg-secondary/40 border border-border">
                 <p className="text-xs font-bold text-foreground">Weekly Days</p>
                 <div className="flex flex-wrap gap-1.5">
                   {DAY_NAMES.map((d, idx) => {
-                    const active = selectedDays.includes(idx);
+                    const currentDays = addForm.watch("daysOfWeek") || [];
+                    const active = currentDays.includes(idx);
                     return (
                       <button
                         key={d}
                         type="button"
-                        onClick={() =>
-                          setSelectedDays((prev) =>
-                            active ? prev.filter((x) => x !== idx) : [...prev, idx]
-                          )
-                        }
+                        onClick={() => {
+                          const updated = active
+                            ? currentDays.filter((x) => x !== idx)
+                            : [...currentDays, idx];
+                          addForm.setValue("daysOfWeek", updated, { shouldValidate: true });
+                        }}
                         className={cn(
                           "size-8 rounded-full text-xs font-bold transition-all",
                           active
@@ -720,27 +805,26 @@ export function TeacherClassesView() {
                     );
                   })}
                 </div>
+                <FormError message={addForm.formState.errors.daysOfWeek?.message} />
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      Start Time
-                    </label>
+                    <FormLabel label="Start Time" required />
                     <Input
                       type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      {...addForm.register("startTime")}
+                      className={inputErrorClass(addForm.formState.errors.startTime)}
                     />
+                    <FormError message={addForm.formState.errors.startTime?.message} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      End Time
-                    </label>
+                    <FormLabel label="End Time" required />
                     <Input
                       type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
+                      {...addForm.register("endTime")}
+                      className={inputErrorClass(addForm.formState.errors.endTime)}
                     />
+                    <FormError message={addForm.formState.errors.endTime?.message} />
                   </div>
                 </div>
               </div>
@@ -748,57 +832,55 @@ export function TeacherClassesView() {
               <div className="space-y-3 p-4 rounded-2xl bg-secondary/40 border border-border">
                 <p className="text-xs font-bold text-foreground">Special Session Date & Time</p>
                 <div>
-                  <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                    Date
-                  </label>
+                  <FormLabel label="Date" required />
                   <Input
                     type="date"
-                    value={specialDate}
-                    onChange={(e) => setSpecialDate(e.target.value)}
+                    {...addForm.register("specialDate")}
+                    className={inputErrorClass(addForm.formState.errors.specialDate)}
                   />
+                  <FormError message={addForm.formState.errors.specialDate?.message} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      Start Time
-                    </label>
+                    <FormLabel label="Start Time" required />
                     <Input
                       type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      {...addForm.register("startTime")}
+                      className={inputErrorClass(addForm.formState.errors.startTime)}
                     />
+                    <FormError message={addForm.formState.errors.startTime?.message} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      End Time
-                    </label>
+                    <FormLabel label="End Time" required />
                     <Input
                       type="time"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
+                      {...addForm.register("endTime")}
+                      className={inputErrorClass(addForm.formState.errors.endTime)}
                     />
+                    <FormError message={addForm.formState.errors.endTime?.message} />
                   </div>
                 </div>
               </div>
             )}
-          </div>
 
-          <DialogFooter className="pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              className="rounded-full"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={!name.trim() || !subjectId || createMutation.isPending}
-              className="rounded-full bg-primary text-white"
-            >
-              {createMutation.isPending ? "Creating..." : "Save Class"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateOpen(false)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="rounded-full bg-primary text-white"
+              >
+                {createMutation.isPending ? "Creating..." : "Save Class"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -814,26 +896,29 @@ export function TeacherClassesView() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
+          <form
+            onSubmit={editForm.handleSubmit(
+              (data) => updateMutation.mutate(data),
+              () => toast.error("Please fill in all required fields correctly")
+            )}
+            className="space-y-4 pt-2"
+          >
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Class Name
-              </label>
+              <FormLabel label="Class Batch Name" required />
               <Input
-                placeholder="Class Name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
+                placeholder="e.g. Grade 11 - Combined Mathematics"
+                {...editForm.register("name")}
+                className={inputErrorClass(editForm.formState.errors.name)}
               />
+              <FormError message={editForm.formState.errors.name?.message} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Subject
-                </label>
+                <FormLabel label="Curriculum Subject" required />
                 <Select
-                  value={editSubjectId}
-                  onChange={(e) => setEditSubjectId(e.target.value)}
+                  {...editForm.register("subjectId")}
+                  className={inputErrorClass(editForm.formState.errors.subjectId)}
                 >
                   <option value="">Select subject...</option>
                   {subjectsData?.data?.map((s: any) => (
@@ -842,65 +927,66 @@ export function TeacherClassesView() {
                     </option>
                   ))}
                 </Select>
+                <FormError message={editForm.formState.errors.subjectId?.message} />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Status
-                </label>
+                <FormLabel label="Status" required />
                 <Select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  {...editForm.register("status")}
+                  className={inputErrorClass(editForm.formState.errors.status)}
                 >
                   <option value="active">Active</option>
                   <option value="paused">Paused</option>
                   <option value="ended">Ended</option>
                 </Select>
+                <FormError message={editForm.formState.errors.status?.message} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Schedule Type
-                </label>
+                <FormLabel label="Schedule Type" required />
                 <Select
-                  value={editScheduleType}
-                  onChange={(e) => setEditScheduleType(e.target.value as any)}
+                  {...editForm.register("scheduleType")}
+                  className={inputErrorClass(editForm.formState.errors.scheduleType)}
                 >
                   <option value="regular">Regular (Weekly)</option>
                   <option value="special">Special (One-off)</option>
                 </Select>
+                <FormError message={editForm.formState.errors.scheduleType?.message} />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Capacity
-                </label>
+                <FormLabel label="Student Capacity" required />
                 <Input
                   type="number"
                   min={1}
-                  value={editCapacity}
-                  onChange={(e) => setEditCapacity(Number(e.target.value))}
+                  placeholder="e.g. 50"
+                  {...editForm.register("capacity")}
+                  className={inputErrorClass(editForm.formState.errors.capacity)}
                 />
+                <FormError message={editForm.formState.errors.capacity?.message} />
               </div>
             </div>
 
-            {editScheduleType === "regular" ? (
+            {editForm.watch("scheduleType") === "regular" ? (
               <div className="space-y-3 p-4 rounded-2xl bg-secondary/40 border border-border">
                 <p className="text-xs font-bold text-foreground">Weekly Days</p>
                 <div className="flex flex-wrap gap-1.5">
                   {DAY_NAMES.map((d, idx) => {
-                    const active = editDays.includes(idx);
+                    const currentDays = editForm.watch("daysOfWeek") || [];
+                    const active = currentDays.includes(idx);
                     return (
                       <button
                         key={d}
                         type="button"
-                        onClick={() =>
-                          setEditDays((prev) =>
-                            active ? prev.filter((x) => x !== idx) : [...prev, idx]
-                          )
-                        }
+                        onClick={() => {
+                          const updated = active
+                            ? currentDays.filter((x) => x !== idx)
+                            : [...currentDays, idx];
+                          editForm.setValue("daysOfWeek", updated, { shouldValidate: true });
+                        }}
                         className={cn(
                           "size-8 rounded-full text-xs font-bold transition-all",
                           active
@@ -913,27 +999,26 @@ export function TeacherClassesView() {
                     );
                   })}
                 </div>
+                <FormError message={editForm.formState.errors.daysOfWeek?.message} />
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      Start Time
-                    </label>
+                    <FormLabel label="Start Time" required />
                     <Input
                       type="time"
-                      value={editStartTime}
-                      onChange={(e) => setEditStartTime(e.target.value)}
+                      {...editForm.register("startTime")}
+                      className={inputErrorClass(editForm.formState.errors.startTime)}
                     />
+                    <FormError message={editForm.formState.errors.startTime?.message} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      End Time
-                    </label>
+                    <FormLabel label="End Time" required />
                     <Input
                       type="time"
-                      value={editEndTime}
-                      onChange={(e) => setEditEndTime(e.target.value)}
+                      {...editForm.register("endTime")}
+                      className={inputErrorClass(editForm.formState.errors.endTime)}
                     />
+                    <FormError message={editForm.formState.errors.endTime?.message} />
                   </div>
                 </div>
               </div>
@@ -941,57 +1026,55 @@ export function TeacherClassesView() {
               <div className="space-y-3 p-4 rounded-2xl bg-secondary/40 border border-border">
                 <p className="text-xs font-bold text-foreground">Special Session Date & Time</p>
                 <div>
-                  <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                    Date
-                  </label>
+                  <FormLabel label="Date" required />
                   <Input
                     type="date"
-                    value={editSpecialDate}
-                    onChange={(e) => setEditSpecialDate(e.target.value)}
+                    {...editForm.register("specialDate")}
+                    className={inputErrorClass(editForm.formState.errors.specialDate)}
                   />
+                  <FormError message={editForm.formState.errors.specialDate?.message} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      Start Time
-                    </label>
+                    <FormLabel label="Start Time" required />
                     <Input
                       type="time"
-                      value={editStartTime}
-                      onChange={(e) => setEditStartTime(e.target.value)}
+                      {...editForm.register("startTime")}
+                      className={inputErrorClass(editForm.formState.errors.startTime)}
                     />
+                    <FormError message={editForm.formState.errors.startTime?.message} />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-muted-foreground block pl-1 mb-1">
-                      End Time
-                    </label>
+                    <FormLabel label="End Time" required />
                     <Input
                       type="time"
-                      value={editEndTime}
-                      onChange={(e) => setEditEndTime(e.target.value)}
+                      {...editForm.register("endTime")}
+                      className={inputErrorClass(editForm.formState.errors.endTime)}
                     />
+                    <FormError message={editForm.formState.errors.endTime?.message} />
                   </div>
                 </div>
               </div>
             )}
-          </div>
 
-          <DialogFooter className="pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setEditClass(null)}
-              className="rounded-full"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => updateMutation.mutate()}
-              disabled={!editName.trim() || updateMutation.isPending}
-              className="rounded-full bg-primary text-white"
-            >
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditClass(null)}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="rounded-full bg-primary text-white"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

@@ -49,13 +49,29 @@ interface StudentItem {
 export function TeacherMarksView() {
   const { user } = useAuth();
   const [search, setSearch] = React.useState("");
+  const [selectedClassId, setSelectedClassId] = React.useState<string>("");
   const [selectedStudentId, setSelectedStudentId] = React.useState<string>("");
+  const [typeTab, setTypeTab] = React.useState<string>("all");
+
+  // Fetch teacher classes
+  const { data: classesData } = useQuery({
+    queryKey: ["classes", "teacher", user?.centerId],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/classes");
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+
+  const classesList: Array<{ id: string; name: string }> = classesData?.data || [];
 
   // Fetch students list
   const { data: studentsData, isLoading: loadingStudents } = useQuery({
-    queryKey: ["students", "teacher", user?.centerId],
+    queryKey: ["students", "teacher", user?.centerId, selectedClassId],
     queryFn: async () => {
-      const res = await fetch("/api/v1/students?limit=100");
+      const params = new URLSearchParams({ limit: "150" });
+      if (selectedClassId) params.append("classId", selectedClassId);
+      const res = await fetch(`/api/v1/students?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load students");
       return res.json();
     },
@@ -80,6 +96,9 @@ export function TeacherMarksView() {
   const marks: MarkRecord[] = marksData?.data || [];
 
   const filteredMarks = marks.filter((m) => {
+    if (typeTab !== "all" && m.type?.toLowerCase() !== typeTab.toLowerCase()) {
+      return false;
+    }
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -111,11 +130,11 @@ export function TeacherMarksView() {
             </p>
             <div className="pt-2">
               <Link
-                href="/evaluate-marks"
+                href="/exams"
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
               >
                 <Award className="size-4" />
-                <span>Enter New Marks</span>
+                <span>View Assessments</span>
               </Link>
             </div>
           </div>
@@ -193,41 +212,12 @@ export function TeacherMarksView() {
             </div>
           </div>
 
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {marks.length} Marks Entries Logged
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Link
-                href="/exams"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Plus className="size-3" />
-                <span>Exams</span>
-              </Link>
-              <Link
-                href="/analysis"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <TrendingUp className="size-3 text-primary" />
-                <span>Analysis</span>
-              </Link>
-            </div>
-          </div>
-
           {/* Search bar directly beneath cards */}
           <div className="relative w-full">
             <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search marks, assessments..."
+              placeholder="Search marks by exam or student..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
@@ -236,28 +226,69 @@ export function TeacherMarksView() {
         </div>
       </section>
 
-      {/* 2. Controls: Select Student */}
-      <section className="bg-card border border-border rounded-3xl p-4 sm:p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="font-extrabold text-sm text-foreground">
-            Filter by Student
-          </h3>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Select a student to inspect their individual assessment performance.
-          </p>
+      {/* 2. Controls: Select Class & Student + Type Tabs */}
+      <section className="bg-card border border-border rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-extrabold text-sm text-foreground">
+              Filter Records
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Select class, student, and assessment category.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Class Filter */}
+            <div className="w-full sm:w-48">
+              <Select
+                value={selectedClassId}
+                onChange={(e) => {
+                  setSelectedClassId(e.target.value);
+                  setSelectedStudentId("");
+                }}
+              >
+                <option value="">All Classes</option>
+                {classesList.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Student Filter */}
+            <div className="w-full sm:w-64">
+              <Select
+                value={activeStudentId}
+                onChange={(e) => setSelectedStudentId(e.target.value)}
+              >
+                {studentsList.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} ({st.username})
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
         </div>
 
-        <div className="w-full sm:w-80">
-          <Select
-            value={activeStudentId}
-            onChange={(e) => setSelectedStudentId(e.target.value)}
-          >
-            {studentsList.map((st) => (
-              <option key={st.id} value={st.id}>
-                {st.name} ({st.username}) - {st.grade || "No Grade"}
-              </option>
-            ))}
-          </Select>
+        {/* Assessment Type Tabs */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+          {(["all", "exam", "quiz", "test"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTypeTab(t)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-full text-xs font-bold capitalize transition-all",
+                typeTab === t
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-secondary/60 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {t === "all" ? "All Assessments" : `${t}s`}
+            </button>
+          ))}
         </div>
       </section>
 

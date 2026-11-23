@@ -1,40 +1,23 @@
 import { NextResponse } from "next/server";
 import { defineRoute } from "@/core/http/defineRoute";
 import { User, StaffProfile } from "@/modules/users/model";
+import { UserPermissionModel } from "@/modules/permissions/model";
+import { invalidatePermissionCache } from "@/core/rbac/resolver";
 import { UserService } from "@/modules/users/service";
 import { updateUserSchema } from "@/modules/users/schema";
+import { Permission } from "@/core/rbac/permissions";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 
 export const GET = defineRoute({
   permission: "staff.view",
   handler: async ({ params }) => {
-    await connectDB();
-    const user = await User.findOne({
-      _id: new mongoose.Types.ObjectId(params.id),
-      role: "staff",
-      deletedAt: null,
-    }).lean();
-
-    if (!user) {
+    try {
+      const staff = await UserService.getStaffDetails(params.id);
+      return { data: staff };
+    } catch {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Staff member not found" } }, { status: 404 });
     }
-
-    const profile = await StaffProfile.findOne({ userId: user._id }).lean();
-
-    return {
-      data: {
-        id: user._id.toString(),
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        status: user.status,
-        joinedAt: user.createdAt,
-        title: profile?.title || "Staff Member",
-        position: profile?.position || "Coordinator",
-      },
-    };
   },
 });
 
@@ -43,12 +26,16 @@ export const PATCH = defineRoute({
   bodySchema: updateUserSchema,
   auditAction: "staff.update",
   auditResource: { type: "Staff" },
-  auditSummary: ({ session, params, body }) => `${session?.name} updated staff ID: ${params.id} (${body.name || ""})`,
+  auditSummary: ({ session, params, body }) => `${session?.name} updated staff: ${params.id} (${body.name || ""})`,
   handler: async ({ params, body }) => {
     await connectDB();
-    const staffId = new mongoose.Types.ObjectId(params.id);
-
-    const user = await User.findById(staffId);
+    let user = null;
+    if (mongoose.isValidObjectId(params.id)) {
+      user = await User.findById(params.id);
+    }
+    if (!user) {
+      user = await User.findOne({ username: params.id.toLowerCase(), role: "staff", deletedAt: null });
+    }
     if (!user || user.role !== "staff" || user.deletedAt) {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Staff member not found" } }, { status: 404 });
     }
@@ -63,7 +50,16 @@ export const PATCH = defineRoute({
       const updateData: Record<string, unknown> = {};
       if (body.title) updateData.title = body.title;
       if (body.position) updateData.position = body.position;
-      await StaffProfile.updateOne({ userId: staffId }, updateData);
+      await StaffProfile.updateOne({ userId: user._id }, updateData);
+    }
+
+    if (body.permissions !== undefined) {
+      await UserPermissionModel.findOneAndUpdate(
+        { userId: user._id },
+        { $set: { grants: body.permissions as Permission[] } },
+        { upsert: true, new: true }
+      );
+      invalidatePermissionCache(user._id.toString());
     }
 
     return { data: { success: true, message: "Staff member updated successfully" } };
@@ -74,17 +70,33 @@ export const DELETE = defineRoute({
   permission: "staff.delete",
   auditAction: "staff.delete",
   auditResource: { type: "Staff" },
-  auditSummary: ({ session, params }) => `${session?.name} deleted staff ID: ${params.id}`,
+  auditSummary: ({ session, params }) => `${session?.name} deleted staff: ${params.id}`,
   handler: async ({ session, params }) => {
     if (!session) {
       return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Not signed in" } }, { status: 401 });
     }
 
-    await UserService.softDeleteUser(
-      { id: session.sub, role: session.role },
-      params.id
-    );
+    await connectDB();
+    let user = null;
+    if (mongoose.isValidObjectId(params.id)) {
+      user = await User.findById(params.id);
+    }
+    if (!user) {
+      user = await User.findOne({ username: params.id.toLowerCase(), role: "staff", deletedAt: null });
+    }
+    if (!user) {
+      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Staff member not found" } }, { status: 404 });
+    }
 
-    return { data: { success: true, message: "Staff member deleted successfully" } };
+    try {
+      await UserService.softDeleteUser(
+        { id: session.sub, role: session.role },
+        user._id.toString()
+      );
+      return { data: { success: true, message: "Staff member deleted successfully" } };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Deletion failed";
+      return NextResponse.json({ error: { code: "CONFLICT", message } }, { status: 409 });
+    }
   },
 });

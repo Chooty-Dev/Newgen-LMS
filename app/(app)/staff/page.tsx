@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -20,9 +21,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, KeyRound, Trash2, Edit, Copy, Check, Users, Award } from "lucide-react";
+import { Plus, KeyRound, Trash2, Edit, Copy, Check, Users, Award, Search, ShieldCheck, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { TeacherStaffView } from "@/components/teacher/TeacherStaffView";
 
 interface StaffRecord {
   id: string;
@@ -34,9 +37,15 @@ interface StaffRecord {
   position: string;
   status: "active" | "disabled";
   joinedAt: string;
+  permissions?: string[];
 }
 
 export default function StaffPage() {
+  const { user } = useAuth();
+  if (user?.role === "teacher") {
+    return <TeacherStaffView />;
+  }
+
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
@@ -55,6 +64,7 @@ export default function StaffPage() {
   const [phone, setPhone] = React.useState("");
   const [position, setPosition] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [selectedPermissions, setSelectedPermissions] = React.useState<string[]>([]);
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff", page, search, statusFilter],
@@ -88,6 +98,7 @@ export default function StaffPage() {
           role: "staff",
           position: position || "Marks Evaluator & Attendance Coordinator",
           password: password.trim() ? password.trim() : undefined,
+          permissions: selectedPermissions,
         }),
       });
       const json = await res.json();
@@ -110,7 +121,7 @@ export default function StaffPage() {
       const res = await fetch(`/api/v1/staff/${editStaff.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email: email || undefined, phone: phone || undefined, position }),
+        body: JSON.stringify({ name, email: email || undefined, phone: phone || undefined, position, permissions: selectedPermissions }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || "Failed to update staff member");
@@ -161,6 +172,7 @@ export default function StaffPage() {
     setEmail("");
     setPhone("");
     setPosition("");
+    setSelectedPermissions([]);
   };
 
   const handleOpenEdit = (s: StaffRecord) => {
@@ -170,6 +182,7 @@ export default function StaffPage() {
     setEmail(s.email || "");
     setPhone(s.phone || "");
     setPosition(s.position);
+    setSelectedPermissions(s.permissions || []);
   };
 
   const columns: ColumnDef<StaffRecord>[] = [
@@ -227,37 +240,124 @@ export default function StaffPage() {
     },
   ];
 
+  const activeStaffCount = staffList.filter((s) => s.status === "active").length;
+  const staffWithPermsCount = staffList.filter((s) => s.permissions && s.permissions.length > 0).length;
+
   return (
-    <div className="space-y-6">
-      <PageHeader title="Staff Members" description="Manage center staff and evaluators.">
-        <Can permission="staff.create">
-          <Button
-            className="rounded-full h-12"
-            onClick={() => {
-              resetForm();
-              setCreateOpen(true);
-            }}
-          >
-            <Plus className="size-5 mr-2" />
-            Add Staff Member
-          </Button>
-        </Can>
-      </PageHeader>
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Administrative Staff Directory
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Create staff accounts, delegate student management permissions, and assign operational evaluation duties across center branches.
+            </p>
+            <div className="pt-2">
+              <Can permission="staff.create">
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setCreateOpen(true);
+                  }}
+                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Plus className="size-4" />
+                  <span>Add Staff Member</span>
+                </Button>
+              </Can>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <StatCard label="Total Staff" value={meta.total} subtitle="Center administrative team" icon={Users} />
-        <StatCard label="Active Status" value={staffList.filter((s) => s.status === "active").length} subtitle="Ready for evaluation" icon={Award} />
-      </div>
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/group-learn.webp"
+              alt="Staff"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
 
-      <FilterBar>
-        <SearchInput
-          value={search}
-          onValueChange={(val) => {
-            setSearch(val);
-            setPage(1);
-          }}
-          placeholder="Search by staff name or username..."
-        />
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {meta.total}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Staff
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {activeStaffCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Active Evaluators
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <ShieldCheck className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {staffWithPermsCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  With Student Perms
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {activeStaffCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Duty Ready
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search staff name or username..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-start gap-3">
         <div className="w-40">
           <Select
             value={statusFilter}
@@ -271,7 +371,7 @@ export default function StaffPage() {
             <option value="disabled">Disabled</option>
           </Select>
         </div>
-      </FilterBar>
+      </div>
 
       <DataTable
         columns={columns}
@@ -343,6 +443,41 @@ export default function StaffPage() {
               <label className="text-sm font-medium text-foreground block pl-2 mb-1">Position / Responsibility</label>
               <Input placeholder="e.g. Exam Evaluator & Attendance Officer" value={position} onChange={(e) => setPosition(e.target.value)} />
             </div>
+
+            {/* Allow Permissions for */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <label className="text-sm font-medium text-foreground block pl-2">Allow Permissions for:</label>
+              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-muted/40 border border-border">
+                {[
+                  { id: "students.create", label: "Add Student" },
+                  { id: "students.view", label: "View Student" },
+                  { id: "students.update", label: "Update Student" },
+                  { id: "students.delete", label: "Delete Student" },
+                ].map((perm) => (
+                  <label key={perm.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={selectedPermissions.includes(perm.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const newPerms = new Set([...selectedPermissions, perm.id]);
+                          if (perm.id !== "students.view") newPerms.add("students.view");
+                          setSelectedPermissions(Array.from(newPerms));
+                        } else {
+                          let newPerms = selectedPermissions.filter((p) => p !== perm.id);
+                          if (perm.id === "students.view") {
+                            newPerms = newPerms.filter((p) => !["students.create", "students.update", "students.delete"].includes(p));
+                          }
+                          setSelectedPermissions(newPerms);
+                        }
+                      }}
+                      className="rounded size-3.5 border-border text-primary focus:ring-primary"
+                    />
+                    <span>{perm.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -375,6 +510,41 @@ export default function StaffPage() {
             <div>
               <label className="text-sm font-medium text-foreground block pl-2 mb-1">Position</label>
               <Input value={position} onChange={(e) => setPosition(e.target.value)} />
+            </div>
+
+            {/* Allow Permissions for */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <label className="text-sm font-medium text-foreground block pl-2">Allow Permissions for:</label>
+              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-muted/40 border border-border">
+                {[
+                  { id: "students.create", label: "Add Student" },
+                  { id: "students.view", label: "View Student" },
+                  { id: "students.update", label: "Update Student" },
+                  { id: "students.delete", label: "Delete Student" },
+                ].map((perm) => (
+                  <label key={perm.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={selectedPermissions.includes(perm.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const newPerms = new Set([...selectedPermissions, perm.id]);
+                          if (perm.id !== "students.view") newPerms.add("students.view");
+                          setSelectedPermissions(Array.from(newPerms));
+                        } else {
+                          let newPerms = selectedPermissions.filter((p) => p !== perm.id);
+                          if (perm.id === "students.view") {
+                            newPerms = newPerms.filter((p) => !["students.create", "students.update", "students.delete"].includes(p));
+                          }
+                          setSelectedPermissions(newPerms);
+                        }
+                      }}
+                      className="rounded size-3.5 border-border text-primary focus:ring-primary"
+                    />
+                    <span>{perm.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

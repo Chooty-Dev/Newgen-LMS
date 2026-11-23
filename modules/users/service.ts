@@ -1,12 +1,16 @@
 import { User, StudentProfile, TeacherProfile, StaffProfile, IUser } from "./model";
 import { Center } from "@/modules/centers/model";
-import { Enrollment } from "@/modules/classes/model";
+import { ClassModel, Enrollment } from "@/modules/classes/model";
+import { Assessment } from "@/modules/exams/model";
+import { Mark } from "@/modules/marks/model";
 import { PerformanceSnapshot } from "@/modules/analysis/model";
+import { UserPermissionModel } from "@/modules/permissions/model";
+import { invalidatePermissionCache } from "@/core/rbac/resolver";
 import { canMutateUser } from "@/core/rbac/policies";
 import { generateTemporaryPassword, hashPassword } from "@/core/auth/password";
 import { revokeAllUserSessions } from "@/core/auth/session";
 import { connectDB } from "@/lib/db";
-import { UserRole } from "@/core/rbac/permissions";
+import { UserRole, Permission } from "@/core/rbac/permissions";
 import mongoose from "mongoose";
 
 export class UserService {
@@ -22,11 +26,13 @@ export class UserService {
       role: UserRole;
       admissionNo?: string;
       grade?: string;
+      classId?: string;
       dateOfBirth?: string;
       guardian?: { name: string; phone: string; relation: string };
       title?: string;
       position?: string;
       centerIds?: string[];
+      permissions?: string[];
     }
   ): Promise<{ user: IUser; temporaryPassword: string }> {
     await connectDB();
@@ -77,6 +83,7 @@ export class UserService {
       mustChangePassword: true,
       status: "active",
       failedLoginCount: 0,
+      createdBy: actor.id && mongoose.isValidObjectId(actor.id) ? new mongoose.Types.ObjectId(actor.id) : undefined,
     });
 
     // Ensure assignedCenterIds is explicitly written to MongoDB
@@ -99,6 +106,21 @@ export class UserService {
         guardian: data.guardian,
         joinedAt: new Date(),
       });
+
+      // Immediate class enrollment if specified
+      if (data.classId && mongoose.isValidObjectId(data.classId)) {
+        const classObjId = new mongoose.Types.ObjectId(data.classId);
+        await Enrollment.create({
+          studentId: user._id,
+          classId: classObjId,
+          status: "active",
+          enrolledAt: new Date(),
+        });
+        await ClassModel.updateOne(
+          { _id: classObjId },
+          { $inc: { enrolledCount: 1 } }
+        );
+      }
     } else if (data.role === "teacher") {
       await TeacherProfile.create({
         userId: user._id,
@@ -119,6 +141,16 @@ export class UserService {
         position: data.position || "Evaluator / Coordinator",
         joinedAt: new Date(),
       });
+
+      // Persist granted permissions if specified
+      if (data.permissions && data.permissions.length > 0) {
+        await UserPermissionModel.create({
+          userId: user._id,
+          grants: data.permissions as Permission[],
+          revokes: [],
+        });
+        invalidatePermissionCache(user._id.toString());
+      }
     }
 
     return { user, temporaryPassword: effectivePassword };
@@ -167,8 +199,44 @@ export class UserService {
       throw new Error(authCheck.reason || "Unauthorized to delete this user");
     }
 
+    const targetObjectId = new mongoose.Types.ObjectId(targetUserId);
+    const targetUser = await User.findById(targetObjectId);
+    if (!targetUser) {
+      throw new Error("User not found");
+    }
+
+    if (targetUser.role === "student") {
+      // Cascade student enrollments to 'left'
+      await Enrollment.updateMany(
+        { studentId: targetObjectId, status: "active" },
+        { status: "left", leftAt: new Date() }
+      );
+    } else if (targetUser.role === "staff") {
+      // Guard: Cannot delete staff if pending evaluations exist
+      const pendingCount = await Assessment.countDocuments({
+        evaluatorIds: targetObjectId,
+        status: { $in: ["scheduled", "ongoing", "waiting_marks"] },
+        deletedAt: null,
+      });
+      if (pendingCount > 0) {
+        throw new Error(
+          `Cannot delete staff member: assigned as evaluator on ${pendingCount} active assessment(s) with pending marks`
+        );
+      }
+
+      // Prune staff from classes and assessments
+      await ClassModel.updateMany(
+        { staffIds: targetObjectId },
+        { $pull: { staffIds: targetObjectId } }
+      );
+      await Assessment.updateMany(
+        { evaluatorIds: targetObjectId },
+        { $pull: { evaluatorIds: targetObjectId } }
+      );
+    }
+
     await User.updateOne(
-      { _id: new mongoose.Types.ObjectId(targetUserId) },
+      { _id: targetObjectId },
       {
         deletedAt: new Date(),
         deletedBy: new mongoose.Types.ObjectId(actor.id),
@@ -188,6 +256,7 @@ export class UserService {
     status?: string;
     classId?: string;
     group?: string;
+    teacherId?: string;
     teacherClassesOnly?: string[];
   }) {
     await connectDB();
@@ -201,7 +270,7 @@ export class UserService {
       query.centerId = new mongoose.Types.ObjectId(params.centerId);
     }
 
-    if (params.status) {
+    if (params.status && params.status !== "all") {
       query.status = params.status;
     }
 
@@ -212,21 +281,39 @@ export class UserService {
       ];
     }
 
-    // Filter by class enrollment
-    if (params.classId) {
+    // Filter by class enrollment or teacher scope
+    if (params.classId && params.classId !== "all" && mongoose.isValidObjectId(params.classId)) {
       const enrollments = await Enrollment.find({
         classId: new mongoose.Types.ObjectId(params.classId),
         status: "active",
       }).select("studentId");
       const studentIds = enrollments.map((e) => e.studentId);
       query._id = { $in: studentIds };
-    } else if (params.teacherClassesOnly && params.teacherClassesOnly.length > 0) {
-      const enrollments = await Enrollment.find({
-        classId: { $in: params.teacherClassesOnly.map((id) => new mongoose.Types.ObjectId(id)) },
-        status: "active",
-      }).select("studentId");
-      const studentIds = enrollments.map((e) => e.studentId);
-      query._id = { $in: studentIds };
+    } else if (params.teacherClassesOnly !== undefined) {
+      const classObjectIds = (params.teacherClassesOnly || [])
+        .filter((id) => mongoose.isValidObjectId(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      const enrollments = classObjectIds.length > 0
+        ? await Enrollment.find({ classId: { $in: classObjectIds }, status: "active" }).select("studentId")
+        : [];
+      const enrolledStudentIds = enrollments.map((e) => e.studentId);
+
+      let createdStudentIds: mongoose.Types.ObjectId[] = [];
+      if (params.teacherId && mongoose.isValidObjectId(params.teacherId)) {
+        const createdStudents = await User.find({
+          role: "student",
+          createdBy: new mongoose.Types.ObjectId(params.teacherId),
+          deletedAt: null,
+        }).select("_id");
+        createdStudentIds = createdStudents.map((s) => s._id as mongoose.Types.ObjectId);
+      }
+
+      const combinedIds = Array.from(
+        new Set([...enrolledStudentIds.map(id => id.toString()), ...createdStudentIds.map(id => id.toString())])
+      ).map((id) => new mongoose.Types.ObjectId(id));
+
+      query._id = { $in: combinedIds };
     }
 
     const total = await User.countDocuments(query);
@@ -273,7 +360,7 @@ export class UserService {
     });
 
     // Optional group filter
-    const filteredData = params.group
+    const filteredData = params.group && params.group !== "all"
       ? data.filter((d) => d.group === params.group)
       : data;
 
@@ -302,7 +389,7 @@ export class UserService {
       deletedAt: null,
     };
 
-    if (params.status) query.status = params.status;
+    if (params.status && params.status !== "all") query.status = params.status;
     if (params.centerId && mongoose.isValidObjectId(params.centerId)) {
       const cObj = new mongoose.Types.ObjectId(params.centerId);
       query.$or = [{ centerId: cObj }, { assignedCenterIds: cObj }];
@@ -389,7 +476,7 @@ export class UserService {
       deletedAt: null,
     };
 
-    if (params.status) query.status = params.status;
+    if (params.status && params.status !== "all") query.status = params.status;
     if (params.centerId && mongoose.isValidObjectId(params.centerId)) {
       query.centerId = new mongoose.Types.ObjectId(params.centerId);
     }
@@ -411,6 +498,9 @@ export class UserService {
     const profiles = await StaffProfile.find({ userId: { $in: userIds } }).lean();
     const profileMap = new Map(profiles.map((p) => [p.userId.toString(), p]));
 
+    const userPerms = await UserPermissionModel.find({ userId: { $in: userIds } }).lean();
+    const permMap = new Map(userPerms.map((up) => [up.userId.toString(), (up.grants || []) as string[]]));
+
     const data = users.map((u) => {
       const p = profileMap.get(u._id.toString());
       return {
@@ -423,6 +513,7 @@ export class UserService {
         joinedAt: u.createdAt,
         title: p?.title || "Staff Member",
         position: p?.position || "Coordinator",
+        permissions: permMap.get(u._id.toString()) || [],
       };
     });
 
@@ -450,7 +541,7 @@ export class UserService {
       deletedAt: null,
     };
 
-    if (params.status) query.status = params.status;
+    if (params.status && params.status !== "all") query.status = params.status;
     if (params.search) {
       query.$or = [
         { name: { $regex: params.search, $options: "i" } },
@@ -485,6 +576,191 @@ export class UserService {
         limit: params.limit,
         totalPages: Math.ceil(total / params.limit) || 1,
       },
+    };
+  }
+
+  // Get student details by ID or username
+  static async getStudentDetails(idOrUsername: string) {
+    await connectDB();
+
+    let user = null;
+    if (mongoose.isValidObjectId(idOrUsername)) {
+      user = await User.findOne({
+        _id: new mongoose.Types.ObjectId(idOrUsername),
+        role: "student",
+        deletedAt: null,
+      }).lean();
+    }
+    if (!user) {
+      user = await User.findOne({
+        username: idOrUsername.toLowerCase(),
+        role: "student",
+        deletedAt: null,
+      }).lean();
+    }
+
+    if (!user) {
+      throw new Error("Student not found");
+    }
+
+    const studentId = user._id;
+    const profile = await StudentProfile.findOne({ userId: studentId }).lean();
+
+    // Fetch enrollments and associated classes
+    const enrollments = await Enrollment.find({
+      studentId,
+      deletedAt: null,
+    }).sort({ createdAt: -1 }).lean();
+
+    const classIds = enrollments.map((e) => e.classId);
+    const classes = await ClassModel.find({
+      _id: { $in: classIds },
+    }).lean();
+    const classMap = new Map(classes.map((c) => [c._id.toString(), c]));
+
+    const enrichedEnrollments = enrollments.map((e) => {
+      const cls = classMap.get(e.classId.toString());
+      return {
+        id: e._id.toString(),
+        classId: e.classId.toString(),
+        className: cls?.name || "Unknown Class",
+        slug: cls?.slug,
+        type: cls?.schedule?.type || "regular",
+        status: e.status,
+        enrolledAt: e.createdAt,
+        leftAt: e.leftAt,
+      };
+    });
+
+    // Fetch marks and associated assessments
+    const marks = await Mark.find({
+      studentId,
+      deletedAt: null,
+    }).sort({ createdAt: -1 }).lean();
+
+    const assessmentIds = marks.map((m) => m.assessmentId);
+    const assessments = await Assessment.find({
+      _id: { $in: assessmentIds },
+    }).lean();
+    const assessmentMap = new Map(assessments.map((a) => [a._id.toString(), a]));
+
+    const enrichedMarks = marks.map((m) => {
+      const a = assessmentMap.get(m.assessmentId.toString());
+      return {
+        id: m._id.toString(),
+        assessmentId: m.assessmentId.toString(),
+        assessmentTitle: a?.title || "Assessment",
+        assessmentSlug: a?.slug,
+        type: a?.type || "exam",
+        score: m.score,
+        totalMarks: a?.totalMarks || 100,
+        grade: m.grade,
+        percentage: a?.totalMarks ? Math.round((m.score / a.totalMarks) * 100) : m.score,
+        feedback: m.remarks,
+        evaluatedAt: m.createdAt,
+      };
+    });
+
+    // Fetch performance snapshots
+    const snapshots = await PerformanceSnapshot.find({
+      studentId,
+    }).sort({ period: -1 }).limit(12).lean();
+
+    const latestSnapshot = snapshots[0];
+
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      joinedAt: user.createdAt,
+      admissionNo: profile?.admissionNo || "-",
+      grade: profile?.grade || "-",
+      dateOfBirth: profile?.dateOfBirth,
+      guardian: profile?.guardian,
+      performanceScore: latestSnapshot?.score ?? 70,
+      group: latestSnapshot?.group ?? "medium",
+      enrollments: enrichedEnrollments,
+      marks: enrichedMarks,
+      snapshots: snapshots.map((s) => ({
+        id: s._id.toString(),
+        period: s.period,
+        score: s.score,
+        group: s.group,
+        attendanceRate: s.attendanceScore ?? 100,
+      })),
+    };
+  }
+
+  // Get staff details by ID or username
+  static async getStaffDetails(idOrUsername: string) {
+    await connectDB();
+
+    let user = null;
+    if (mongoose.isValidObjectId(idOrUsername)) {
+      user = await User.findOne({
+        _id: new mongoose.Types.ObjectId(idOrUsername),
+        role: "staff",
+        deletedAt: null,
+      }).lean();
+    }
+    if (!user) {
+      user = await User.findOne({
+        username: idOrUsername.toLowerCase(),
+        role: "staff",
+        deletedAt: null,
+      }).lean();
+    }
+
+    if (!user) {
+      throw new Error("Staff member not found");
+    }
+
+    const staffId = user._id;
+    const profile = await StaffProfile.findOne({ userId: staffId }).lean();
+
+    const assignedClasses = await ClassModel.find({
+      staffIds: staffId,
+      deletedAt: null,
+    }).select("name slug grade type status schedule").lean();
+
+    const assignedAssessments = await Assessment.find({
+      evaluatorIds: staffId,
+      deletedAt: null,
+    }).select("title slug type status scheduledAt totalMarks").lean();
+
+    const userPerm = await UserPermissionModel.findOne({ userId: staffId }).lean();
+
+    return {
+      id: user._id.toString(),
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      joinedAt: user.createdAt,
+      title: profile?.title || "Staff Member",
+      position: profile?.position || "Coordinator",
+      permissions: (userPerm?.grants || []) as string[],
+      assignedClasses: assignedClasses.map((c) => ({
+        id: c._id.toString(),
+        name: c.name,
+        slug: c.slug,
+        type: c.schedule?.type || "regular",
+        status: c.status,
+        schedule: c.schedule,
+      })),
+      assignedAssessments: assignedAssessments.map((a) => ({
+        id: a._id.toString(),
+        title: a.title,
+        slug: a.slug,
+        type: a.type,
+        status: a.status,
+        scheduledAt: a.sessions?.[0]?.date || a.createdAt.toISOString(),
+        totalMarks: a.totalMarks,
+      })),
     };
   }
 }

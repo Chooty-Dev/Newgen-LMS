@@ -1,5 +1,5 @@
 import { Announcement, IAnnouncement } from "./model";
-import { Enrollment } from "@/modules/classes/model";
+import { ClassModel, Enrollment } from "@/modules/classes/model";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 
@@ -59,15 +59,38 @@ export class AnnouncementService {
     };
   }
 
-  static async createAnnouncement(centerId: string, actorId: string, data: {
-    title: string;
-    body: string;
-    audience: "center" | "classes";
-    classIds?: string[];
-    pinned?: boolean;
-    publishAt?: string;
-  }) {
+  static async createAnnouncement(
+    centerId: string,
+    actorId: string,
+    data: {
+      title: string;
+      body: string;
+      audience: "center" | "classes";
+      classIds?: string[];
+      pinned?: boolean;
+      publishAt?: string;
+    },
+    actorRole?: string
+  ) {
     await connectDB();
+
+    // If teacher, validate that all selected classes belong to the teacher
+    if (actorRole === "teacher" && data.audience === "classes" && data.classIds && data.classIds.length > 0) {
+      const classObjectIds = data.classIds
+        .filter((id) => mongoose.isValidObjectId(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      const ownedCount = await ClassModel.countDocuments({
+        _id: { $in: classObjectIds },
+        teacherId: new mongoose.Types.ObjectId(actorId),
+        deletedAt: null,
+      });
+
+      if (ownedCount !== classObjectIds.length) {
+        throw new Error("You can only post announcements to classes assigned to you");
+      }
+    }
+
     const ann = await Announcement.create({
       centerId: new mongoose.Types.ObjectId(centerId),
       title: data.title,

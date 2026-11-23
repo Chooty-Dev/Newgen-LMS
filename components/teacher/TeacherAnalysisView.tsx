@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -58,16 +59,41 @@ interface StudentAnalysisData {
 
 export function TeacherAnalysisView() {
   const { user } = useAuth();
-  const [selectedStudentId, setSelectedStudentId] = React.useState<string>("");
+  const searchParams = useSearchParams();
+  const urlStudentId = searchParams.get("studentId");
+
+  const [selectedStudentId, setSelectedStudentId] = React.useState<string>(urlStudentId || "");
+  const [selectedClassId, setSelectedClassId] = React.useState<string>("");
+  const [groupFilter, setGroupFilter] = React.useState<string>("all");
   const [studentSearch, setStudentSearch] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (urlStudentId) {
+      setSelectedStudentId(urlStudentId);
+    }
+  }, [urlStudentId]);
+
+  // Fetch teacher classes for filter
+  const { data: classesData } = useQuery({
+    queryKey: ["classes", "teacher", user?.centerId],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/classes");
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
+  });
+  const classesList: Array<{ id: string; name: string }> = classesData?.data || [];
 
   // Fetch list of students
   const { data: studentsData, isLoading: loadingStudents } = useQuery<{
-    data: Array<{ id: string; name: string; username: string; grade?: string }>;
+    data: Array<{ id: string; name: string; username: string; grade?: string; group?: string }>;
   }>({
-    queryKey: ["students", "list", user?.centerId],
+    queryKey: ["students", "list", user?.centerId, selectedClassId, groupFilter],
     queryFn: async () => {
-      const res = await fetch("/api/v1/students?limit=100");
+      const params = new URLSearchParams({ limit: "150" });
+      if (selectedClassId) params.append("classId", selectedClassId);
+      if (groupFilter !== "all") params.append("group", groupFilter);
+      const res = await fetch(`/api/v1/students?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load students");
       return res.json();
     },
@@ -130,7 +156,24 @@ export function TeacherAnalysisView() {
             </p>
           </div>
 
-          <div className="w-full">
+          <div className="space-y-3">
+            {/* Class Filter */}
+            <Select
+              value={selectedClassId}
+              onChange={(e) => {
+                setSelectedClassId(e.target.value);
+                setSelectedStudentId("");
+              }}
+            >
+              <option value="">All Classes</option>
+              {classesList.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+
+            {/* Student Filter */}
             <Select
               value={activeStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
@@ -144,31 +187,28 @@ export function TeacherAnalysisView() {
                 )
                 .map((st) => (
                   <option key={st.id} value={st.id}>
-                    {st.name} ({st.username}) - {st.grade || "No Grade"}
+                    {st.name} ({st.username})
                   </option>
                 ))}
             </Select>
-          </div>
 
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-secondary/40 border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {students.length} Student Profiles Active
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Link
-                href="/students"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Users className="size-3" />
-                <span>Roster</span>
-              </Link>
+            {/* Group Filter Chips */}
+            <div className="flex items-center gap-1.5 pt-1">
+              {(["all", "weak", "medium", "excellent"] as const).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGroupFilter(g)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all",
+                    groupFilter === g
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-secondary/70 text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {g === "all" ? "All Tiers" : g}
+                </button>
+              ))}
             </div>
           </div>
 

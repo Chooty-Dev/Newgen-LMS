@@ -1,6 +1,7 @@
 import { Assessment, IAssessment, AssessmentType, AssessmentStatus } from "./model";
 import { ClassModel } from "@/modules/classes/model";
 import { connectDB } from "@/lib/db";
+import { generateSlug } from "@/lib/slug";
 import mongoose from "mongoose";
 
 import { Mark } from "@/modules/marks/model";
@@ -22,9 +23,11 @@ export class AssessmentService {
       deletedAt: null,
     };
 
-    if (params.type) query.type = params.type;
-    if (params.status) query.status = params.status;
-    if (params.subjectId) query.subjectId = new mongoose.Types.ObjectId(params.subjectId);
+    if (params.type && params.type !== "all") query.type = params.type;
+    if (params.status && params.status !== "all") query.status = params.status;
+    if (params.subjectId && params.subjectId !== "all" && mongoose.isValidObjectId(params.subjectId)) {
+      query.subjectId = new mongoose.Types.ObjectId(params.subjectId);
+    }
     if (params.search) query.title = { $regex: params.search, $options: "i" };
 
     if (params.evaluatorId) {
@@ -43,7 +46,7 @@ export class AssessmentService {
     const assessments = await Assessment.find(query)
       .populate("subjectId", "name code")
       .populate("classIds", "name")
-      .populate("evaluatorIds", "name username")
+      .populate("evaluatorIds", "name username email")
       .sort({ "sessions.0.date": -1, createdAt: -1 })
       .lean();
 
@@ -51,10 +54,11 @@ export class AssessmentService {
       data: assessments.map((a) => {
         const sub = a.subjectId as unknown as { name: string; code: string } | null;
         const classes = (a.classIds || []) as unknown as Array<{ _id: mongoose.Types.ObjectId; name: string }>;
-        const evaluators = (a.evaluatorIds || []) as unknown as Array<{ _id: mongoose.Types.ObjectId; name: string }>;
+        const evaluators = (a.evaluatorIds || []) as unknown as Array<{ _id: mongoose.Types.ObjectId; name: string; username: string; email?: string }>;
 
         return {
           id: a._id.toString(),
+          slug: a.slug || a._id.toString(),
           title: a.title,
           type: a.type,
           subject: sub ? `${sub.code} - ${sub.name}` : "-",
@@ -68,10 +72,108 @@ export class AssessmentService {
           weight: a.weight,
           dateMode: a.dateMode,
           sessions: a.sessions,
-          status: a.status,
+          status: a.status || "scheduled",
           createdAt: a.createdAt,
         };
       }),
+    };
+  }
+
+  static async getAssessmentDetails(idOrSlug: string) {
+    await connectDB();
+    let query: Record<string, unknown> = { deletedAt: null };
+
+    if (mongoose.isValidObjectId(idOrSlug)) {
+      query = { $or: [{ _id: new mongoose.Types.ObjectId(idOrSlug) }, { slug: idOrSlug }], deletedAt: null };
+    } else {
+      query = { slug: idOrSlug, deletedAt: null };
+    }
+
+    const a = await Assessment.findOne(query)
+      .populate("subjectId", "name code")
+      .populate("classIds", "name capacity enrolledCount")
+      .populate("evaluatorIds", "name username email phone")
+      .lean();
+
+    if (!a) throw new Error("Assessment not found");
+
+    const sub = a.subjectId as unknown as { _id: mongoose.Types.ObjectId; name: string; code: string } | null;
+    const classes = (a.classIds || []) as unknown as Array<{ _id: mongoose.Types.ObjectId; name: string }>;
+    const evaluators = (a.evaluatorIds || []) as unknown as Array<{ _id: mongoose.Types.ObjectId; name: string; username: string; email?: string; phone?: string }>;
+
+    // Fetch marks submitted for this assessment
+    const marks = await Mark.find({ assessmentId: a._id })
+      .populate("studentId", "name username email")
+      .sort({ score: -1 })
+      .lean();
+
+    const submittedCount = marks.filter((m) => m.status === "submitted").length;
+    const scores = marks.map((m) => m.percentage || 0);
+    const average = scores.length > 0 ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : 0;
+    const highest = scores.length > 0 ? Math.max(...scores) : 0;
+    const lowest = scores.length > 0 ? Math.min(...scores) : 0;
+
+    const gradeDistribution = {
+      A: marks.filter((m) => m.grade === "A").length,
+      B: marks.filter((m) => m.grade === "B").length,
+      C: marks.filter((m) => m.grade === "C").length,
+      S: marks.filter((m) => m.grade === "S").length,
+      F: marks.filter((m) => m.grade === "F").length,
+    };
+
+    const studentMarks = marks.map((m) => {
+      const st = m.studentId as unknown as { _id: mongoose.Types.ObjectId; name: string; username: string; email?: string } | null;
+      return {
+        id: m._id.toString(),
+        studentId: st?._id?.toString() || "",
+        studentName: st?.name || "Student",
+        studentUsername: st?.username || "",
+        score: m.score,
+        totalMarks: m.totalMarks,
+        percentage: m.percentage,
+        grade: m.grade,
+        status: m.status,
+        attendanceStatus: m.attendanceStatus,
+        remarks: m.remarks || "",
+        evaluatedAt: m.evaluatedAt,
+      };
+    });
+
+    const formattedAssessment = {
+      id: a._id.toString(),
+      slug: a.slug || a._id.toString(),
+      title: a.title,
+      type: a.type,
+      subject: sub ? `${sub.code} - ${sub.name}` : "-",
+      subjectId: sub?._id?.toString() || "",
+      totalMarks: a.totalMarks,
+      passMark: a.passMark,
+      weight: a.weight,
+      dateMode: a.dateMode,
+      sessions: a.sessions,
+      status: a.status || "scheduled",
+      createdAt: a.createdAt,
+    };
+
+    return {
+      assessment: formattedAssessment,
+      classes: classes.map((c) => ({ id: c._id.toString(), name: c.name })),
+      staff: evaluators.map((e) => ({
+        id: e._id.toString(),
+        name: e.name,
+        username: e.username,
+        email: e.email || "",
+        phone: e.phone || "",
+      })),
+      results: {
+        totalEvaluated: marks.length,
+        submittedCount,
+        average,
+        highest,
+        lowest,
+        gradeDistribution,
+        studentMarks,
+      },
     };
   }
 
@@ -89,9 +191,12 @@ export class AssessmentService {
     status?: AssessmentStatus;
   }) {
     await connectDB();
+    const slug = generateSlug(data.title);
+
     const created = await Assessment.create({
       centerId: new mongoose.Types.ObjectId(centerId),
       title: data.title,
+      slug,
       type: data.type,
       subjectId: new mongoose.Types.ObjectId(data.subjectId),
       classIds: data.classIds.map((id) => new mongoose.Types.ObjectId(id)),
@@ -107,6 +212,24 @@ export class AssessmentService {
     return created;
   }
 
+  static async assignEvaluator(id: string, staffId: string) {
+    await connectDB();
+    return Assessment.findByIdAndUpdate(
+      id,
+      { $addToSet: { evaluatorIds: new mongoose.Types.ObjectId(staffId) } },
+      { new: true }
+    );
+  }
+
+  static async unassignEvaluator(id: string, staffId: string) {
+    await connectDB();
+    return Assessment.findByIdAndUpdate(
+      id,
+      { $pull: { evaluatorIds: new mongoose.Types.ObjectId(staffId) } },
+      { new: true }
+    );
+  }
+
   static async updateAssessment(id: string, data: Partial<IAssessment>) {
     await connectDB();
     const updated = await Assessment.findByIdAndUpdate(id, data, { returnDocument: "after" });
@@ -116,14 +239,16 @@ export class AssessmentService {
 
   static async deleteAssessment(id: string, actorId: string) {
     await connectDB();
-    await Assessment.findByIdAndUpdate(id, {
+    const aObjId = new mongoose.Types.ObjectId(id);
+
+    await Assessment.findByIdAndUpdate(aObjId, {
       deletedAt: new Date(),
       deletedBy: new mongoose.Types.ObjectId(actorId),
     });
 
     // Recompute snapshots for students affected by this deleted assessment
     try {
-      const marks = await Mark.find({ assessmentId: new mongoose.Types.ObjectId(id) }).select("studentId").lean();
+      const marks = await Mark.find({ assessmentId: aObjId }).select("studentId").lean();
       const studentIds = Array.from(new Set(marks.map((m) => m.studentId.toString())));
       await Promise.all(
         studentIds.map((sId) =>

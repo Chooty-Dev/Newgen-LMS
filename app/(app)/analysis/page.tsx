@@ -66,7 +66,11 @@ export default function AnalysisPage() {
   }
 
   if (user?.role === "teacher") {
-    return <TeacherAnalysisView />;
+    return (
+      <React.Suspense fallback={<div className="p-8"><Skeleton className="h-44 w-full rounded-3xl" /></div>}>
+        <TeacherAnalysisView />
+      </React.Suspense>
+    );
   }
 
   return <TeacherAdminAnalysisView />;

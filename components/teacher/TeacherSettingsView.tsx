@@ -4,6 +4,10 @@ import * as React from "react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
   Settings,
   ShieldCheck,
@@ -32,24 +36,61 @@ interface ActiveSession {
   isCurrent: boolean;
 }
 
+const profileSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").trim(),
+  phone: z.string().optional().or(z.literal("")),
+  githubUrl: z.string().url("Please enter a valid URL (e.g. https://github.com/...)").optional().or(z.literal("")),
+  linkedinUrl: z.string().url("Please enter a valid URL (e.g. https://linkedin.com/in/...)").optional().or(z.literal("")),
+});
+type ProfileFormData = z.infer<typeof profileSchema>;
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(10, "Password must be at least 10 characters long"),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New passwords do not match",
+    path: ["confirmPassword"],
+  });
+type PasswordFormData = z.infer<typeof passwordSchema>;
+
 export function TeacherSettingsView() {
   const queryClient = useQueryClient();
   const { user, refetchUser } = useAuth();
 
-  // Personal details
-  const [name, setName] = React.useState(user?.name || "");
-  const [phone, setPhone] = React.useState(user?.phone || "");
-  const [githubUrl, setGithubUrl] = React.useState(
-    user?.socialLinks?.find((s) => s.platform.toLowerCase() === "github")?.url || ""
-  );
-  const [linkedinUrl, setLinkedinUrl] = React.useState(
-    user?.socialLinks?.find((s) => s.platform.toLowerCase() === "linkedin")?.url || ""
-  );
+  // Profile Form
+  const profileForm = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema) as any,
+    defaultValues: {
+      name: user?.name || "",
+      phone: user?.phone || "",
+      githubUrl: user?.socialLinks?.find((s) => s.platform.toLowerCase() === "github")?.url || "",
+      linkedinUrl: user?.socialLinks?.find((s) => s.platform.toLowerCase() === "linkedin")?.url || "",
+    },
+  });
 
-  // Password fields
-  const [currentPassword, setCurrentPassword] = React.useState("");
-  const [newPassword, setNewPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
+  React.useEffect(() => {
+    if (user) {
+      profileForm.reset({
+        name: user.name || "",
+        phone: user.phone || "",
+        githubUrl: user.socialLinks?.find((s) => s.platform.toLowerCase() === "github")?.url || "",
+        linkedinUrl: user.socialLinks?.find((s) => s.platform.toLowerCase() === "linkedin")?.url || "",
+      });
+    }
+  }, [user, profileForm]);
+
+  // Password Form
+  const passwordForm = useForm<PasswordFormData>({
+    resolver: zodResolver(passwordSchema) as any,
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
 
   // Fetch active sessions
   const { data: sessionData, isLoading: sessionsLoading } = useQuery({
@@ -65,53 +106,70 @@ export function TeacherSettingsView() {
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: ProfileFormData) => {
       const socialLinks: Array<{ platform: string; url: string }> = [];
-      if (githubUrl) socialLinks.push({ platform: "GitHub", url: githubUrl });
-      if (linkedinUrl) socialLinks.push({ platform: "LinkedIn", url: linkedinUrl });
+      if (data.githubUrl) socialLinks.push({ platform: "GitHub", url: data.githubUrl });
+      if (data.linkedinUrl) socialLinks.push({ platform: "LinkedIn", url: data.linkedinUrl });
 
       const res = await fetch("/api/v1/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          phone: phone || undefined,
+          name: data.name,
+          phone: data.phone || undefined,
           socialLinks,
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to update profile");
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to update profile");
+        error.fields = json.error?.fields;
+        throw error;
+      }
       return json.data;
     },
     onSuccess: async () => {
       await refetchUser();
       toast.success("Teacher profile updated successfully!");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          profileForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      }
+      toast.error(err.message || "Failed to update profile");
+    },
   });
 
   // Change password mutation
   const changePasswordMutation = useMutation({
-    mutationFn: async () => {
-      if (newPassword.length < 10) throw new Error("Password must be at least 10 characters");
-      if (newPassword !== confirmPassword) throw new Error("New passwords do not match");
-
+    mutationFn: async (data: PasswordFormData) => {
       const res = await fetch("/api/v1/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify(data),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to change password");
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to change password");
+        error.fields = json.error?.fields;
+        throw error;
+      }
       return json.data;
     },
     onSuccess: () => {
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      passwordForm.reset();
       toast.success("Password changed successfully!");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          passwordForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      }
+      toast.error(err.message || "Failed to change password");
+    },
   });
 
   // Revoke session mutation
@@ -184,54 +242,56 @@ export function TeacherSettingsView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              Full Name
-            </label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <form onSubmit={profileForm.handleSubmit((data) => updateProfileMutation.mutate(data))} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <FormLabel label="Full Name" required />
+              <Input
+                placeholder="e.g. Samantha Perera"
+                {...profileForm.register("name")}
+                className={inputErrorClass(profileForm.formState.errors.name)}
+              />
+              <FormError message={profileForm.formState.errors.name?.message} />
+            </div>
+            <div>
+              <FormLabel label="Phone Number" optional />
+              <Input
+                placeholder="e.g. 077 123 4567"
+                {...profileForm.register("phone")}
+                className={inputErrorClass(profileForm.formState.errors.phone)}
+              />
+              <FormError message={profileForm.formState.errors.phone?.message} />
+            </div>
+            <div>
+              <FormLabel label="GitHub Profile" optional />
+              <Input
+                placeholder="e.g. https://github.com/samanthap"
+                {...profileForm.register("githubUrl")}
+                className={inputErrorClass(profileForm.formState.errors.githubUrl)}
+              />
+              <FormError message={profileForm.formState.errors.githubUrl?.message} />
+            </div>
+            <div>
+              <FormLabel label="LinkedIn Profile" optional />
+              <Input
+                placeholder="e.g. https://linkedin.com/in/samanthap"
+                {...profileForm.register("linkedinUrl")}
+                className={inputErrorClass(profileForm.formState.errors.linkedinUrl)}
+              />
+              <FormError message={profileForm.formState.errors.linkedinUrl?.message} />
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              Phone Number
-            </label>
-            <Input
-              placeholder="+94 77 123 4567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              GitHub Profile (Optional)
-            </label>
-            <Input
-              placeholder="https://github.com/..."
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              LinkedIn Profile (Optional)
-            </label>
-            <Input
-              placeholder="https://linkedin.com/in/..."
-              value={linkedinUrl}
-              onChange={(e) => setLinkedinUrl(e.target.value)}
-            />
-          </div>
-        </div>
 
-        <div className="flex justify-end pt-2">
-          <Button
-            onClick={() => updateProfileMutation.mutate()}
-            disabled={updateProfileMutation.isPending || !name}
-            className="rounded-full h-11 px-6 font-bold"
-          >
-            {updateProfileMutation.isPending ? "Saving..." : "Save Details"}
-          </Button>
-        </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              type="submit"
+              disabled={updateProfileMutation.isPending}
+              className="rounded-full h-11 px-6 font-bold"
+            >
+              {updateProfileMutation.isPending ? "Saving..." : "Save Details"}
+            </Button>
+          </div>
+        </form>
       </div>
 
       {/* 3. Password & Security Card */}
@@ -248,51 +308,50 @@ export function TeacherSettingsView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              Current Password
-            </label>
-            <Input
-              type="password"
-              placeholder="••••••••••••"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
+        <form onSubmit={passwordForm.handleSubmit((data) => changePasswordMutation.mutate(data))} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <FormLabel label="Current Password" required />
+              <Input
+                type="password"
+                placeholder="Enter current password..."
+                {...passwordForm.register("currentPassword")}
+                className={inputErrorClass(passwordForm.formState.errors.currentPassword)}
+              />
+              <FormError message={passwordForm.formState.errors.currentPassword?.message} />
+            </div>
+            <div>
+              <FormLabel label="New Password" required />
+              <Input
+                type="password"
+                placeholder="Min 10 characters..."
+                {...passwordForm.register("newPassword")}
+                className={inputErrorClass(passwordForm.formState.errors.newPassword)}
+              />
+              <FormError message={passwordForm.formState.errors.newPassword?.message} />
+            </div>
+            <div>
+              <FormLabel label="Confirm Password" required />
+              <Input
+                type="password"
+                placeholder="Repeat new password..."
+                {...passwordForm.register("confirmPassword")}
+                className={inputErrorClass(passwordForm.formState.errors.confirmPassword)}
+              />
+              <FormError message={passwordForm.formState.errors.confirmPassword?.message} />
+            </div>
           </div>
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              New Password
-            </label>
-            <Input
-              type="password"
-              placeholder="••••••••••••"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-              Confirm Password
-            </label>
-            <Input
-              type="password"
-              placeholder="••••••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
-        </div>
 
-        <div className="flex justify-end pt-2">
-          <Button
-            onClick={() => changePasswordMutation.mutate()}
-            disabled={changePasswordMutation.isPending || !currentPassword || !newPassword}
-            className="rounded-full h-11 px-6 font-bold"
-          >
-            {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
-          </Button>
-        </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              type="submit"
+              disabled={changePasswordMutation.isPending}
+              className="rounded-full h-11 px-6 font-bold"
+            >
+              {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
+            </Button>
+          </div>
+        </form>
       </div>
 
       {/* 4. Active Logged-in Devices */}

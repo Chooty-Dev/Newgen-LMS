@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -21,9 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Trash2, Edit, BookOpen, Layers } from "lucide-react";
+import { Plus, Trash2, Edit, BookOpen, Layers, Search, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { TeacherSubjectsView } from "@/components/teacher/TeacherSubjectsView";
 
 interface SubjectRecord {
   id: string;
@@ -35,6 +38,11 @@ interface SubjectRecord {
 }
 
 export default function SubjectsPage() {
+  const { user } = useAuth();
+  if (user?.role === "teacher") {
+    return <TeacherSubjectsView />;
+  }
+
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
@@ -175,34 +183,121 @@ export default function SubjectsPage() {
     },
   ];
 
+  const activeSubjectsCount = subjects.filter((s) => s.status === "active").length;
+  const archivedCount = subjects.filter((s) => s.status === "archived").length;
+
   return (
-    <div className="space-y-6">
-      <PageHeader title="Manage Subjects" description="Add, edit or organize curriculum subjects.">
-        <Can permission="subjects.create">
-          <Button
-            className="rounded-full h-12"
-            onClick={() => {
-              resetForm();
-              setCreateOpen(true);
-            }}
-          >
-            <Plus className="size-5 mr-2" />
-            Add Subject
-          </Button>
-        </Can>
-      </PageHeader>
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Curriculum & Subjects
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Define academic subjects, manage curriculum codes, and organize teaching tracks across all center departments.
+            </p>
+            <div className="pt-2">
+              <Can permission="subjects.create">
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setCreateOpen(true);
+                  }}
+                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Plus className="size-4" />
+                  <span>Add Subject</span>
+                </Button>
+              </Can>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <StatCard label="Total Subjects" value={subjects.length} subtitle="Active study areas" icon={BookOpen} />
-        <StatCard label="Active Curriculum" value={subjects.filter((s) => s.status === "active").length} subtitle="Offered this term" icon={Layers} />
-      </div>
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/bulb-on-books.webp"
+              alt="Subjects"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
 
-      <FilterBar>
-        <SearchInput
-          value={search}
-          onValueChange={setSearch}
-          placeholder="Search by subject name or code..."
-        />
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <BookOpen className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {subjects.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Subjects
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {activeSubjectsCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Active Courses
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {archivedCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Archived
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <Layers className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {activeSubjectsCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Curricula
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by subject name or code..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-start gap-3">
         <div className="w-40">
           <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
@@ -210,7 +305,7 @@ export default function SubjectsPage() {
             <option value="archived">Archived</option>
           </Select>
         </div>
-      </FilterBar>
+      </div>
 
       <DataTable
         columns={columns}

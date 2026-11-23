@@ -28,6 +28,7 @@ export const GET = defineRoute({
       status: query.status,
       classId: query.classId,
       group: query.group,
+      teacherId: session?.role === "teacher" ? session.sub : undefined,
       teacherClassesOnly,
     });
 

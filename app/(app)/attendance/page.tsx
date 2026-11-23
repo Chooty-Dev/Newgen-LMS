@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -210,7 +211,7 @@ export default function AttendancePage() {
   }
 
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = React.useState("2026-11-20");
+  const [selectedDate, setSelectedDate] = React.useState(() => new Date().toISOString().slice(0, 10));
 
   const [activeTab, setActiveTab] = React.useState("by-student");
 
@@ -312,44 +313,111 @@ export default function AttendancePage() {
   });
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Attendance" description="Mark who came today.">
-        <Can permission="attendance.export">
-          <Button
-            variant="outline"
-            className="rounded-full h-12"
-            onClick={() => window.open(`/api/v1/attendance/export?date=${selectedDate}`, "_blank")}
-          >
-            <Download className="size-5 mr-2" />
-            Export CSV
-          </Button>
-        </Can>
-      </PageHeader>
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Class Attendance Tracker
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Verify student check-ins, record attendance by session or student, and auto-mark absentees. Export comprehensive records for auditing.
+            </p>
+            <div className="pt-2">
+              <Can permission="attendance.export">
+                <Button
+                  onClick={() => window.open(`/api/v1/attendance/export?date=${selectedDate}`, "_blank")}
+                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Download className="size-4" />
+                  <span>Export CSV</span>
+                </Button>
+              </Can>
+            </div>
+          </div>
 
-      <Card className="rounded-3xl border-border bg-card p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <CalendarCheck className="size-6 text-foreground stroke-[1.8]" />
-          <div>
-            <span className="text-base font-semibold text-foreground block">Attendance Date</span>
-            <span className="text-xs text-muted-foreground">Select date for records</span>
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/attendance.webp"
+              alt="Attendance"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
           </div>
         </div>
-        <div className="w-full sm:w-56">
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="rounded-full h-12 text-base"
-          />
-        </div>
-      </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-        <StatCard label="Expected Today" value={overview.expectedToday} subtitle={`${overview.classesToday} classes scheduled`} icon={Users} />
-        <StatCard label="Attended" value={overview.attended} subtitle="Present & on-time" icon={CheckCircle2} />
-        <StatCard label="Recorded Absent" value={overview.absent} subtitle="Confirmed absent" icon={XCircle} />
-        <StatCard label="Left to Mark" value={overview.leftToMark} subtitle="Pending verification" icon={Clock} />
-      </div>
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {overview.expectedToday}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Expected Today
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {overview.attended}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Attended
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                <XCircle className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {overview.absent}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Absent
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {overview.leftToMark}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Left to Mark
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Date Picker directly below cards filling the space */}
+          <div className="relative w-full">
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full h-10 px-4 rounded-full bg-card border border-border text-xs sm:text-sm font-medium shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList>

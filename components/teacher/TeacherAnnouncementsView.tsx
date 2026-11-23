@@ -4,6 +4,10 @@ import * as React from "react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
   Megaphone,
   Pin,
@@ -47,6 +51,28 @@ interface AnnouncementRecord {
   authorRole: string;
 }
 
+const announcementFormSchema = z
+  .object({
+    title: z.string().min(2, "Notice title must be at least 2 characters").trim(),
+    body: z.string().min(5, "Notice details must be at least 5 characters").trim(),
+    audience: z.enum(["center", "classes"]),
+    selectedClassId: z.string().optional(),
+    pinned: z.boolean().default(false),
+  })
+  .refine(
+    (data) => {
+      if (data.audience === "classes" && !data.selectedClassId) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Please select a target class batch",
+      path: ["selectedClassId"],
+    }
+  );
+type AnnouncementFormData = z.infer<typeof announcementFormSchema>;
+
 export function TeacherAnnouncementsView() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -54,12 +80,17 @@ export function TeacherAnnouncementsView() {
   const [search, setSearch] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
 
-  // Form fields
-  const [title, setTitle] = React.useState("");
-  const [body, setBody] = React.useState("");
-  const [audience, setAudience] = React.useState<"center" | "classes">("center");
-  const [selectedClassId, setSelectedClassId] = React.useState("");
-  const [pinned, setPinned] = React.useState(false);
+  // React Hook Form
+  const form = useForm<AnnouncementFormData>({
+    resolver: zodResolver(announcementFormSchema) as any,
+    defaultValues: {
+      title: "",
+      body: "",
+      audience: "center",
+      selectedClassId: "",
+      pinned: false,
+    },
+  });
 
   // Fetch announcements
   const { data, isLoading } = useQuery({
@@ -83,30 +114,40 @@ export function TeacherAnnouncementsView() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: AnnouncementFormData) => {
       const res = await fetch("/api/v1/announcements", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          body,
-          audience,
-          classIds: audience === "classes" && selectedClassId ? [selectedClassId] : [],
-          pinned,
+          title: data.title,
+          body: data.body,
+          audience: data.audience,
+          classIds: data.audience === "classes" && data.selectedClassId ? [data.selectedClassId] : [],
+          pinned: data.pinned,
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to post announcement");
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to post announcement");
+        error.fields = json.error?.fields;
+        throw error;
+      }
       return json.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements"] });
       setCreateOpen(false);
-      setTitle("");
-      setBody("");
+      form.reset();
       toast.success("Announcement published successfully!");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          form.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      }
+      toast.error(err.message || "Failed to post announcement");
+    },
   });
 
   const pinnedItems = announcements.filter((a) => a.pinned);
@@ -210,29 +251,6 @@ export function TeacherAnnouncementsView() {
             </div>
           </div>
 
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {pinnedItems.length} Pinned • {announcements.length} Broadcasts
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Plus className="size-3" />
-                <span>New Notice</span>
-              </button>
-            </div>
-          </div>
-
           {/* Search bar directly beneath cards */}
           <div className="relative w-full">
             <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -308,7 +326,7 @@ export function TeacherAnnouncementsView() {
       )}
 
       {/* Post Notice Modal */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) form.reset(); }}>
         <DialogContent className="max-w-lg rounded-3xl p-6 sm:p-8 bg-card border-border shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-extrabold text-foreground">
@@ -319,39 +337,35 @@ export function TeacherAnnouncementsView() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
+          <form onSubmit={form.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4 pt-2">
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Notice Title
-              </label>
+              <FormLabel label="Notice Title" required />
               <Input
                 placeholder="e.g. Term 1 Revision Schedule Updates"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                {...form.register("title")}
+                className={inputErrorClass(form.formState.errors.title)}
               />
+              <FormError message={form.formState.errors.title?.message} />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Audience
-              </label>
+              <FormLabel label="Audience" required />
               <Select
-                value={audience}
-                onChange={(e) => setAudience(e.target.value as any)}
+                {...form.register("audience")}
+                className={inputErrorClass(form.formState.errors.audience)}
               >
                 <option value="center">Entire Center</option>
                 <option value="classes">Specific Class Batch</option>
               </Select>
+              <FormError message={form.formState.errors.audience?.message} />
             </div>
 
-            {audience === "classes" && (
+            {form.watch("audience") === "classes" && (
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Select Class
-                </label>
+                <FormLabel label="Select Class Batch" required />
                 <Select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
+                  {...form.register("selectedClassId")}
+                  className={inputErrorClass(form.formState.errors.selectedClassId)}
                 >
                   <option value="">Select a class batch...</option>
                   {(classesData?.data || []).map((cls: any) => (
@@ -360,20 +374,19 @@ export function TeacherAnnouncementsView() {
                     </option>
                   ))}
                 </Select>
+                <FormError message={form.formState.errors.selectedClassId?.message} />
               </div>
             )}
 
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Notice Content
-              </label>
+              <FormLabel label="Notice Content" required />
               <Textarea
                 rows={4}
-                placeholder="Write notice details..."
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="rounded-2xl"
+                placeholder="e.g. Please be informed that extra classes will be conducted this Saturday from 9 AM to 12 PM..."
+                {...form.register("body")}
+                className={cn("rounded-2xl", inputErrorClass(form.formState.errors.body))}
               />
+              <FormError message={form.formState.errors.body?.message} />
             </div>
 
             <div className="flex items-center justify-between p-3 rounded-2xl bg-secondary">
@@ -383,26 +396,30 @@ export function TeacherAnnouncementsView() {
                   Keep notice highlighted at top of students&apos; feeds
                 </p>
               </div>
-              <Switch checked={pinned} onCheckedChange={setPinned} />
+              <Switch
+                checked={form.watch("pinned")}
+                onCheckedChange={(val) => form.setValue("pinned", val)}
+              />
             </div>
-          </div>
 
-          <DialogFooter className="pt-4 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              className="rounded-full h-11 px-5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !title || !body}
-              className="rounded-full h-11 px-6 font-bold"
-            >
-              {createMutation.isPending ? "Posting..." : "Publish Notice"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="pt-4 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateOpen(false)}
+                className="rounded-full h-11 px-5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="rounded-full h-11 px-6 font-bold"
+              >
+                {createMutation.isPending ? "Posting..." : "Publish Notice"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

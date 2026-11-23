@@ -4,20 +4,21 @@ import * as React from "react";
 
 const loaderStyles = `
 .center-loader-wrapper {
-  color: var(--foreground);
+  color: #184880;
   -webkit-user-select: none;
   user-select: none;
   background-color: transparent;
   border-radius: 50%;
   justify-content: center;
   align-items: center;
-  width: 200px;
-  height: 200px;
-  font-size: 1.25rem;
-  font-weight: 500;
+  width: 210px;
+  height: 210px;
+  font-size: 1.3rem;
+  font-weight: 800;
   display: flex;
   position: relative;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .center-loader-ring {
@@ -35,15 +36,15 @@ const loaderStyles = `
 @keyframes center-loader-rotate {
   0% {
     transform: rotate(90deg);
-    box-shadow: inset 0 8px 18px var(--foreground), inset 0 20px 30px var(--ring), inset 0 50px 60px var(--accent);
+    box-shadow: inset 0 8px 18px #184880, inset 0 20px 30px #38BDF8, inset 0 50px 60px #EBF3FE;
   }
   50% {
     transform: rotate(270deg);
-    box-shadow: inset 0 8px 18px var(--foreground), inset 0 20px 18px var(--secondary), inset 0 40px 60px var(--primary);
+    box-shadow: inset 0 8px 18px #184880, inset 0 20px 22px #60A5FA, inset 0 45px 65px #0284C7;
   }
   to {
     transform: rotate(450deg);
-    box-shadow: inset 0 8px 18px var(--foreground), inset 0 20px 30px var(--ring), inset 0 50px 60px var(--accent);
+    box-shadow: inset 0 8px 18px #184880, inset 0 20px 30px #38BDF8, inset 0 50px 60px #EBF3FE;
   }
 }
 
@@ -55,6 +56,7 @@ const loaderStyles = `
   animation: 2s infinite center-loader-letter-anim;
   display: inline-block;
   transform: translateY(0);
+  color: #184880;
 }
 
 .center-loader-letter:nth-child(1) { animation-delay: 0s; }
@@ -71,14 +73,17 @@ const loaderStyles = `
   0%, to {
     opacity: 0.35;
     transform: translateY(0);
+    color: #627D98;
   }
   20% {
     opacity: 1;
-    transform: scale(1.18);
+    transform: scale(1.22);
+    color: #184880;
   }
   40% {
-    opacity: 0.65;
+    opacity: 0.75;
     transform: translateY(0);
+    color: #0284C7;
   }
 }
 `;

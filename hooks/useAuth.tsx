@@ -102,9 +102,9 @@ export function AuthProvider({
         // immediately refetch for the new active center without a browser page reload!
         await queryClient.invalidateQueries();
 
-        // Ensure loader displays for ~6 seconds for optimal switching experience
+        // Ensure loader displays for ~7 seconds for optimal switching experience
         const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, 6000 - elapsed);
+        const remaining = Math.max(0, 7000 - elapsed);
         if (remaining > 0) {
           await new Promise((resolve) => setTimeout(resolve, remaining));
         }

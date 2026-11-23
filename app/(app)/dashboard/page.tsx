@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -17,6 +18,14 @@ import {
   ArrowRight,
   TrendingDown,
   Award,
+  Users,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  ClipboardList,
+  Calendar,
+  Layers,
+  Search,
 } from "lucide-react";
 
 interface AnnouncementItem {
@@ -273,30 +282,111 @@ function StaffDashboard() {
   const stats = data?.stats;
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`Hello, ${user?.name}`}
-        description="Here are your tasks and evaluation duties for today."
-      />
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Staff Portal & Duties
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Track assigned evaluation tasks, enter assessment marks, and oversee class attendance sessions for today. Select a task below to begin.
+            </p>
+            <div className="pt-2">
+              <Link href="/evaluate-marks">
+                <Button className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95">
+                  <ClipboardList className="size-4" />
+                  <span>Enter Pending Marks</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
 
-      {/* Stat Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          label="Marks to Evaluate"
-          value={stats?.pendingMarksCount ?? 0}
-          subtitle="Assessments waiting for score entry"
-        />
-        <StatCard
-          label="Attendance Sessions"
-          value={stats?.sessionsTodayCount ?? 0}
-          subtitle="Classes scheduled for attendance today"
-        />
-        <StatCard
-          label="Evaluations Completed"
-          value={stats?.completedMarksCount ?? 0}
-          subtitle="Marks successfully submitted"
-        />
-      </div>
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/group-learn.webp"
+              alt="Staff Duties"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.pendingMarksCount ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Marks to Evaluate
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Calendar className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.sessionsTodayCount ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Attendance Today
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.completedMarksCount ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Evaluations Done
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <Layers className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {data?.todaySessions?.length ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Active Batches
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <Link href="/attendance" className="flex-1">
+              <Button variant="outline" size="sm" className="w-full rounded-full text-xs font-semibold h-9">
+                Open Attendance
+              </Button>
+            </Link>
+            <Link href="/evaluate-marks" className="flex-1">
+              <Button variant="outline" size="sm" className="w-full rounded-full text-xs font-semibold h-9">
+                Evaluation Grid
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Task Grids: Marks to Evaluate & Attendance Sessions */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -422,35 +512,111 @@ function AdminDashboard() {
   const stats = data?.stats;
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`Dashboard — ${user?.name}`}
-        description="Comprehensive overview of center metrics, student performance, and operational status."
-      />
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Center Management Hub
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Comprehensive overview of center operations, faculty distribution, and student academic performance. Track active enrollments and evaluation status in real-time.
+            </p>
+            <div className="pt-2">
+              <Link href="/classes">
+                <Button className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95">
+                  <BookOpen className="size-4" />
+                  <span>Manage Center Batches</span>
+                </Button>
+              </Link>
+            </div>
+          </div>
 
-      {/* 4 Stat Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Total Students"
-          value={stats?.totalStudents ?? 0}
-          subtitle="Enrolled active students"
-        />
-        <StatCard
-          label="Total Teachers"
-          value={stats?.totalTeachers ?? 0}
-          subtitle="Active teaching faculty"
-        />
-        <StatCard
-          label="Active Classes"
-          value={stats?.classesToday ?? 0}
-          subtitle="Running courses and batches"
-        />
-        <StatCard
-          label="Marks Waiting"
-          value={stats?.marksWaiting ?? 0}
-          subtitle="Pending evaluation approval"
-        />
-      </div>
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/bulb-on-books.webp"
+              alt="Admin Dashboard"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.totalStudents ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Students
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <BookOpen className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.totalTeachers ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Faculty
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.classesToday ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Active Classes
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Clock className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {stats?.marksWaiting ?? 0}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Marks Waiting
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <Link href="/announcements" className="flex-1">
+              <Button variant="outline" size="sm" className="w-full rounded-full text-xs font-semibold h-9">
+                Announcements
+              </Button>
+            </Link>
+            <Link href="/analysis" className="flex-1">
+              <Button variant="outline" size="sm" className="w-full rounded-full text-xs font-semibold h-9">
+                Performance
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Center Performance Charts */}
       <div className="grid gap-6 lg:grid-cols-2">

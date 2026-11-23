@@ -18,6 +18,7 @@ export interface IClass extends Document {
   _id: mongoose.Types.ObjectId;
   centerId: mongoose.Types.ObjectId;
   name: string;
+  slug?: string;
   subjectId: mongoose.Types.ObjectId;
   teacherId: mongoose.Types.ObjectId;
   staffIds: mongoose.Types.ObjectId[];
@@ -40,6 +41,7 @@ const ClassSchema = new Schema<IClass>(
   {
     centerId: { type: Schema.Types.ObjectId, ref: "Center", required: true, index: true },
     name: { type: String, required: true, trim: true },
+    slug: { type: String, unique: true, sparse: true, trim: true, index: true },
     subjectId: { type: Schema.Types.ObjectId, ref: "Subject", required: true, index: true },
     teacherId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     staffIds: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],

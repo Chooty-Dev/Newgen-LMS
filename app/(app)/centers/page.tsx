@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { toast } from "sonner";
-import { Building2, Plus, Edit2, Trash2 } from "lucide-react";
+import { Building2, Plus, Edit2, Trash2, Globe, CheckCircle2, MapPin } from "lucide-react";
 
 interface CenterData {
   _id: string;
@@ -169,24 +170,109 @@ export default function CentersPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Manage Centers"
-        description="Add, edit or remove your education centers here."
-      >
-        {canCreate && (
-          <Button
-            onClick={() => {
-              resetForm();
-              setCreateOpen(true);
-            }}
-            className="rounded-full h-12 px-6 gap-2"
-          >
-            <Plus className="size-5" />
-            <span>Add Center</span>
-          </Button>
-        )}
-      </PageHeader>
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Education Centers & Branches
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Configure education institute branches, local addresses, contact details, and operational timezones for centralized administration.
+            </p>
+            <div className="pt-2">
+              {canCreate && (
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setCreateOpen(true);
+                  }}
+                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Plus className="size-4" />
+                  <span>Add Education Center</span>
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/class.webp"
+              alt="Centers"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Building2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {centers.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Centers
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {centers.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Active Branches
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <MapPin className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-foreground truncate leading-tight">
+                  Colombo
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Primary Location
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <Globe className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-foreground truncate leading-tight">
+                  GMT+05:30
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Local Timezone
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-card border border-border rounded-2xl text-xs text-muted-foreground font-medium flex items-center gap-2">
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span>Center-level data isolation is active for this workspace.</span>
+          </div>
+        </div>
+      </section>
 
       {/* Centers Table Card */}
       <Card className="rounded-3xl p-6 md:p-8">

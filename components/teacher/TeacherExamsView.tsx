@@ -3,8 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
   FileCheck,
   ClipboardList,
@@ -38,6 +43,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface AssessmentRecord {
   id: string;
+  slug?: string;
   title: string;
   type: "exam" | "test" | "mcq_quiz" | "paper" | "assignment";
   subject: string;
@@ -55,7 +61,22 @@ interface AssessmentRecord {
   createdAt: string;
 }
 
+const createExamSchema = z.object({
+  title: z.string().min(2, "Assessment title must be at least 2 characters").trim(),
+  type: z.enum(["exam", "test", "mcq_quiz", "paper", "assignment"]),
+  subjectId: z.string().min(1, "Please select a curriculum subject"),
+  selectedClassId: z.string().min(1, "Please select a target class batch"),
+  date: z.string().min(1, "Assessment date is required"),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().min(1, "End time is required"),
+  totalMarks: z.coerce.number().min(1, "Total marks must be at least 1"),
+  passMark: z.coerce.number().min(0, "Pass mark must be 0 or higher"),
+  weight: z.coerce.number().min(0.1, "Weight must be at least 0.1"),
+});
+type CreateExamFormData = z.infer<typeof createExamSchema>;
+
 export function TeacherExamsView() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -63,17 +84,22 @@ export function TeacherExamsView() {
   const [typeFilter, setTypeFilter] = React.useState<string>("all");
   const [createOpen, setCreateOpen] = React.useState(false);
 
-  // Form fields
-  const [title, setTitle] = React.useState("");
-  const [type, setType] = React.useState<"exam" | "test" | "mcq_quiz" | "paper" | "assignment">("exam");
-  const [subjectId, setSubjectId] = React.useState("");
-  const [selectedClassId, setSelectedClassId] = React.useState("");
-  const [date, setDate] = React.useState("");
-  const [startTime, setStartTime] = React.useState("09:00");
-  const [endTime, setEndTime] = React.useState("11:00");
-  const [totalMarks, setTotalMarks] = React.useState(100);
-  const [passMark, setPassMark] = React.useState(40);
-  const [weight, setWeight] = React.useState(1.0);
+  // React Hook Form for Schedule Assessment
+  const examForm = useForm<CreateExamFormData>({
+    resolver: zodResolver(createExamSchema) as any,
+    defaultValues: {
+      title: "",
+      type: "exam",
+      subjectId: "",
+      selectedClassId: "",
+      date: "",
+      startTime: "09:00",
+      endTime: "11:00",
+      totalMarks: 100,
+      passMark: 40,
+      weight: 1.0,
+    },
+  });
 
   // Fetch assessments
   const { data, isLoading } = useQuery({
@@ -99,34 +125,48 @@ export function TeacherExamsView() {
 
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (formData: CreateExamFormData) => {
       const res = await fetch("/api/v1/exams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title,
-          type,
-          subjectId,
-          classIds: [selectedClassId],
-          totalMarks,
-          passMark,
-          weight,
+          title: formData.title,
+          type: formData.type,
+          subjectId: formData.subjectId,
+          classIds: [formData.selectedClassId],
+          totalMarks: formData.totalMarks,
+          passMark: formData.passMark,
+          weight: formData.weight,
           dateMode: "single",
-          sessions: [{ date, startTime, endTime }],
+          sessions: [{ date: formData.date, startTime: formData.startTime, endTime: formData.endTime }],
           evaluatorIds: [],
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to create assessment");
+      if (!res.ok) {
+        const error: any = new Error(json.error?.message || "Failed to create assessment");
+        error.fields = json.error?.fields;
+        throw error;
+      }
       return json.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
       setCreateOpen(false);
-      setTitle("");
+      examForm.reset();
       toast.success("Assessment scheduled successfully!");
+      if (data?.slug || data?.id) {
+        router.push(`/exams/${data.slug || data.id}?tab=staff`);
+      }
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: any) => {
+      if (err.fields) {
+        Object.entries(err.fields).forEach(([f, msgs]) => {
+          examForm.setError(f as any, { message: (msgs as string[])[0] });
+        });
+      }
+      toast.error(err.message || "Failed to create assessment");
+    },
   });
 
   // Filtered
@@ -240,42 +280,12 @@ export function TeacherExamsView() {
             </div>
           </div>
 
-          {/* Combined Option 01 (Quick Actions) + Option 02 (Live Status Widget) */}
-          <div className="bg-card border border-border/80 rounded-2xl px-3 py-2 flex items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="relative flex size-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full size-2 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] font-bold text-foreground truncate">
-                {scheduledCount} Assessments Scheduled
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Plus className="size-3" />
-                <span>New Exam</span>
-              </button>
-              <Link
-                href="/marks"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[10px] sm:text-xs font-bold transition-all active:scale-95"
-              >
-                <Award className="size-3 text-primary" />
-                <span>Marks</span>
-              </Link>
-            </div>
-          </div>
-
           {/* Search bar directly beneath cards */}
           <div className="relative w-full">
             <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search assessments..."
+              placeholder="Search exams & tests..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
@@ -408,11 +418,19 @@ export function TeacherExamsView() {
                 {/* Actions */}
                 <div className="pt-1 flex items-center gap-2">
                   <Link
-                    href={`/evaluate-marks?assessmentId=${item.id}`}
+                    href={`/exams/${item.slug || item.id}`}
                     className="flex-1 inline-flex items-center justify-center h-10 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold transition-all shadow-xs gap-1.5"
                   >
                     <Award className="size-3.5" />
-                    <span>Enter Marks</span>
+                    <span>View Exam & Results</span>
+                  </Link>
+                  <Link
+                    href={`/evaluate-marks?assessmentId=${item.id}`}
+                    className="inline-flex items-center justify-center h-10 px-3.5 rounded-full bg-accent hover:bg-accent/80 text-foreground text-xs font-bold transition-all border border-border shadow-xs gap-1 shrink-0"
+                    title="Enter / Evaluate Marks"
+                  >
+                    <CheckCircle2 className="size-3.5 text-emerald-600" />
+                    <span>Marks</span>
                   </Link>
                 </div>
               </div>
@@ -422,7 +440,7 @@ export function TeacherExamsView() {
       )}
 
       {/* Schedule Assessment Modal */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) examForm.reset(); }}>
         <DialogContent className="max-w-lg rounded-3xl p-6 sm:p-8 bg-card border-border shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-extrabold text-foreground">
@@ -433,151 +451,151 @@ export function TeacherExamsView() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
+          <form onSubmit={examForm.handleSubmit((data) => createMutation.mutate(data))} className="space-y-4 pt-2">
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Assessment Title
-              </label>
+              <FormLabel label="Assessment Title" required />
               <Input
                 placeholder="e.g. Mid-Term Mathematics Exam"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                {...examForm.register("title")}
+                className={inputErrorClass(examForm.formState.errors.title)}
               />
+              <FormError message={examForm.formState.errors.title?.message} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Type
-                </label>
-                <Select value={type} onChange={(e) => setType(e.target.value as any)}>
+                <FormLabel label="Assessment Type" required />
+                <Select
+                  {...examForm.register("type")}
+                  className={inputErrorClass(examForm.formState.errors.type)}
+                >
                   <option value="exam">Term Exam</option>
                   <option value="test">Class Test</option>
                   <option value="mcq_quiz">MCQ Quiz</option>
                   <option value="assignment">Assignment</option>
                   <option value="paper">Paper</option>
                 </Select>
+                <FormError message={examForm.formState.errors.type?.message} />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Subject
-                </label>
-                <Select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
-                  <option value="">Select Subject</option>
+                <FormLabel label="Subject" required />
+                <Select
+                  {...examForm.register("subjectId")}
+                  className={inputErrorClass(examForm.formState.errors.subjectId)}
+                >
+                  <option value="">Select Subject...</option>
                   {(subjectsData?.data || []).map((sub: any) => (
                     <option key={sub.id} value={sub.id}>
                       {sub.name}
                     </option>
                   ))}
                 </Select>
+                <FormError message={examForm.formState.errors.subjectId?.message} />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                Class Batch
-              </label>
+              <FormLabel label="Target Class Batch" required />
               <Select
-                value={selectedClassId}
-                onChange={(e) => setSelectedClassId(e.target.value)}
+                {...examForm.register("selectedClassId")}
+                className={inputErrorClass(examForm.formState.errors.selectedClassId)}
               >
-                <option value="">Select Class Batch</option>
+                <option value="">Select Class Batch...</option>
                 {(classesData?.data || []).map((cls: any) => (
                   <option key={cls.id} value={cls.id}>
                     {cls.name} ({cls.subject})
                   </option>
                 ))}
               </Select>
+              <FormError message={examForm.formState.errors.selectedClassId?.message} />
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Date
-                </label>
+                <FormLabel label="Date" required />
                 <Input
                   type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  {...examForm.register("date")}
+                  className={inputErrorClass(examForm.formState.errors.date)}
                 />
+                <FormError message={examForm.formState.errors.date?.message} />
               </div>
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Start Time
-                </label>
+                <FormLabel label="Start Time" required />
                 <Input
                   type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  {...examForm.register("startTime")}
+                  className={inputErrorClass(examForm.formState.errors.startTime)}
                 />
+                <FormError message={examForm.formState.errors.startTime?.message} />
               </div>
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  End Time
-                </label>
+                <FormLabel label="End Time" required />
                 <Input
                   type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  {...examForm.register("endTime")}
+                  className={inputErrorClass(examForm.formState.errors.endTime)}
                 />
+                <FormError message={examForm.formState.errors.endTime?.message} />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Total Marks
-                </label>
+                <FormLabel label="Total Marks" required />
                 <Input
                   type="number"
                   min={1}
-                  value={totalMarks}
-                  onChange={(e) => setTotalMarks(Number(e.target.value))}
+                  placeholder="e.g. 100"
+                  {...examForm.register("totalMarks")}
+                  className={inputErrorClass(examForm.formState.errors.totalMarks)}
                 />
+                <FormError message={examForm.formState.errors.totalMarks?.message} />
               </div>
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Pass Mark
-                </label>
+                <FormLabel label="Pass Mark" required />
                 <Input
                   type="number"
-                  min={1}
-                  value={passMark}
-                  onChange={(e) => setPassMark(Number(e.target.value))}
+                  min={0}
+                  placeholder="e.g. 40"
+                  {...examForm.register("passMark")}
+                  className={inputErrorClass(examForm.formState.errors.passMark)}
                 />
+                <FormError message={examForm.formState.errors.passMark?.message} />
               </div>
               <div>
-                <label className="text-xs font-bold text-foreground block pl-2 mb-1">
-                  Weight (x)
-                </label>
+                <FormLabel label="Weight (x)" optional />
                 <Input
                   type="number"
                   step="0.1"
                   min={0.1}
-                  value={weight}
-                  onChange={(e) => setWeight(Number(e.target.value))}
+                  placeholder="e.g. 1.0"
+                  {...examForm.register("weight")}
+                  className={inputErrorClass(examForm.formState.errors.weight)}
                 />
+                <FormError message={examForm.formState.errors.weight?.message} />
               </div>
             </div>
-          </div>
 
-          <DialogFooter className="pt-4 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCreateOpen(false)}
-              className="rounded-full h-11 px-5"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !title || !subjectId || !selectedClassId || !date}
-              className="rounded-full h-11 px-6 font-bold"
-            >
-              {createMutation.isPending ? "Scheduling..." : "Save Assessment"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="pt-4 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCreateOpen(false)}
+                className="rounded-full h-11 px-5"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="rounded-full h-11 px-6 font-bold"
+              >
+                {createMutation.isPending ? "Scheduling..." : "Save Assessment"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

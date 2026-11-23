@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -23,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Trash2, Megaphone, Pin, Globe } from "lucide-react";
+import { Plus, Trash2, Megaphone, Pin, Globe, Search, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -193,28 +194,118 @@ function StaffAnnouncementsPage() {
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Announcements" description="Share important notices with classes or the whole center.">
-        <Can permission="announcements.create">
-          <Button
-            className="rounded-full h-12"
-            onClick={() => {
-              resetForm();
-              setCreateOpen(true);
-            }}
-          >
-            <Plus className="size-5 mr-2" />
-            New Announcement
-          </Button>
-        </Can>
-      </PageHeader>
+  const classBulletinsCount = announcements.filter((a) => a.audience === "classes").length;
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <StatCard label="Total Notices" value={announcements.length} subtitle="Published announcements" icon={Megaphone} />
-        <StatCard label="Pinned Notices" value={pinnedItems.length} subtitle="High priority alerts" icon={Pin} />
-        <StatCard label="Center-wide" value={announcements.filter((a) => a.audience === "center").length} subtitle="Visible to everyone" icon={Globe} />
-      </div>
+  return (
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Announcements & Notices
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Broadcast circulars to students, pin urgent examination reminders, or publish updates across target batches.
+            </p>
+            <div className="pt-2">
+              <Can permission="announcements.create">
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setCreateOpen(true);
+                  }}
+                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Plus className="size-4" />
+                  <span>New Announcement</span>
+                </Button>
+              </Can>
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/announce.webp"
+              alt="Announcements"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
+
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Megaphone className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {announcements.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Notices
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <Pin className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {pinnedItems.length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Pinned Alerts
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <Globe className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {announcements.filter((a) => a.audience === "center").length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Center-Wide
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <Bell className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {classBulletinsCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Class Bulletins
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search announcements..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
 
       {/* Featured Pinned Notices */}
       {pinnedItems.length > 0 && (

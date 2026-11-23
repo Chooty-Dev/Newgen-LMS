@@ -31,7 +31,8 @@ export const POST = defineRoute({
     const ann = await AnnouncementService.createAnnouncement(
       session.centerId,
       session.sub,
-      body
+      body,
+      session.role
     );
 
     return { data: ann };

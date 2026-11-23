@@ -3,40 +3,36 @@ import { defineRoute } from "@/core/http/defineRoute";
 import { User, StudentProfile } from "@/modules/users/model";
 import { UserService } from "@/modules/users/service";
 import { updateUserSchema } from "@/modules/users/schema";
+import { canAccessStudent } from "@/core/rbac/policies";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 
 export const GET = defineRoute({
   permission: "students.view",
-  handler: async ({ params }) => {
-    await connectDB();
-    const user = await User.findOne({
-      _id: new mongoose.Types.ObjectId(params.id),
-      role: "student",
-      deletedAt: null,
-    }).lean();
+  handler: async ({ session, params }) => {
+    try {
+      const student = await UserService.getStudentDetails(params.id);
 
-    if (!user) {
-      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Student not found" } }, { status: 404 });
+      if (session) {
+        const allowed = await canAccessStudent(
+          { id: session.sub, role: session.role },
+          student.id
+        );
+        if (!allowed) {
+          return NextResponse.json(
+            { error: { code: "FORBIDDEN", message: "Forbidden: You do not have access to this student" } },
+            { status: 403 }
+          );
+        }
+      }
+
+      return { data: student };
+    } catch {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Student not found" } },
+        { status: 404 }
+      );
     }
-
-    const profile = await StudentProfile.findOne({ userId: user._id }).lean();
-
-    return {
-      data: {
-        id: user._id.toString(),
-        name: user.name,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        status: user.status,
-        joinedAt: user.createdAt,
-        admissionNo: profile?.admissionNo || "-",
-        grade: profile?.grade || "-",
-        dateOfBirth: profile?.dateOfBirth,
-        guardian: profile?.guardian,
-      },
-    };
   },
 });
 
@@ -46,14 +42,32 @@ export const PATCH = defineRoute({
   auditAction: "students.update",
   auditResource: { type: "Student" },
   auditSummary: ({ session, params, body }) =>
-    `${session?.name} updated student details for ID: ${params.id} (${body.name || "profile"})`,
-  handler: async ({ params, body }) => {
+    `${session?.name} updated student details for: ${params.id} (${body.name || "profile"})`,
+  handler: async ({ session, params, body }) => {
     await connectDB();
-    const studentId = new mongoose.Types.ObjectId(params.id);
 
-    const user = await User.findById(studentId);
+    let user = null;
+    if (mongoose.isValidObjectId(params.id)) {
+      user = await User.findById(params.id);
+    }
+    if (!user) {
+      user = await User.findOne({ username: params.id.toLowerCase(), role: "student", deletedAt: null });
+    }
     if (!user || user.role !== "student" || user.deletedAt) {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Student not found" } }, { status: 404 });
+    }
+
+    if (session) {
+      const allowed = await canAccessStudent(
+        { id: session.sub, role: session.role },
+        user._id.toString()
+      );
+      if (!allowed) {
+        return NextResponse.json(
+          { error: { code: "FORBIDDEN", message: "Forbidden: You do not have access to this student" } },
+          { status: 403 }
+        );
+      }
     }
 
     if (body.name) user.name = body.name;
@@ -69,7 +83,7 @@ export const PATCH = defineRoute({
         profileUpdate.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : undefined;
       if (body.guardian !== undefined) profileUpdate.guardian = body.guardian;
 
-      await StudentProfile.updateOne({ userId: studentId }, profileUpdate);
+      await StudentProfile.updateOne({ userId: user._id }, profileUpdate);
     }
 
     return { data: { success: true, message: "Student updated successfully" } };
@@ -80,15 +94,27 @@ export const DELETE = defineRoute({
   permission: "students.delete",
   auditAction: "students.delete",
   auditResource: { type: "Student" },
-  auditSummary: ({ session, params }) => `${session?.name} deleted student ID: ${params.id}`,
+  auditSummary: ({ session, params }) => `${session?.name} deleted student: ${params.id}`,
   handler: async ({ session, params }) => {
     if (!session) {
       return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "Not signed in" } }, { status: 401 });
     }
 
+    await connectDB();
+    let user = null;
+    if (mongoose.isValidObjectId(params.id)) {
+      user = await User.findById(params.id);
+    }
+    if (!user) {
+      user = await User.findOne({ username: params.id.toLowerCase(), role: "student", deletedAt: null });
+    }
+    if (!user) {
+      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Student not found" } }, { status: 404 });
+    }
+
     await UserService.softDeleteUser(
       { id: session.sub, role: session.role },
-      params.id
+      user._id.toString()
     );
 
     return { data: { success: true, message: "Student deleted successfully" } };

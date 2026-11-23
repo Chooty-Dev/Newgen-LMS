@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { StatCard } from "@/components/shared/StatCard";
 import { SearchInput } from "@/components/shared/SearchInput";
@@ -20,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Download, KeyRound, Trash2, Edit, Copy, Check, Users, Award, AlertCircle } from "lucide-react";
+import { Plus, Download, KeyRound, Trash2, Edit, Copy, Check, Users, Award, AlertCircle, Search, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
@@ -312,69 +313,133 @@ export default function StudentsPage() {
     },
   ];
 
+  const activeStudentsCount = students.filter((s) => s.status === "active").length;
+
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Manage Students"
-        description="Add, edit or remove your students here."
-      >
-        <Can permission="students.export">
-          <Button
-            variant="outline"
-            className="rounded-full h-12"
-            onClick={() => window.open("/api/v1/students/export", "_blank")}
-          >
-            <Download className="size-5 mr-2" />
-            Export CSV
-          </Button>
-        </Can>
-        <Can permission="students.create">
-          <Button
-            className="rounded-full h-12"
-            onClick={() => {
-              resetForm();
-              setCreateOpen(true);
-            }}
-          >
-            <Plus className="size-5 mr-2" />
-            Add Student
-          </Button>
-        </Can>
-      </PageHeader>
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+              Student Directory & Enrollment
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+              Register new students, update admission details, reset credentials, and monitor performance standings across all enrolled batches.
+            </p>
+            <div className="pt-2 flex items-center gap-2">
+              <Can permission="students.create">
+                <Button
+                  onClick={() => {
+                    resetForm();
+                    setCreateOpen(true);
+                  }}
+                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Plus className="size-4" />
+                  <span>Register Student</span>
+                </Button>
+              </Can>
+              <Can permission="students.export">
+                <Button
+                  variant="outline"
+                  onClick={() => window.open("/api/v1/students/export", "_blank")}
+                  className="bg-white/10 text-white hover:bg-white/20 border-white/20 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-5 transition-all"
+                >
+                  <Download className="size-4" />
+                  <span>Export CSV</span>
+                </Button>
+              </Can>
+            </div>
+          </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <StatCard
-          label="Total Students"
-          value={meta.total}
-          subtitle="Enrolled in center"
-          icon={Users}
-        />
-        <StatCard
-          label="High Performers"
-          value={students.filter((s) => s.group === "excellent").length}
-          subtitle="Scored 75 and above"
-          icon={Award}
-        />
-        <StatCard
-          label="Needs Help"
-          value={students.filter((s) => s.group === "weak").length}
-          subtitle="Attention required"
-          icon={AlertCircle}
-        />
-      </div>
+          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+            <Image
+              src="/images/group-learn.webp"
+              alt="Students"
+              fill
+              priority
+              className="object-contain object-bottom-right drop-shadow-md"
+            />
+          </div>
+        </div>
 
-      {/* Search and Filters */}
-      <FilterBar>
-        <SearchInput
-          value={search}
-          onValueChange={(val) => {
-            setSearch(val);
-            setPage(1);
-          }}
-          placeholder="Search by name or username..."
-        />
-        <div className="flex items-center gap-3">
+        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Users className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {meta.total}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Total Students
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <Award className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {students.filter((s) => s.group === "excellent").length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  High Performers
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <AlertCircle className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {students.filter((s) => s.group === "weak").length}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Needs Help
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                <UserCheck className="size-4 sm:size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                  {activeStudentsCount}
+                </p>
+                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                  Active Status
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by name or username..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-start gap-3">
           <div className="w-40">
             <Select
               value={groupFilter}
@@ -403,7 +468,6 @@ export default function StudentsPage() {
             </Select>
           </div>
         </div>
-      </FilterBar>
 
       {/* Data Table */}
       <DataTable
