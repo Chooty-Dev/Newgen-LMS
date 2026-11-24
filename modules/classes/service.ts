@@ -61,6 +61,7 @@ export class ClassService {
           id: c._id.toString(),
           slug: c.slug || c._id.toString(),
           name: c.name,
+          grade: c.grade || 11,
           subject: sub ? `${sub.code} - ${sub.name}` : "-",
           subjectId: c.subjectId ? (c.subjectId as unknown as { _id: mongoose.Types.ObjectId })._id?.toString() : "",
           teacher: teach?.name || "Unassigned",
@@ -140,6 +141,7 @@ export class ClassService {
       id: c._id.toString(),
       slug: c.slug || c._id.toString(),
       name: c.name,
+      grade: c.grade || 11,
       subject: sub ? `${sub.code} - ${sub.name}` : "-",
       subjectId: sub?._id?.toString() || "",
       teacher: teach?.name || "Unassigned",
@@ -181,6 +183,7 @@ export class ClassService {
   static async createClass(centerId: string, data: {
     name: string;
     subjectId: string;
+    grade?: number;
     teacherId: string;
     staffIds?: string[];
     scheduleType: "regular" | "special";
@@ -219,6 +222,7 @@ export class ClassService {
       name: data.name,
       slug,
       subjectId: new mongoose.Types.ObjectId(data.subjectId),
+      grade: data.grade || 11,
       teacherId: new mongoose.Types.ObjectId(data.teacherId),
       staffIds: (data.staffIds || []).map((id) => new mongoose.Types.ObjectId(id)),
       schedule,
@@ -276,6 +280,7 @@ export class ClassService {
   static async updateClass(classId: string, data: {
     name?: string;
     subjectId?: string;
+    grade?: number;
     capacity?: number;
     scheduleType?: "regular" | "special";
     daysOfWeek?: number[];
@@ -288,6 +293,7 @@ export class ClassService {
     const updateDoc: Record<string, unknown> = {};
     if (data.name !== undefined) updateDoc.name = data.name;
     if (data.subjectId !== undefined) updateDoc.subjectId = new mongoose.Types.ObjectId(data.subjectId);
+    if (data.grade !== undefined) updateDoc.grade = data.grade;
     if (data.capacity !== undefined) updateDoc.capacity = data.capacity;
     if (data.status !== undefined) updateDoc.status = data.status;
 

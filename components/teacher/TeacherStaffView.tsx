@@ -23,9 +23,15 @@ import {
   KeyRound,
   Copy,
   Check,
+  LayoutGrid,
+  Table2,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
+import { CardThemeBar } from "./CardThemeBar";
+import { CardTypeFlag } from "./CardTypeFlag";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { toast } from "sonner";
@@ -93,6 +99,7 @@ export function TeacherStaffView() {
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [page, setPage] = React.useState(1);
+  const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -329,24 +336,43 @@ export function TeacherStaffView() {
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
               >
                 <Plus className="size-4" />
-                <span>Add Staff Member</span>
+                <span>Add a Staff Member</span>
               </button>
             </div>
           </div>
 
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/schedule.webp"
-              alt="Staff Illustration"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
-            />
+          {/* Large Right Illustration */}
+          <div className="pointer-events-none absolute right-2 sm:right-4 md:right-6 top-0 bottom-0 w-48 sm:w-64 md:w-80 lg:w-96 xl:w-[420px] z-10 flex items-center justify-end py-2 sm:py-3">
+            <div className="relative w-full h-full max-h-[260px]">
+              <Image
+                src="/images/teacher-staff-bg.webp"
+                alt="Staff Illustration"
+                fill
+                priority
+                className="object-contain object-right drop-shadow-xl"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 4 Stats Cards + Search Bar */}
+        {/* Search Bar + Theme Swatches + 4 Stats Cards */}
         <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* Search bar on top */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search staff by name or username..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+
+          {/* Quick Apple-style Color Palette Bar */}
+          <CardThemeBar />
+
+          {/* 4 Stats Cards */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-xs flex items-center gap-2.5">
               <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -404,141 +430,264 @@ export function TeacherStaffView() {
               </div>
             </div>
           </div>
-
-          <div className="relative w-full">
-            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search staff by name or username..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
-            />
-          </div>
         </div>
       </section>
 
-      {/* 2. Staff Members List */}
-      <section className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-border/60">
+      {/* 2. Staff Members Directory (Cards / Table) */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
           <div>
             <h3 className="font-extrabold text-base text-foreground">Staff Directory</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Click any staff member to view assigned classes and assessments.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Assigned staff members and designated assessment evaluators.</p>
           </div>
-          <span className="text-xs font-bold text-muted-foreground px-3 py-1 bg-secondary rounded-full">
-            {meta.total} Registered
-          </span>
+
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-muted-foreground px-3 py-1 bg-secondary rounded-full hidden sm:inline-block">
+              {meta.total} Registered
+            </span>
+
+            {/* View Mode Toggle: Cards (Default) vs Table */}
+            <div className="flex items-center bg-secondary/80 border border-border rounded-full p-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+                  viewMode === "cards"
+                    ? "bg-white text-primary shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutGrid className="size-3.5" />
+                <span>Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+                  viewMode === "table"
+                    ? "bg-white text-primary shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Table2 className="size-3.5" />
+                <span>Table</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
-          <div className="space-y-3 py-4">
-            <Skeleton className="h-16 w-full rounded-2xl" />
-            <Skeleton className="h-16 w-full rounded-2xl" />
-            <Skeleton className="h-16 w-full rounded-2xl" />
-          </div>
+          <DataLoader text="Loading staff directory..." minHeight="min-h-[180px]" />
         ) : staffList.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground space-y-2">
+          <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center space-y-3">
             <UserCheck className="size-10 mx-auto opacity-30 text-primary" />
             <p className="text-sm font-bold text-foreground">No staff members found</p>
-            <p className="text-xs">Add staff members to assign them as evaluators.</p>
+            <p className="text-xs text-muted-foreground">Add a staff member to assign them as evaluators.</p>
+          </div>
+        ) : viewMode === "cards" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 animate-in fade-in duration-300">
+            {staffList.map((st) => {
+              const initials = st.name
+                .split(" ")
+                .map((n) => n[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase();
+
+              return (
+                <div
+                  key={st.id}
+                  className="card-themed rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md transition-all flex flex-col justify-between space-y-3.5 group border relative"
+                >
+                  {/* 1. Top Row: Avatar + Name + Position/Username + Status Flag */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Link
+                        href={`/staff/${st.username}`}
+                        className="size-11 rounded-2xl card-themed-tag font-black text-sm flex items-center justify-center border border-border/70 shrink-0 shadow-xs group-hover:scale-105 transition-transform"
+                      >
+                        {initials}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/staff/${st.username}`}
+                          className="font-extrabold text-sm sm:text-base text-foreground truncate block group-hover:text-primary transition-colors leading-tight"
+                          title={st.name}
+                        >
+                          {st.name}
+                        </Link>
+                        <p className="text-[11px] card-themed-sub font-medium truncate mt-0.5">
+                          @{st.username} • {st.position || st.title || "Coordinator"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 pt-0.5">
+                      <CardTypeFlag type={st.status || "active"} />
+                    </div>
+                  </div>
+
+                  {/* 2. Middle Row: Granted Permissions Badges */}
+                  <div className="py-2 px-3 rounded-2xl bg-secondary/40 border border-border/50 space-y-1">
+                    <span className="text-[10px] card-themed-sub font-bold block">Assigned Role & Permissions</span>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {st.permissions && st.permissions.length > 0 ? (
+                        st.permissions.map((p) => {
+                          const label =
+                            p === "students.create"
+                              ? "Add Student"
+                              : p === "students.view"
+                              ? "View Student"
+                              : p === "students.update"
+                              ? "Update Student"
+                              : p === "students.delete"
+                              ? "Delete Student"
+                              : p;
+                          return (
+                            <span
+                              key={p}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20"
+                            >
+                              ✓ {label}
+                            </span>
+                          );
+                        })
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-medium">Default Staff Permissions</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. Bottom Row: Dedicated Action Line with Text Colors (No Backgrounds) */}
+                  <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
+                    {/* Left: View Profile Link */}
+                    <Link
+                      href={`/staff/${st.username}`}
+                      className="font-bold text-primary hover:underline inline-flex items-center gap-1 transition-colors"
+                      title="View Staff Profile"
+                    >
+                      <span>Profile</span>
+                      <ArrowRight className="size-3" />
+                    </Link>
+
+                    {/* Right: Actions with Text Colors */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEdit(st)}
+                        className="p-1 text-blue-600 hover:text-blue-700 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                        title="Edit Staff Member"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setResetId(st.id)}
+                        className="p-1 text-amber-500 hover:text-amber-600 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                        title="Reset Password"
+                      >
+                        <KeyRound className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteStaff(st)}
+                        className="p-1 text-rose-500 hover:text-rose-600 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                        title="Delete Staff Member"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
-          <div className="divide-y divide-border/60">
-            {staffList.map((st) => (
-              <div
-                key={st.id}
-                className="py-4 flex flex-col sm:flex-row sm:items-center justify-between hover:bg-secondary/30 px-3 rounded-2xl transition-colors gap-3"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-secondary text-primary border border-border">
-                      {st.title || "Staff"}
-                    </span>
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-bold capitalize",
-                        st.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {st.status}
-                    </span>
-                  </div>
-                  <Link
-                    href={`/staff/${st.username}`}
-                    className="text-base font-extrabold text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
-                  >
-                    <span>{st.name}</span>
-                    <ExternalLink className="size-3 text-muted-foreground" />
-                  </Link>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    @{st.username} • {st.position || "Coordinator"} {st.email ? `• ${st.email}` : ""}
-                  </p>
-                  {/* Granted Permissions Badges */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                    {st.permissions && st.permissions.length > 0 ? (
-                      st.permissions.map((p) => {
-                        const label =
-                          p === "students.create"
-                            ? "Add Student"
-                            : p === "students.view"
-                            ? "View Student"
-                            : p === "students.update"
-                            ? "Update Student"
-                            : p === "students.delete"
-                            ? "Delete Student"
-                            : p;
-                        return (
-                          <span
-                            key={p}
-                            className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20"
+          /* Table View */
+          <div className="card-themed rounded-3xl border border-border shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="bg-secondary/60 border-b border-border/80 text-muted-foreground font-bold">
+                  <tr>
+                    <th className="py-3.5 px-4">Staff Member</th>
+                    <th className="py-3.5 px-4">Position</th>
+                    <th className="py-3.5 px-4">Email</th>
+                    <th className="py-3.5 px-4 text-center">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {staffList.map((st) => (
+                    <tr key={st.id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-xl card-themed-tag font-bold text-xs flex items-center justify-center shrink-0 border border-border/60">
+                            {st.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/staff/${st.username}`}
+                              className="font-extrabold text-foreground hover:text-primary transition-colors block truncate"
+                            >
+                              {st.name}
+                            </Link>
+                            <span className="text-[11px] card-themed-sub block truncate">
+                              @{st.username}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-foreground">
+                        {st.position || st.title || "Coordinator"}
+                      </td>
+                      <td className="py-3.5 px-4 text-muted-foreground">
+                        {st.email || "—"}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <CardTypeFlag type={st.status || "active"} />
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <Link
+                            href={`/staff/${st.username}`}
+                            className="text-primary font-bold hover:underline text-xs"
+                            title="Profile"
                           >
-                            ✓ {label}
-                          </span>
-                        );
-                      })
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">Default Staff Permissions</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  <Link
-                    href={`/staff/${st.username}`}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary text-foreground hover:bg-primary hover:text-white transition-colors text-xs font-bold"
-                  >
-                    <span>View Profile</span>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setResetId(st.id)}
-                    className="size-8 p-0 rounded-full text-muted-foreground hover:text-foreground"
-                    title="Reset Password"
-                  >
-                    <KeyRound className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleOpenEdit(st)}
-                    className="size-8 p-0 rounded-full text-muted-foreground hover:text-foreground"
-                    title="Edit Staff"
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteStaff(st)}
-                    className="size-8 p-0 rounded-full text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                    title="Delete Staff"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+                            Profile
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(st)}
+                            className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setResetId(st.id)}
+                            className="p-1 text-amber-500 hover:text-amber-600 transition-colors"
+                            title="Reset Password"
+                          >
+                            <KeyRound className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteStaff(st)}
+                            className="p-1 text-rose-500 hover:text-rose-600 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>

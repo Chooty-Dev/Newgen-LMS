@@ -41,6 +41,7 @@ export class SubjectService {
         name: s.name,
         code: s.code,
         description: s.description || "",
+        grades: s.grades && s.grades.length > 0 ? s.grades : [6, 7, 8, 9, 10, 11],
         status: s.status,
         createdAt: s.createdAt,
       })),
@@ -53,7 +54,10 @@ export class SubjectService {
     };
   }
 
-  static async createSubject(centerId: string, data: { name: string; code: string; description?: string }) {
+  static async createSubject(
+    centerId: string,
+    data: { name: string; code: string; description?: string; grades?: number[] }
+  ) {
     await connectDB();
     const existing = await Subject.findOne({
       centerId: new mongoose.Types.ObjectId(centerId),
@@ -69,6 +73,7 @@ export class SubjectService {
       name: data.name,
       code: data.code.toUpperCase(),
       description: data.description,
+      grades: data.grades && data.grades.length > 0 ? data.grades : [6, 7, 8, 9, 10, 11],
       status: "active",
     });
 

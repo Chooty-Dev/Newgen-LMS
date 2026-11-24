@@ -25,6 +25,9 @@ import {
   AlertCircle,
   FileText,
   Bookmark,
+  LayoutGrid,
+  Table2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
+import { CardThemeBar } from "./CardThemeBar";
+import { CardTypeFlag } from "./CardTypeFlag";
 
 interface AssessmentRecord {
   id: string;
@@ -66,7 +72,13 @@ const createExamSchema = z.object({
   type: z.enum(["exam", "test", "mcq_quiz", "paper", "assignment"]),
   subjectId: z.string().min(1, "Please select a curriculum subject"),
   selectedClassId: z.string().min(1, "Please select a target class batch"),
-  date: z.string().min(1, "Assessment date is required"),
+  date: z
+    .string()
+    .min(1, "Assessment date is required")
+    .refine((d) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return d >= today;
+    }, "Assessment date cannot be in the past"),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   totalMarks: z.coerce.number().min(1, "Total marks must be at least 1"),
@@ -82,7 +94,30 @@ export function TeacherExamsView() {
 
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<string>("all");
+  const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
   const [createOpen, setCreateOpen] = React.useState(false);
+
+  // Delete assessment state
+  const [deleteExamId, setDeleteExamId] = React.useState<string | null>(null);
+  const [deleteExamTitle, setDeleteExamTitle] = React.useState("");
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/exams/${id}`, { method: "DELETE" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || "Failed to delete assessment");
+      return json.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+      setDeleteExamId(null);
+      setDeleteExamTitle("");
+      toast.success("Assessment deleted successfully");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Failed to delete assessment");
+    },
+  });
 
   // React Hook Form for Schedule Assessment
   const examForm = useForm<CreateExamFormData>({
@@ -202,25 +237,42 @@ export function TeacherExamsView() {
                 className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
               >
                 <Plus className="size-4" />
-                <span>Schedule Assessment</span>
+                <span>Schedule an Exam</span>
               </Button>
             </div>
           </div>
 
           {/* Large Right Illustration */}
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/exam-paper.webp"
-              alt="Exams"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
-            />
+          <div className="pointer-events-none absolute right-2 sm:right-4 md:right-6 top-0 bottom-0 w-48 sm:w-64 md:w-80 lg:w-96 xl:w-[420px] z-10 flex items-center justify-end py-2 sm:py-3">
+            <div className="relative w-full h-full max-h-[260px]">
+              <Image
+                src="/images/teacher-exam-bg.webp"
+                alt="Exams"
+                fill
+                priority
+                className="object-contain object-right drop-shadow-xl"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        {/* Search Bar + Theme Swatches + 4 Stats Cards */}
         <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* Search bar on top */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search exams & tests..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+
+          {/* Quick Apple-style Color Palette Bar */}
+          <CardThemeBar />
+
           {/* 4 Stats Cards tightly grouped in 2x2 grid */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
@@ -279,163 +331,267 @@ export function TeacherExamsView() {
               </div>
             </div>
           </div>
-
-          {/* Search bar directly beneath cards */}
-          <div className="relative w-full">
-            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search exams & tests..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
-            />
-          </div>
         </div>
       </section>
 
-      {/* 2. Filter Tabs */}
-      <section className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { id: "all", label: "All Papers" },
-          { id: "exam", label: "Term Exams" },
-          { id: "test", label: "Class Tests" },
-          { id: "mcq_quiz", label: "MCQ Quizzes" },
-          { id: "assignment", label: "Assignments" },
-        ].map((tab) => (
+      {/* 2. Filter Tabs & View Mode Switcher */}
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {[
+            { id: "all", label: "All Papers" },
+            { id: "exam", label: "Term Exams" },
+            { id: "test", label: "Class Tests" },
+            { id: "mcq_quiz", label: "MCQ Quizzes" },
+            { id: "assignment", label: "Assignments" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setTypeFilter(tab.id)}
+              className={cn(
+                "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap",
+                typeFilter === tab.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* View Mode Toggle: Cards (Default) vs Table */}
+        <div className="flex items-center bg-secondary/80 border border-border rounded-full p-1 shadow-2xs shrink-0 self-start sm:self-auto">
           <button
-            key={tab.id}
-            onClick={() => setTypeFilter(tab.id)}
+            type="button"
+            onClick={() => setViewMode("cards")}
             className={cn(
-              "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap",
-              typeFilter === tab.id
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-card border border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+              viewMode === "cards"
+                ? "bg-white text-primary shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            {tab.label}
+            <LayoutGrid className="size-3.5" />
+            <span>Cards</span>
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+              viewMode === "table"
+                ? "bg-white text-primary shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Table2 className="size-3.5" />
+            <span>Table</span>
+          </button>
+        </div>
       </section>
 
-      {/* 4. Assessment Cards Grid */}
+      {/* 3. Assessment Cards Grid or Table View */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          <Skeleton className="h-64 rounded-3xl" />
-          <Skeleton className="h-64 rounded-3xl" />
-          <Skeleton className="h-64 rounded-3xl" />
-        </div>
+        <DataLoader text="Loading assessments..." minHeight="min-h-[260px]" />
       ) : filtered.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center space-y-3">
           <ClipboardList className="size-12 mx-auto text-muted-foreground/40" />
           <h4 className="font-extrabold text-base text-foreground">No assessments found</h4>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Click &quot;Schedule Assessment&quot; to set up your next exam or quiz.
+            Click &quot;Schedule an Exam&quot; to set up your next test or quiz.
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((item, idx) => {
+      ) : viewMode === "cards" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-300">
+          {filtered.map((item) => {
             const isDone = item.status === "completed";
             const isOngoing = item.status === "waiting_marks" || item.status === "ongoing";
             const session = item.sessions?.[0];
 
-            const gradStyle =
-              idx % 3 === 0
-                ? "from-primary to-indigo-500"
-                : idx % 3 === 1
-                ? "from-emerald-600 to-teal-400"
-                : "from-amber-500 to-orange-400";
-
             return (
               <div
                 key={item.id}
-                className="bg-card border border-border rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between space-y-4 group"
+                className="card-themed rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md transition-all flex flex-col justify-between space-y-3.5 group border relative"
               >
-                {/* Header visual */}
-                <div
-                  className={cn(
-                    "relative h-28 w-full rounded-2xl bg-gradient-to-tr p-3.5 flex flex-col justify-between overflow-hidden text-white",
-                    gradStyle
-                  )}
-                >
-                  <div className="flex items-center justify-between z-10">
-                    <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider backdrop-blur-xs">
-                      {item.type.replace(/_/g, " ")}
+                {/* 1. Header: Subject Tag + Status Pill + CardTypeFlag */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="card-themed-tag px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-border/80">
+                      {item.subject || "Subject"}
                     </span>
                     <span
                       className={cn(
-                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold",
+                        "px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize shrink-0",
                         isDone
-                          ? "bg-emerald-500 text-white"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                           : isOngoing
-                          ? "bg-amber-400 text-slate-900"
-                          : "bg-black/25 text-white"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-blue-50 text-blue-700 border-blue-200"
                       )}
                     >
                       {item.status.replace(/_/g, " ")}
                     </span>
                   </div>
-
-                  <div className="flex items-center justify-between z-10">
-                    <div className="size-11 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center">
-                      <FileText className="size-5 stroke-[2.2]" />
-                    </div>
-                    <span className="text-xs font-bold bg-white/20 px-2.5 py-0.5 rounded-full tabular-nums">
-                      {item.totalMarks} Marks
-                    </span>
-                  </div>
-                  <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+                  <CardTypeFlag type={item.type} />
                 </div>
 
-                {/* Details */}
-                <div className="space-y-2">
-                  <h4 className="font-extrabold text-base text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                {/* 2. Assessment Title & Core Details */}
+                <div className="space-y-1.5">
+                  <h4
+                    className="font-extrabold text-base text-foreground group-hover:text-primary transition-colors line-clamp-1"
+                    title={item.title}
+                  >
                     {item.title}
                   </h4>
                   <div className="text-xs text-muted-foreground space-y-1 font-medium">
                     <p className="flex items-center gap-1.5">
                       <Layers className="size-3.5 text-primary shrink-0" />
                       <span className="truncate">
-                        {item.subject} • {item.classes.join(", ") || "General Class"}
+                        {item.classes.join(", ") || "General Class"}
                       </span>
                     </p>
                     <p className="flex items-center gap-1.5">
                       <Clock className="size-3.5 text-primary shrink-0" />
-                      <span>
+                      <span className="truncate">
                         {session ? `${session.date} (${session.startTime} - ${session.endTime})` : "Date pending"}
                       </span>
                     </p>
                   </div>
                 </div>
 
-                {/* Mark details */}
+                {/* 3. Mark & Weight Details */}
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-bold">
-                  <span className="text-muted-foreground">Pass Mark: {item.passMark}</span>
-                  <span className="text-foreground">Weight: {item.weight}x</span>
+                  <span className="text-foreground">
+                    {item.totalMarks} Marks <span className="text-muted-foreground font-normal">(Pass: {item.passMark})</span>
+                  </span>
+                  <span className="text-muted-foreground">Weight: {item.weight}x</span>
                 </div>
 
-                {/* Actions */}
-                <div className="pt-1 flex items-center gap-2">
-                  <Link
-                    href={`/exams/${item.slug || item.id}`}
-                    className="flex-1 inline-flex items-center justify-center h-10 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold transition-all shadow-xs gap-1.5"
-                  >
-                    <Award className="size-3.5" />
-                    <span>View Exam & Results</span>
-                  </Link>
-                  <Link
-                    href={`/evaluate-marks?assessmentId=${item.id}`}
-                    className="inline-flex items-center justify-center h-10 px-3.5 rounded-full bg-accent hover:bg-accent/80 text-foreground text-xs font-bold transition-all border border-border shadow-xs gap-1 shrink-0"
-                    title="Enter / Evaluate Marks"
-                  >
-                    <CheckCircle2 className="size-3.5 text-emerald-600" />
-                    <span>Marks</span>
-                  </Link>
+                {/* 4. Dedicated Bottom Action Line (Interactive Text Colors, No Background Box) */}
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
+                  {/* Left: View Results & Evaluate Marks */}
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/exams/${item.slug || item.id}`}
+                      className="font-bold text-primary hover:underline inline-flex items-center gap-1 transition-colors"
+                      title="View Assessment & Results"
+                    >
+                      <Award className="size-3.5" />
+                      <span>Results</span>
+                    </Link>
+                    <Link
+                      href={`/evaluate-marks?assessmentId=${item.id}`}
+                      className="font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 transition-colors"
+                      title="Enter / Evaluate Marks"
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                      <span>Evaluate</span>
+                    </Link>
+                  </div>
+
+                  {/* Right: Actions with Interactive Text Colors */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteExamId(item.id);
+                        setDeleteExamTitle(item.title);
+                      }}
+                      className="p-1 text-rose-500 hover:text-rose-600 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      title="Delete Assessment"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="bg-card border border-border rounded-3xl overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] animate-in fade-in duration-300">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border bg-secondary/40 text-muted-foreground font-black uppercase text-[10px] tracking-wider">
+                  <th className="py-3.5 px-5">Assessment</th>
+                  <th className="py-3.5 px-4">Subject & Class</th>
+                  <th className="py-3.5 px-4">Schedule</th>
+                  <th className="py-3.5 px-4">Marks</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 font-medium">
+                {filtered.map((item) => {
+                  const isDone = item.status === "completed";
+                  const isOngoing = item.status === "waiting_marks" || item.status === "ongoing";
+                  const session = item.sessions?.[0];
+                  return (
+                    <tr key={item.id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="py-3 px-5">
+                        <div className="font-extrabold text-foreground text-xs sm:text-sm line-clamp-1">{item.title}</div>
+                        <div className="text-[10px] text-muted-foreground capitalize">{item.type.replace(/_/g, " ")} • Weight: {item.weight}x</div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="font-bold text-foreground">{item.subject}</span>
+                        <div className="text-[11px] text-muted-foreground truncate max-w-[180px]">{item.classes.join(", ") || "General"}</div>
+                      </td>
+                      <td className="py-3 px-4 text-muted-foreground whitespace-nowrap">
+                        {session ? `${session.date} (${session.startTime} - ${session.endTime})` : "Date pending"}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className="font-bold text-foreground">{item.totalMarks} Marks</span>
+                        <span className="text-muted-foreground text-[11px] block">Pass: {item.passMark}</span>
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span
+                          className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize",
+                            isDone
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : isOngoing
+                              ? "bg-amber-50 text-amber-700 border-amber-200"
+                              : "bg-blue-50 text-blue-700 border-blue-200"
+                          )}
+                        >
+                          {item.status.replace(/_/g, " ")}
+                        </span>
+                      </td>
+                      <td className="py-3 px-5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-3">
+                          <Link
+                            href={`/exams/${item.slug || item.id}`}
+                            className="font-bold text-primary hover:underline text-xs"
+                          >
+                            Results
+                          </Link>
+                          <Link
+                            href={`/evaluate-marks?assessmentId=${item.id}`}
+                            className="font-bold text-emerald-600 hover:underline text-xs"
+                          >
+                            Evaluate
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeleteExamId(item.id);
+                              setDeleteExamTitle(item.title);
+                            }}
+                            className="p-1 text-rose-500 hover:text-rose-600 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                            title="Delete Assessment"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -516,8 +672,14 @@ export function TeacherExamsView() {
                 <FormLabel label="Date" required />
                 <Input
                   type="date"
+                  min={new Date().toISOString().slice(0, 10)}
+                  onClick={(e) => {
+                    try {
+                      (e.currentTarget as any).showPicker?.();
+                    } catch {}
+                  }}
                   {...examForm.register("date")}
-                  className={inputErrorClass(examForm.formState.errors.date)}
+                  className={cn("cursor-pointer", inputErrorClass(examForm.formState.errors.date))}
                 />
                 <FormError message={examForm.formState.errors.date?.message} />
               </div>
@@ -596,6 +758,53 @@ export function TeacherExamsView() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Assessment Dialog */}
+      <Dialog
+        open={!!deleteExamId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteExamId(null);
+            setDeleteExamTitle("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md rounded-3xl p-6 sm:p-7 bg-card border-border shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold text-foreground">
+              Delete Assessment
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              Are you sure you want to delete <span className="font-bold text-foreground">&quot;{deleteExamTitle}&quot;</span>? All scheduled sessions and associated records will be permanently removed. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="pt-4 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDeleteExamId(null);
+                setDeleteExamTitle("");
+              }}
+              className="rounded-full h-10 px-5"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (deleteExamId) deleteMutation.mutate(deleteExamId);
+              }}
+              className="rounded-full h-10 px-6 font-bold"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

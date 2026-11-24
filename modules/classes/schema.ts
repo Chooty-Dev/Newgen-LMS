@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createClassSchema = z.object({
   name: z.string().min(2, "Class name is required").trim(),
   subjectId: z.string().min(1, "Subject is required"),
+  grade: z.coerce.number().min(6, "Grade must be between 6 and 12").max(12, "Grade must be between 6 and 12").optional(),
   teacherId: z.string().min(1, "Teacher is required"),
   staffIds: z.array(z.string()).default([]),
   scheduleType: z.enum(["regular", "special"]),

@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
 import { AreaTrendChart } from "@/components/charts/AreaTrendChart";
 import { SubjectBarChart } from "@/components/charts/SubjectBarChart";
 import {
@@ -67,7 +68,7 @@ export default function AnalysisPage() {
 
   if (user?.role === "teacher") {
     return (
-      <React.Suspense fallback={<div className="p-8"><Skeleton className="h-44 w-full rounded-3xl" /></div>}>
+      <React.Suspense fallback={<DataLoader text="Loading analysis..." minHeight="min-h-[300px]" />}>
         <TeacherAnalysisView />
       </React.Suspense>
     );

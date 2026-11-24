@@ -113,6 +113,195 @@
   --sidebar-ring: #184880;
 
   --radius: 1.5rem;
+
+  /* Card Theme Defaults (Newgen Blue) */
+  --card-theme-bg: #F4F8FD;
+  --card-theme-border: #DDE8F8;
+  --card-theme-hover-border: #BCD5F5;
+  --card-theme-fg: #0F172A;
+  --card-theme-sub: #627D98;
+  --card-theme-header: #EBF3FE;
+  --card-theme-accent: #184880;
+  --card-theme-tag-bg: #EBF3FE;
+  --card-theme-tag-fg: #184880;
+  --card-theme-swatch: #184880;
+}
+
+/* =========================================
+   LIGHT & MID-TONE CARD THEMES (CUSTOMIZABLE)
+   Adjust hex values below to customize card styles.
+========================================= */
+
+/* --- 1. LIGHT PASTEL TINTS --- */
+
+/* Sage (Botanical Mint Green) */
+[data-card-theme="sage"], .card-theme-sage {
+  --card-theme-bg: #F3F8F5;
+  --card-theme-border: #D5E8DD;
+  --card-theme-hover-border: #9FD0B0;
+  --card-theme-fg: #0B2C21;
+  --card-theme-sub: #406757;
+  --card-theme-header: #E2F0E8;
+  --card-theme-accent: #0F766E;
+  --card-theme-tag-bg: #E2F0E8;
+  --card-theme-tag-fg: #0F766E;
+  --card-theme-swatch: #10B981;
+}
+
+/* Lavender (Soft Lilac Violet) */
+[data-card-theme="lavender"], .card-theme-lavender {
+  --card-theme-bg: #F8F5FD;
+  --card-theme-border: #E6DCFA;
+  --card-theme-hover-border: #C8B7F2;
+  --card-theme-fg: #221143;
+  --card-theme-sub: #635286;
+  --card-theme-header: #EFE7FC;
+  --card-theme-accent: #7C3AED;
+  --card-theme-tag-bg: #EFE7FC;
+  --card-theme-tag-fg: #7C3AED;
+  --card-theme-swatch: #8B5CF6;
+}
+
+/* Amber (Warm Starlight Amber) */
+[data-card-theme="amber"], .card-theme-amber {
+  --card-theme-bg: #FDF9F0;
+  --card-theme-border: #F7E9C4;
+  --card-theme-hover-border: #EBCE87;
+  --card-theme-fg: #3B2605;
+  --card-theme-sub: #7E6025;
+  --card-theme-header: #F9EFD4;
+  --card-theme-accent: #B45309;
+  --card-theme-tag-bg: #F9EFD4;
+  --card-theme-tag-fg: #B45309;
+  --card-theme-swatch: #F59E0B;
+}
+
+/* Rose (Blush Coral Pink) */
+[data-card-theme="rose"], .card-theme-rose {
+  --card-theme-bg: #FDF5F6;
+  --card-theme-border: #FAD9E0;
+  --card-theme-hover-border: #F3B0BE;
+  --card-theme-fg: #3F1019;
+  --card-theme-sub: #874C58;
+  --card-theme-header: #FCE8EC;
+  --card-theme-accent: #BE185D;
+  --card-theme-tag-bg: #FCE8EC;
+  --card-theme-tag-fg: #BE185D;
+  --card-theme-swatch: #EC4899;
+}
+
+/* Sky (Cerulean Ocean Blue) */
+[data-card-theme="sky"], .card-theme-sky {
+  --card-theme-bg: #F0F8FF;
+  --card-theme-border: #CFE6FD;
+  --card-theme-hover-border: #96C9FB;
+  --card-theme-fg: #072744;
+  --card-theme-sub: #3E6C92;
+  --card-theme-header: #E0F0FE;
+  --card-theme-accent: #0284C7;
+  --card-theme-tag-bg: #E0F0FE;
+  --card-theme-tag-fg: #0284C7;
+  --card-theme-swatch: #0EA5E9;
+}
+
+/* Pearl (Minimal Neutral Slate) */
+[data-card-theme="pearl"], .card-theme-pearl {
+  --card-theme-bg: #FAFAFA;
+  --card-theme-border: #E4E4E7;
+  --card-theme-hover-border: #A1A1AA;
+  --card-theme-fg: #18181B;
+  --card-theme-sub: #71717A;
+  --card-theme-header: #F4F4F5;
+  --card-theme-accent: #27272A;
+  --card-theme-tag-bg: #F4F4F5;
+  --card-theme-tag-fg: #18181B;
+  --card-theme-swatch: #94A3B8;
+}
+
+/* --- 2. MID-TONE TINTS --- */
+
+/* Mint (Fresh Botanical Green) */
+[data-card-theme="mint"], .card-theme-mint {
+  --card-theme-bg: #F0FDF4;
+  --card-theme-border: #BBF7D0;
+  --card-theme-hover-border: #86EFAC;
+  --card-theme-fg: #064E3B;
+  --card-theme-sub: #166534;
+  --card-theme-header: #DCFCE7;
+  --card-theme-accent: #059669;
+  --card-theme-tag-bg: #DCFCE7;
+  --card-theme-tag-fg: #059669;
+  --card-theme-swatch: #059669;
+}
+
+/* Violet (Royal Indigo Violet) */
+[data-card-theme="violet"], .card-theme-violet {
+  --card-theme-bg: #F5F3FF;
+  --card-theme-border: #DDD6FE;
+  --card-theme-hover-border: #C4B5FD;
+  --card-theme-fg: #2E1065;
+  --card-theme-sub: #5B21B6;
+  --card-theme-header: #EDE9FE;
+  --card-theme-accent: #6D28D9;
+  --card-theme-tag-bg: #EDE9FE;
+  --card-theme-tag-fg: #6D28D9;
+  --card-theme-swatch: #6D28D9;
+}
+
+/* Peach (Warm Sunrise Apricot) */
+[data-card-theme="peach"], .card-theme-peach {
+  --card-theme-bg: #FFF7ED;
+  --card-theme-border: #FED7AA;
+  --card-theme-hover-border: #FDBA74;
+  --card-theme-fg: #431407;
+  --card-theme-sub: #9A3412;
+  --card-theme-header: #FFEDD5;
+  --card-theme-accent: #EA580C;
+  --card-theme-tag-bg: #FFEDD5;
+  --card-theme-tag-fg: #EA580C;
+  --card-theme-swatch: #F97316;
+}
+
+/* Coral (Warm Crimson Coral) */
+[data-card-theme="coral"], .card-theme-coral {
+  --card-theme-bg: #FFF1F2;
+  --card-theme-border: #FECDD3;
+  --card-theme-hover-border: #FDA4AF;
+  --card-theme-fg: #4C0519;
+  --card-theme-sub: #9F1239;
+  --card-theme-header: #FFE4E6;
+  --card-theme-accent: #E11D48;
+  --card-theme-tag-bg: #FFE4E6;
+  --card-theme-tag-fg: #E11D48;
+  --card-theme-swatch: #E11D48;
+}
+
+/* Teal (Coastal Sea Teal) */
+[data-card-theme="teal"], .card-theme-teal {
+  --card-theme-bg: #F0FDFA;
+  --card-theme-border: #99F6E4;
+  --card-theme-hover-border: #5EEAD4;
+  --card-theme-fg: #042F2C;
+  --card-theme-sub: #115E59;
+  --card-theme-header: #CCFBF1;
+  --card-theme-accent: #0D9488;
+  --card-theme-tag-bg: #CCFBF1;
+  --card-theme-tag-fg: #0D9488;
+  --card-theme-swatch: #0D9488;
+}
+
+/* Indigo (Vibrant Soft Indigo) */
+[data-card-theme="indigo"], .card-theme-indigo {
+  --card-theme-bg: #EEF2FF;
+  --card-theme-border: #C7D2FE;
+  --card-theme-hover-border: #A5B4FC;
+  --card-theme-fg: #1E1B4B;
+  --card-theme-sub: #3730A3;
+  --card-theme-header: #E0E7FF;
+  --card-theme-accent: #4338CA;
+  --card-theme-tag-bg: #E0E7FF;
+  --card-theme-tag-fg: #4338CA;
+  --card-theme-swatch: #4F46E5;
 }
 
 /* =========================================
@@ -148,6 +337,29 @@
   ::selection {
     background-color: var(--primary);
     color: var(--primary-foreground);
+  }
+}
+
+@layer utilities {
+  .card-themed {
+    background-color: var(--card-theme-bg);
+    border-color: var(--card-theme-border);
+    color: var(--card-theme-fg);
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  }
+  .card-themed:hover {
+    border-color: var(--card-theme-hover-border);
+  }
+  .card-themed-header {
+    background-color: var(--card-theme-header);
+    color: var(--card-theme-fg);
+  }
+  .card-themed-sub {
+    color: var(--card-theme-sub);
+  }
+  .card-themed-tag {
+    background-color: var(--card-theme-tag-bg);
+    color: var(--card-theme-tag-fg);
   }
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -264,23 +265,17 @@ export function TeacherShell({ children }: TeacherShellProps) {
         </div>
       </div>
 
-      {/* Bottom Promo Card (Matches Trophy Card in reference UI) */}
-      <div className="mt-6 p-4 rounded-3xl bg-secondary border border-border shadow-xs text-center relative overflow-hidden space-y-3">
-        <div className="size-11 rounded-2xl bg-amber-400/20 text-amber-600 mx-auto flex items-center justify-center shadow-xs">
-          <Trophy className="size-5 fill-amber-500 text-amber-500" />
+      {/* Bottom Proud Educator Badge - Clean full-size graphic, no background, no shadows */}
+      <div className="mt-auto pt-6 pb-2 flex flex-col items-center justify-center">
+        <div className="relative w-full max-w-[210px] aspect-[16/9] flex items-center justify-center">
+          <Image
+            src="/images/proud-educator.webp"
+            alt="Proud Educator"
+            fill
+            className="object-contain"
+            priority
+          />
         </div>
-        <div>
-          <p className="text-sm font-bold text-foreground">Teacher Faculty</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Active Term 2026/27
-          </p>
-        </div>
-        <Link
-          href="/settings"
-          className="inline-flex items-center justify-center w-full px-4 py-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all"
-        >
-          View Profile
-        </Link>
       </div>
     </div>
   );
@@ -435,10 +430,16 @@ export function TeacherShell({ children }: TeacherShellProps) {
               <button
                 type="button"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                className="flex items-center gap-2.5 p-1.5 sm:pr-3 rounded-full hover:bg-secondary border border-border transition-all"
+                className="flex items-center gap-2 p-1 sm:pr-3 rounded-full hover:bg-secondary border border-border transition-all cursor-pointer"
               >
-                <div className="size-8 rounded-full bg-primary text-primary-foreground font-extrabold text-xs flex items-center justify-center shadow-xs">
-                  {initials}
+                <div className="relative size-8 sm:size-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center">
+                  <Image
+                    src="/images/teacher-profile.webp"
+                    alt={user?.name || "Teacher Profile"}
+                    fill
+                    className="object-contain"
+                    priority
+                  />
                 </div>
                 <div className="hidden sm:block text-left text-xs leading-tight">
                   <p className="font-bold text-foreground truncate max-w-[120px]">
@@ -453,14 +454,24 @@ export function TeacherShell({ children }: TeacherShellProps) {
 
               {/* Profile Dropdown */}
               {profileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-card border border-border shadow-xl py-2 z-50 animate-in fade-in-50 zoom-in-95">
-                  <div className="px-4 py-2 border-b border-border">
-                    <p className="text-xs font-bold text-foreground truncate">
-                      {user?.name}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground truncate">
-                      {user?.email}
-                    </p>
+                <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-card border border-border shadow-xl py-2 z-50 animate-in fade-in-50 zoom-in-95">
+                  <div className="px-4 py-2 border-b border-border flex items-center gap-2.5">
+                    <div className="relative size-9 rounded-full overflow-hidden shrink-0">
+                      <Image
+                        src="/images/teacher-profile.webp"
+                        alt={user?.name || "Teacher Profile"}
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground truncate">
+                        {user?.name}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {user?.email}
+                      </p>
+                    </div>
                   </div>
                   <Link
                     href="/settings"

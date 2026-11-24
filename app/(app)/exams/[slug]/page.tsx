@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { toast } from "sonner";
@@ -98,7 +99,7 @@ function ExamDetailsContent() {
   const [evaluatorModalOpen, setEvaluatorModalOpen] = React.useState(false);
   const [selectedStaffId, setSelectedStaffId] = React.useState("");
 
-  const { data: allStaffData } = useQuery({
+  const { data: allStaffData, isLoading: allStaffLoading } = useQuery({
     queryKey: ["all-staff-picker", user?.centerId],
     queryFn: async () => {
       const res = await fetch("/api/v1/staff?limit=100");
@@ -196,7 +197,7 @@ function ExamDetailsContent() {
       lowestScore: rawResults?.summary?.lowestScore ?? rawResults?.lowest ?? 0,
     },
     distribution: rawResults?.distribution || rawResults?.gradeDistribution || { A: 0, B: 0, C: 0, S: 0, F: 0 },
-    marks: rawResults?.marks || [],
+    marks: rawResults?.studentMarks || rawResults?.marks || [],
   };
 
   const filteredMarks = (results.marks || []).filter((m: { studentName: string; studentUsername: string }) => {
@@ -546,9 +547,19 @@ function ExamDetailsContent() {
 
           <div className="space-y-4 py-2">
             <div className="max-h-60 overflow-y-auto divide-y divide-border/50 border border-border rounded-2xl p-2">
-              {((allStaffData?.data || []) as Array<{ id: string; name: string; username: string; title?: string }>)
-                .filter((s) => !evaluators.some((as: { id: string }) => as.id === s.id))
-                .map((s) => (
+              {allStaffLoading ? (
+                <DataLoader text="Loading evaluators..." minHeight="min-h-[140px]" />
+              ) : (() => {
+                const available = ((allStaffData?.data || []) as Array<{ id: string; name: string; username: string; title?: string }>)
+                  .filter((s) => !evaluators.some((as: { id: string }) => as.id === s.id));
+                if (available.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground py-6 text-center">
+                      No additional staff members available to assign.
+                    </p>
+                  );
+                }
+                return available.map((s) => (
                   <label key={s.id} className="flex items-center gap-3 p-2 hover:bg-secondary/40 rounded-xl cursor-pointer text-xs">
                     <input
                       type="radio"
@@ -562,7 +573,8 @@ function ExamDetailsContent() {
                       <p className="text-[10px] text-muted-foreground">@{s.username} • {s.title || "Staff"}</p>
                     </div>
                   </label>
-                ))}
+                ));
+              })()}
             </div>
           </div>
 

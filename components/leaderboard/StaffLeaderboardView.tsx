@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,6 +29,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { DataLoader } from "@/components/ui/data-loader";
+import { CardThemeBar } from "@/components/teacher/CardThemeBar";
 
 interface FormattedLeaderboardEntry {
   id: string;
@@ -103,9 +106,19 @@ export function StaffLeaderboardView() {
 
   if (isLoading || !data?.data) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-10 w-48 bg-muted rounded-full" />
-        <div className="h-64 bg-muted rounded-3xl" />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+              <Trophy className="size-7 text-primary" />
+              Leaderboard
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Top student performers in your center.
+            </p>
+          </div>
+        </div>
+        <DataLoader text="Loading leaderboard rankings..." minHeight="min-h-[320px]" />
       </div>
     );
   }
@@ -129,10 +142,10 @@ export function StaffLeaderboardView() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <Trophy className="size-7 text-primary" />
-            Center Leaderboard
+            Leaderboard
           </h1>
           <p className="text-sm text-muted-foreground">
-            Top 10 student performers ranked by the single-source score formula.
+            Top student performers in your center.
           </p>
         </div>
 
@@ -178,47 +191,102 @@ export function StaffLeaderboardView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 2. Grade Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {GRADE_PILLS.map((pill) => {
-          const isActive = selectedGrade === pill.value;
-          return (
-            <button
-              key={pill.value}
-              onClick={() => setSelectedGrade(pill.value)}
-              className={cn(
-                "h-9 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
-              )}
-            >
-              {pill.label}
-            </button>
-          );
-        })}
+      {/* 2. Grade Filter Tabs + Theme Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {GRADE_PILLS.map((pill) => {
+            const isActive = selectedGrade === pill.value;
+            return (
+              <button
+                key={pill.value}
+                onClick={() => setSelectedGrade(pill.value)}
+                className={cn(
+                  "h-9 px-4 rounded-full text-xs sm:text-sm font-semibold transition-all whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-secondary text-foreground hover:bg-secondary/80 border border-border"
+                )}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Quick Color Palette Bar */}
+        <CardThemeBar />
       </div>
 
+      {/* Best Student Spotlight - Full size image, clean layout, no background color, no shadows */}
+      {top10.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 py-2 px-1 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            <div className="relative w-44 sm:w-52 aspect-[4/3] shrink-0 flex items-center justify-center">
+              <Image
+                src="/images/super-student.webp"
+                alt="Super Student"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold uppercase tracking-wider">
+                <Crown className="size-3.5 fill-amber-500 text-amber-500" />
+                <span>Rank #1 • Best Student</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-foreground">
+                {top10[0].studentName}
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                {top10[0].grade} • Highest Performance Score in Center
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 shrink-0 text-center sm:text-right">
+            <div>
+              <span className="text-3xl sm:text-4xl font-black text-primary tabular-nums block">
+                {top10[0].score}
+              </span>
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Overall Score
+              </span>
+            </div>
+            <div className="hidden sm:block text-left border-l border-border/80 pl-4 space-y-1 text-xs">
+              <div>
+                <span className="text-muted-foreground">Academic Marks: </span>
+                <span className="font-extrabold text-foreground">{top10[0].marksScore}%</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Attendance: </span>
+                <span className="font-extrabold text-foreground">{top10[0].attendanceScore}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. Table Card */}
-      <Card className="rounded-3xl border border-border bg-card overflow-hidden">
+      <Card className="rounded-3xl border border-border card-themed overflow-hidden">
         <CardHeader className="pb-3 border-b border-border/60">
           <CardTitle className="text-lg font-bold flex items-center justify-between">
-            <span>Rankings (Top 10)</span>
+            <span>Top Students</span>
             <span className="text-xs font-normal text-muted-foreground sm:hidden">
               Sync: {formattedSyncTime}
             </span>
           </CardTitle>
           <CardDescription>
-            Formula: (Marks Score × 75%) + (Attendance Score × 25%). Tie-breakers applied automatically.
+            Rankings based on overall assessment marks and attendance.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {top10.length === 0 ? (
             <div className="p-12 text-center text-muted-foreground space-y-2">
               <Trophy className="size-10 mx-auto opacity-30 text-primary" />
-              <p className="text-base font-semibold">No students eligible for Top 10 yet</p>
+              <p className="text-base font-semibold">No students on the leaderboard yet</p>
               <p className="text-xs">
-                Students must have at least 3 submitted assessments and 5 finalized attendance sessions.
+                Students will appear once marks and attendance records are evaluated.
               </p>
             </div>
           ) : (

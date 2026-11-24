@@ -20,6 +20,7 @@ export interface IClass extends Document {
   name: string;
   slug?: string;
   subjectId: mongoose.Types.ObjectId;
+  grade?: number;
   teacherId: mongoose.Types.ObjectId;
   staffIds: mongoose.Types.ObjectId[];
   schedule: {
@@ -43,6 +44,7 @@ const ClassSchema = new Schema<IClass>(
     name: { type: String, required: true, trim: true },
     slug: { type: String, unique: true, sparse: true, trim: true, index: true },
     subjectId: { type: Schema.Types.ObjectId, ref: "Subject", required: true, index: true },
+    grade: { type: Number, min: 6, max: 12 },
     teacherId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     staffIds: [{ type: Schema.Types.ObjectId, ref: "User", index: true }],
     schedule: {

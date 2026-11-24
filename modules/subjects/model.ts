@@ -6,6 +6,7 @@ export interface ISubject extends Document {
   name: string;
   code: string;
   description?: string;
+  grades?: number[];
   status: "active" | "archived";
   deletedAt?: Date;
   deletedBy?: mongoose.Types.ObjectId;
@@ -19,6 +20,7 @@ const SubjectSchema = new Schema<ISubject>(
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, trim: true, uppercase: true },
     description: { type: String, trim: true },
+    grades: { type: [Number], default: [6, 7, 8, 9, 10, 11] },
     status: { type: String, enum: ["active", "archived"], default: "active", index: true },
     deletedAt: { type: Date, default: null, index: true },
     deletedBy: { type: Schema.Types.ObjectId, ref: "User" },

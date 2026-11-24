@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
 
 interface ActiveSession {
   id: string;
@@ -369,7 +369,7 @@ export function TeacherSettingsView() {
         </div>
 
         {sessionsLoading ? (
-          <Skeleton className="h-20 rounded-2xl" />
+          <DataLoader text="Loading active sessions..." minHeight="min-h-[100px]" />
         ) : activeSessions.length === 0 ? (
           <p className="text-xs text-muted-foreground">No active sessions found.</p>
         ) : (

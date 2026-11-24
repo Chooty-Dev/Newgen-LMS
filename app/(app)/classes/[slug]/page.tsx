@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { toast } from "sonner";
@@ -112,7 +113,7 @@ function ClassDetailsContent() {
   const [selectedStudentIds, setSelectedStudentIds] = React.useState<string[]>([]);
   const [studentSearch, setStudentSearch] = React.useState("");
 
-  const { data: allStudentsData } = useQuery({
+  const { data: allStudentsData, isLoading: allStudentsLoading } = useQuery({
     queryKey: ["all-students-picker", user?.centerId],
     queryFn: async () => {
       const res = await fetch("/api/v1/students?limit=200");
@@ -126,7 +127,7 @@ function ClassDetailsContent() {
   const [staffModalOpen, setStaffModalOpen] = React.useState(false);
   const [selectedStaffId, setSelectedStaffId] = React.useState("");
 
-  const { data: allStaffData } = useQuery({
+  const { data: allStaffData, isLoading: allStaffLoading } = useQuery({
     queryKey: ["all-staff-picker", user?.centerId],
     queryFn: async () => {
       const res = await fetch("/api/v1/staff?limit=100");
@@ -467,10 +468,7 @@ function ClassDetailsContent() {
           </div>
 
           {loadingStudents ? (
-            <div className="space-y-3">
-              <Skeleton className="h-14 w-full rounded-2xl" />
-              <Skeleton className="h-14 w-full rounded-2xl" />
-            </div>
+            <DataLoader text="Loading enrolled students..." minHeight="min-h-[180px]" />
           ) : enrolledStudents.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground space-y-3">
               <Users className="size-10 mx-auto opacity-30 text-primary" />
@@ -690,10 +688,20 @@ function ClassDetailsContent() {
             </div>
 
             <div className="max-h-60 overflow-y-auto divide-y divide-border/50 border border-border rounded-2xl p-2">
-              {((allStudentsData?.data || []) as Array<{ id: string; name: string; username: string; grade?: string }>)
-                .filter((s) => !enrolledStudents.some((es: { studentId: string }) => es.studentId === s.id))
-                .filter((s) => !studentSearch || s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.username.toLowerCase().includes(studentSearch.toLowerCase()))
-                .map((s) => {
+              {allStudentsLoading ? (
+                <DataLoader text="Loading students..." minHeight="min-h-[140px]" />
+              ) : (() => {
+                const available = ((allStudentsData?.data || []) as Array<{ id: string; name: string; username: string; grade?: string }>)
+                  .filter((s) => !enrolledStudents.some((es: { studentId: string }) => es.studentId === s.id))
+                  .filter((s) => !studentSearch || s.name.toLowerCase().includes(studentSearch.toLowerCase()) || s.username.toLowerCase().includes(studentSearch.toLowerCase()));
+                if (available.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground py-6 text-center">
+                      No eligible students found to enroll.
+                    </p>
+                  );
+                }
+                return available.map((s) => {
                   const isChecked = selectedStudentIds.includes(s.id);
                   return (
                     <label
@@ -716,7 +724,8 @@ function ClassDetailsContent() {
                       </div>
                     </label>
                   );
-                })}
+                });
+              })()}
             </div>
           </div>
 
@@ -744,9 +753,19 @@ function ClassDetailsContent() {
 
           <div className="space-y-4 py-2">
             <div className="max-h-60 overflow-y-auto divide-y divide-border/50 border border-border rounded-2xl p-2">
-              {((allStaffData?.data || []) as Array<{ id: string; name: string; username: string; title?: string }>)
-                .filter((s) => !assignedStaff.some((as: { id: string }) => as.id === s.id))
-                .map((s) => (
+              {allStaffLoading ? (
+                <DataLoader text="Loading staff members..." minHeight="min-h-[140px]" />
+              ) : (() => {
+                const available = ((allStaffData?.data || []) as Array<{ id: string; name: string; username: string; title?: string }>)
+                  .filter((s) => !assignedStaff.some((as: { id: string }) => as.id === s.id));
+                if (available.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground py-6 text-center">
+                      No additional staff members available to assign.
+                    </p>
+                  );
+                }
+                return available.map((s) => (
                   <label
                     key={s.id}
                     className="flex items-center gap-3 p-2 hover:bg-secondary/40 rounded-xl cursor-pointer text-xs"
@@ -763,7 +782,8 @@ function ClassDetailsContent() {
                       <p className="text-[10px] text-muted-foreground">@{s.username} • {s.title || "Staff"}</p>
                     </div>
                   </label>
-                ))}
+                ));
+              })()}
             </div>
           </div>
 

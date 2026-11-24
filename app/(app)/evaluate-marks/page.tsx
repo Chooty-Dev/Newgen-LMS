@@ -12,6 +12,9 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, Send, Award, CheckCircle2, Clock, Users, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { cn } from "@/lib/utils";
+import { DataLoader } from "@/components/ui/data-loader";
 
 interface GridEntry {
   studentId: string;
@@ -24,6 +27,7 @@ interface GridEntry {
   grade: string;
   attendanceStatus: "present" | "absent" | "excused";
   remarks?: string;
+  status?: string;
 }
 
 interface AssessmentSummary {
@@ -31,6 +35,7 @@ interface AssessmentSummary {
   title: string;
   totalMarks: number;
   passMark: number;
+  status?: string;
 }
 
 function EvaluationGridEditor({
@@ -43,7 +48,12 @@ function EvaluationGridEditor({
   onSaved: () => void;
 }) {
   const [entries, setEntries] = React.useState<GridEntry[]>(initialEntries);
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = React.useState(false);
   const inputRefs = React.useRef<Map<number, HTMLInputElement>>(new Map());
+
+  const isAlreadyEvaluated =
+    assessment.status === "completed" ||
+    (initialEntries.length > 0 && initialEntries.every((e: any) => e.status === "submitted"));
 
   const saveMutation = useMutation({
     mutationFn: async (status: "draft" | "submitted") => {
@@ -125,8 +135,53 @@ function EvaluationGridEditor({
     }
   };
 
+  const handleAttemptSubmit = () => {
+    if (isAlreadyEvaluated) {
+      toast.error("This assessment has already been evaluated and finalized.");
+      return;
+    }
+
+    const unenteredPresent = entries.filter(
+      (e) =>
+        e.attendanceStatus === "present" &&
+        (e.score === undefined || e.score === null || isNaN(Number(e.score)))
+    );
+    if (unenteredPresent.length > 0) {
+      toast.error(
+        `Please enter marks for all present students (${unenteredPresent.length} missing). You can click "Save Draft" if you wish to finish later.`
+      );
+      return;
+    }
+
+    const outOfBounds = entries.filter(
+      (e) =>
+        e.attendanceStatus === "present" &&
+        (Number(e.score) < 0 || Number(e.score) > assessment.totalMarks)
+    );
+    if (outOfBounds.length > 0) {
+      toast.error(
+        `Marks must be between 0 and total marks (${assessment.totalMarks}). Please check student scores.`
+      );
+      return;
+    }
+
+    setConfirmSubmitOpen(true);
+  };
+
   return (
     <Card className="rounded-3xl border-border bg-card p-6 md:p-8">
+      {isAlreadyEvaluated && (
+        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center gap-3">
+          <CheckCircle2 className="size-5 shrink-0 text-amber-600" />
+          <div>
+            <p className="font-extrabold text-sm">Assessment Already Evaluated</p>
+            <p className="text-xs opacity-90 mt-0.5">
+              Marks have already been submitted and finalized for this assessment. Submitting new marks is disabled to protect student scorecards.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-6 mb-6 border-b border-border gap-4">
         <div>
           <h2 className="text-2xl font-semibold text-foreground">{assessment.title}</h2>
@@ -146,11 +201,12 @@ function EvaluationGridEditor({
           </Button>
           <Button
             className="rounded-full h-12"
-            onClick={() => saveMutation.mutate("submitted")}
-            disabled={saveMutation.isPending}
+            onClick={handleAttemptSubmit}
+            disabled={isAlreadyEvaluated || saveMutation.isPending}
+            title={isAlreadyEvaluated ? "Assessment is already evaluated" : "Submit final marks"}
           >
             <Send className="size-4 mr-2" />
-            Submit Marks
+            {isAlreadyEvaluated ? "Already Evaluated" : "Submit Marks"}
           </Button>
         </div>
       </div>
@@ -175,6 +231,7 @@ function EvaluationGridEditor({
           <tbody className="divide-y divide-border">
             {entries.map((entry, idx) => {
               const isAbsent = entry.attendanceStatus === "absent";
+              const isInvalid = !isAbsent && (entry.score < 0 || entry.score > entry.totalMarks);
               return (
                 <tr key={entry.studentId} className="hover:bg-muted/30 transition-colors">
                   <td className="py-4 pl-2 text-muted-foreground">{idx + 1}</td>
@@ -186,11 +243,12 @@ function EvaluationGridEditor({
                     <button
                       type="button"
                       onClick={() => toggleAbsent(idx)}
+                      disabled={isAlreadyEvaluated}
                       className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition-all ${
                         isAbsent
                           ? "bg-rose-100 text-rose-700 border border-rose-200"
                           : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                      }`}
+                      } ${isAlreadyEvaluated ? "opacity-70 cursor-not-allowed" : ""}`}
                     >
                       {isAbsent ? "Absent" : "Present"}
                     </button>
@@ -204,11 +262,14 @@ function EvaluationGridEditor({
                       type="number"
                       min={0}
                       max={entry.totalMarks}
-                      disabled={isAbsent}
+                      disabled={isAbsent || isAlreadyEvaluated}
                       value={isAbsent ? 0 : entry.score}
                       onChange={(e) => handleScoreChange(idx, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, idx)}
-                      className="w-28 text-center rounded-full h-10 tabular-nums font-semibold"
+                      className={cn(
+                        "w-28 text-center rounded-full h-10 tabular-nums font-semibold",
+                        isInvalid && "border-rose-500 bg-rose-50/20 text-rose-600 focus:ring-rose-500"
+                      )}
                     />
                   </td>
                   <td className="py-4 text-center tabular-nums font-semibold">
@@ -222,6 +283,7 @@ function EvaluationGridEditor({
                   <td className="py-4 pr-2">
                     <Input
                       placeholder="Optional comment"
+                      disabled={isAlreadyEvaluated}
                       value={entry.remarks || ""}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -240,6 +302,17 @@ function EvaluationGridEditor({
           </tbody>
         </table>
       </div>
+
+      {/* Confirmation Dialog on Final Submission */}
+      <ConfirmDialog
+        open={confirmSubmitOpen}
+        onOpenChange={setConfirmSubmitOpen}
+        title="Confirm Final Marks Submission"
+        description="Are you sure you want to finalize and submit marks for this assessment? This action cannot be undone. Student report cards and performance analytics will be updated permanently."
+        confirmLabel="Confirm & Submit Marks"
+        isDestructive={false}
+        onConfirm={() => saveMutation.mutate("submitted")}
+      />
     </Card>
   );
 }
@@ -394,7 +467,7 @@ export default function EvaluateMarksPage() {
       {/* Grid Content */}
       {selectedAssessmentId ? (
         gridLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Loading student list...</div>
+          <DataLoader text="Loading student evaluation marks grid..." minHeight="min-h-[260px]" />
         ) : !gridData?.data?.entries?.length ? (
           <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-3xl p-8">
             No students enrolled in this assessment&apos;s classes.

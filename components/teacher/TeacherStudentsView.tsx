@@ -25,10 +25,15 @@ import {
   Check,
   ExternalLink,
   GraduationCap,
+  LayoutGrid,
+  Table2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
+import { CardThemeBar } from "./CardThemeBar";
+import { CardTypeFlag } from "./CardTypeFlag";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import {
   Dialog,
@@ -116,6 +121,7 @@ export function TeacherStudentsView() {
 
   const [search, setSearch] = React.useState("");
   const [groupFilter, setGroupFilter] = React.useState<"all" | "excellent" | "medium" | "weak">("all");
+  const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
 
   // Modals state
   const [createOpen, setCreateOpen] = React.useState(false);
@@ -397,7 +403,7 @@ export function TeacherStudentsView() {
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95"
               >
                 <Plus className="size-4" />
-                <span>Register Student</span>
+                <span>Add a Student</span>
               </button>
               <Link
                 href="/analysis"
@@ -410,19 +416,36 @@ export function TeacherStudentsView() {
           </div>
 
           {/* Large Right Illustration */}
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/group-learn.webp"
-              alt="Students"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
-            />
+          <div className="pointer-events-none absolute right-2 sm:right-4 md:right-6 top-0 bottom-0 w-48 sm:w-64 md:w-80 lg:w-96 xl:w-[420px] z-10 flex items-center justify-end py-2 sm:py-3">
+            <div className="relative w-full h-full max-h-[260px]">
+              <Image
+                src="/images/teacher-student-bg.webp"
+                alt="Students"
+                fill
+                priority
+                className="object-contain object-right drop-shadow-xl"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        {/* Search Bar + Theme Swatches + 4 Stats Cards */}
         <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+          {/* Search bar on top */}
+          <div className="relative w-full">
+            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search students..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
+            />
+          </div>
+
+          {/* Quick Apple-style Color Palette Bar */}
+          <CardThemeBar />
+
           {/* 4 Stats Cards tightly grouped in 2x2 grid */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:border-primary/30 transition-all flex items-center gap-2.5">
@@ -481,69 +504,85 @@ export function TeacherStudentsView() {
               </div>
             </div>
           </div>
-
-          {/* Search bar directly beneath cards */}
-          <div className="relative w-full">
-            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search students..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
-            />
-          </div>
         </div>
       </section>
 
-      {/* 2. Filter Tabs */}
-      <section className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {[
-          { id: "all", label: "All Students", count: students.length },
-          { id: "excellent", label: "High Performers", count: excellentCount },
-          { id: "medium", label: "Good", count: mediumCount },
-          { id: "weak", label: "Needs Help", count: weakCount },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setGroupFilter(tab.id as any)}
-            className={cn(
-              "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
-              groupFilter === tab.id
-                ? "bg-primary text-primary-foreground shadow-xs"
-                : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            )}
-          >
-            <span>{tab.label}</span>
-            <span
+      {/* 2. Filter Tabs & View Mode Switcher (Cards / Table) */}
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {[
+            { id: "all", label: "All Students", count: students.length },
+            { id: "excellent", label: "High Performers", count: excellentCount },
+            { id: "medium", label: "Good", count: mediumCount },
+            { id: "weak", label: "Needs Help", count: weakCount },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setGroupFilter(tab.id as any)}
               className={cn(
-                "px-1.5 py-0.5 rounded-full text-[10px]",
-                groupFilter === tab.id ? "bg-white/20 text-white" : "bg-secondary text-muted-foreground"
+                "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
+                groupFilter === tab.id
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/60"
               )}
             >
-              {tab.count}
-            </span>
+              <span>{tab.label}</span>
+              <span
+                className={cn(
+                  "px-1.5 py-0.5 rounded-full text-[10px]",
+                  groupFilter === tab.id ? "bg-white/20 text-white" : "bg-secondary text-muted-foreground"
+                )}
+              >
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* View Mode Toggle: Cards (Default) vs Table */}
+        <div className="flex items-center bg-secondary/80 border border-border rounded-full p-1 shadow-2xs shrink-0 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode("cards")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+              viewMode === "cards"
+                ? "bg-white text-primary shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <LayoutGrid className="size-3.5" />
+            <span>Cards</span>
           </button>
-        ))}
+          <button
+            type="button"
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer",
+              viewMode === "table"
+                ? "bg-white text-primary shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Table2 className="size-3.5" />
+            <span>Table</span>
+          </button>
+        </div>
       </section>
 
-      {/* 3. Students Grid */}
+      {/* 3. Students Content (Cards or Table) */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          <Skeleton className="h-44 rounded-3xl" />
-          <Skeleton className="h-44 rounded-3xl" />
-          <Skeleton className="h-44 rounded-3xl" />
-        </div>
+        <DataLoader text="Loading students..." minHeight="min-h-[260px]" />
       ) : filtered.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center space-y-3">
           <Users className="size-12 mx-auto text-muted-foreground/40" />
-          <h4 className="font-extrabold text-base text-foreground">No students match</h4>
+          <h4 className="font-extrabold text-base text-foreground">No students found</h4>
           <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-            Try adjusting your search query or switching to &quot;All Students&quot;.
+            Try adjusting your search query or click &quot;Add a Student&quot; to enroll a new student.
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+      ) : viewMode === "cards" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 animate-in fade-in duration-300">
           {filtered.map((st) => {
             const initials = st.name
               .split(" ")
@@ -558,104 +597,224 @@ export function TeacherStudentsView() {
             return (
               <div
                 key={st.id}
-                className="bg-card border border-border rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between space-y-4 group"
+                className="card-themed rounded-3xl p-5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md transition-all flex flex-col justify-between space-y-3.5 group border relative"
               >
+                {/* 1. Top Row: Avatar + Student Name + Username / Admission + Status Tag */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <Link
                       href={`/students/${st.username}`}
-                      className="size-12 rounded-2xl bg-secondary text-primary font-black text-sm flex items-center justify-center border border-border shrink-0 shadow-xs group-hover:scale-105 transition-transform"
+                      className="size-11 rounded-2xl card-themed-tag font-black text-sm flex items-center justify-center border border-border/70 shrink-0 shadow-xs group-hover:scale-105 transition-transform"
                     >
                       {initials}
                     </Link>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <Link
                         href={`/students/${st.username}`}
-                        className="font-extrabold text-sm sm:text-base text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1.5"
+                        className="font-extrabold text-sm sm:text-base text-foreground truncate block group-hover:text-primary transition-colors leading-tight"
+                        title={st.name}
                       >
-                        <span className="truncate">{st.name}</span>
-                        <ExternalLink className="size-3 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {st.name}
                       </Link>
-                      <p className="text-xs text-muted-foreground font-medium">
+                      <p className="text-[11px] card-themed-sub font-medium truncate mt-0.5">
                         @{st.username} {st.admissionNo ? `• ${st.admissionNo}` : ""}
                       </p>
                     </div>
                   </div>
 
-                  {/* Actions Group */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEdit(st)}
-                      className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/60 transition-colors"
-                      title="Edit Student"
-                    >
-                      <Edit className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setResetStudent(st)}
-                      className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10 transition-colors"
-                      title="Reset Password"
-                    >
-                      <KeyRound className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeleteStudent(st)}
-                      className="size-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 transition-colors"
-                      title="Delete Student"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                  <div className="shrink-0 pt-0.5">
+                    <CardTypeFlag type={st.status || "active"} />
                   </div>
                 </div>
 
-                {/* Score & Standing */}
-                <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-bold">
-                  <div>
-                    <span className="text-muted-foreground block text-[11px]">Standing Score</span>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-lg font-black text-foreground tabular-nums">
-                        {st.performanceScore || 70}/100
-                      </span>
-                      <span
-                        className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-extrabold",
-                          isEx
-                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
-                            : isWeak
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
-                            : "bg-secondary text-primary border border-border"
-                        )}
-                      >
-                        {isEx ? "Excellent" : isWeak ? "Needs Help" : "Good"}
-                      </span>
-                    </div>
-                  </div>
-
+                {/* 2. Middle Row: Standing Score & Status Pill */}
+                <div className="py-2 px-3 rounded-2xl bg-secondary/40 border border-border/50 flex items-center justify-between">
+                  <span className="text-xs card-themed-sub font-bold">Standing Score</span>
                   <div className="flex items-center gap-2">
-                    <Link
-                      href={`/analysis?studentId=${st.id}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-secondary text-primary hover:bg-primary hover:text-white transition-colors text-xs font-bold border border-border"
-                      title="View Analysis"
+                    <span className="text-sm font-black text-foreground tabular-nums">
+                      {st.performanceScore || 70}/100
+                    </span>
+                    <span
+                      className={cn(
+                        "px-2 py-0.5 rounded-full text-[10px] font-extrabold",
+                        isEx
+                          ? "bg-emerald-100 text-emerald-700"
+                          : isWeak
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-secondary text-primary border border-border/60"
+                      )}
                     >
-                      <span>Analysis</span>
-                      <TrendingUp className="size-3" />
-                    </Link>
+                      {isEx ? "Excellent" : isWeak ? "Needs Help" : "Good"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Bottom Row: Dedicated Action Line with Text Colors (No Backgrounds) */}
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
+                  {/* Left: View & Analyze Links */}
+                  <div className="flex items-center gap-3">
                     <Link
                       href={`/students/${st.username}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-xs font-bold"
-                      title="Student Profile"
+                      className="font-bold text-primary hover:underline inline-flex items-center gap-1 transition-colors"
+                      title="View Student Profile"
                     >
                       <span>Profile</span>
                       <ArrowRight className="size-3" />
                     </Link>
+                    <Link
+                      href={`/analysis?studentId=${st.id}`}
+                      className="font-bold text-sky-600 hover:underline inline-flex items-center gap-1 transition-colors"
+                      title="View Student Analytics"
+                    >
+                      <span>Analysis</span>
+                      <TrendingUp className="size-3" />
+                    </Link>
+                  </div>
+
+                  {/* Right: Action Buttons with Interactive Text Colors (Blue, Amber/Yellow, Red) */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(st)}
+                      className="p-1 text-blue-600 hover:text-blue-700 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      title="Edit Student"
+                    >
+                      <Edit className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetStudent(st)}
+                      className="p-1 text-amber-500 hover:text-amber-600 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      title="Reset Password"
+                    >
+                      <KeyRound className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteStudent(st)}
+                      className="p-1 text-rose-500 hover:text-rose-600 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                      title="Delete Student"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
                   </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="card-themed rounded-3xl border border-border shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead className="bg-secondary/60 border-b border-border/80 text-muted-foreground font-bold">
+                <tr>
+                  <th className="py-3.5 px-4">Student</th>
+                  <th className="py-3.5 px-4">Admission</th>
+                  <th className="py-3.5 px-4 text-center">Score</th>
+                  <th className="py-3.5 px-4 text-center">Standing</th>
+                  <th className="py-3.5 px-4 text-center">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {filtered.map((st) => {
+                  const isEx = st.group === "excellent";
+                  const isWeak = st.group === "weak";
+                  return (
+                    <tr key={st.id} className="hover:bg-secondary/30 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-9 rounded-xl card-themed-tag font-bold text-xs flex items-center justify-center shrink-0 border border-border/60">
+                            {st.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/students/${st.username}`}
+                              className="font-extrabold text-foreground hover:text-primary transition-colors block truncate"
+                            >
+                              {st.name}
+                            </Link>
+                            <span className="text-[11px] card-themed-sub block truncate">
+                              @{st.username}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-foreground">
+                        {st.admissionNo || "—"}
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-bold">
+                        <span className="text-foreground tabular-nums">
+                          {st.performanceScore || 70}/100
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={cn(
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-extrabold",
+                            isEx
+                              ? "bg-emerald-100 text-emerald-700"
+                              : isWeak
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-secondary text-primary border border-border/60"
+                          )}
+                        >
+                          {isEx ? "Excellent" : isWeak ? "Needs Help" : "Good"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <CardTypeFlag type={st.status || "active"} />
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="inline-flex items-center gap-2">
+                          <Link
+                            href={`/students/${st.username}`}
+                            className="text-primary font-bold hover:underline text-xs"
+                            title="Profile"
+                          >
+                            Profile
+                          </Link>
+                          <Link
+                            href={`/analysis?studentId=${st.id}`}
+                            className="text-sky-600 font-bold hover:underline text-xs"
+                            title="Analysis"
+                          >
+                            Analysis
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(st)}
+                            className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                            title="Edit Student"
+                          >
+                            <Edit className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setResetStudent(st)}
+                            className="p-1 text-amber-500 hover:text-amber-600 transition-colors"
+                            title="Reset Password"
+                          >
+                            <KeyRound className="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteStudent(st)}
+                            className="p-1 text-rose-500 hover:text-rose-600 transition-colors"
+                            title="Delete Student"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

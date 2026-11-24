@@ -33,6 +33,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
+import { CardThemeBar } from "./CardThemeBar";
+import { CardTypeFlag } from "./CardTypeFlag";
 
 interface ClassScheduleRegular {
   daysOfWeek?: number[];
@@ -67,6 +70,7 @@ interface ExamItem {
   id: string;
   title: string;
   subject?: string;
+  type?: string;
   status?: string;
   totalMarks?: number;
   passMark?: number;
@@ -123,7 +127,7 @@ export function TeacherDashboardView() {
   });
 
   // 3. Fetch teacher exams / assignments
-  const { data: examsRes } = useQuery<{ data: ExamItem[] }>({
+  const { data: examsRes, isLoading: loadingExams } = useQuery<{ data: ExamItem[] }>({
     queryKey: ["exams", "teacher", user?.centerId],
     queryFn: async () => {
       const res = await fetch("/api/v1/exams");
@@ -287,8 +291,8 @@ export function TeacherDashboardView() {
     totalEvaluated > 0
       ? Math.round(((excellentCount + goodCount) / totalEvaluated) * 100)
       : totalStudents > 0
-      ? 100
-      : 0;
+        ? 100
+        : 0;
 
   // SVG Concentric Rings
   const r1 = 48;
@@ -345,19 +349,59 @@ export function TeacherDashboardView() {
           </div>
 
           {/* Large Right Illustration filling the section */}
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/bulb-on-books.webp"
-              alt="Teacher Welcome"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
-            />
+          <div className="pointer-events-none absolute right-2 sm:right-4 md:right-6 top-0 bottom-0 w-48 sm:w-64 md:w-80 lg:w-96 xl:w-[420px] z-10 flex items-center justify-end py-2 sm:py-3">
+            <div className="relative w-full h-full max-h-[260px]">
+              <Image
+                src="/images/teacher-dashboard-bg.webp"
+                alt="Teacher Welcome"
+                fill
+                priority
+                className="object-contain object-right drop-shadow-xl"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 4 Stats Cards + Search Bar: 4 cols on lg (1/3 width) */}
+        {/* Search Bar + Theme Swatches + 4 Stats Cards */}
         <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+
+          {/* 2. Teacher Profile Card */}
+          <div className="bg-card border border-border rounded-3xl p-3 sm:p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
+            <div className="flex items-center gap-3.5 border-b border-border/60 pb-3.5">
+              <div className="relative size-14 shrink-0 flex items-center justify-center">
+                <Image
+                  src="/images/teacher-profile.webp"
+                  alt={analyticsRes?.data?.teacherProfile?.name || user?.name || "Teacher Profile"}
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
+                  {analyticsRes?.data?.teacherProfile?.name || user?.name}
+                </h3>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Teacher Hub • {analyticsRes?.data?.teacherProfile?.accountAgeMonths || 1} Mo Active
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="p-1 rounded-2xl bg-secondary/40 border border-border/40">
+                <span className="text-[10px] font-semibold text-muted-foreground block">Class Average</span>
+                <p className="text-lg font-black text-primary mt-0.5">
+                  {analyticsRes?.data?.teacherProfile?.classAverageScore ?? 72}%
+                </p>
+              </div>
+              <div className="p-1 rounded-2xl bg-secondary/40 border border-border/40">
+                <span className="text-[10px] font-semibold text-muted-foreground block">Pass Rate</span>
+                <p className="text-lg font-black text-emerald-600 mt-0.5">
+                  {analyticsRes?.data?.teacherProfile?.overallResultRate ?? 88}%
+                </p>
+              </div>
+            </div>
+          </div>
           {/* 4 Stats Cards tightly grouped in 2x2 grid */}
           <div className="grid grid-cols-2 gap-2.5">
             {/* Card 1: Active Classes */}
@@ -420,18 +464,6 @@ export function TeacherDashboardView() {
               </div>
             </div>
           </div>
-
-          {/* Search bar directly beneath cards */}
-          <div className="relative w-full">
-            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search classes or subjects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
-            />
-          </div>
         </div>
       </section>
 
@@ -443,146 +475,16 @@ export function TeacherDashboardView() {
         {/* LEFT COLUMN: Assigned Classes, Assessments, Teaching Hours Chart         */}
         {/* ========================================================================= */}
         <div className="lg:col-span-8 space-y-6 sm:space-y-8">
-          {/* Middle Section: "Assigned Classes" (100% Real Live Classes) */}
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-extrabold text-foreground tracking-tight">
-                Assigned Classes
-              </h3>
-              <Link
-                href="/classes"
-                className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
-              >
-                <span>View all ({rawClasses.length})</span>
-                <ArrowRight className="size-3.5" />
-              </Link>
-            </div>
-
-            {rawClasses.length === 0 ? (
-              <div className="bg-card border border-dashed border-border rounded-3xl p-8 text-center space-y-3">
-                <BookOpen className="size-10 mx-auto text-muted-foreground/40" />
-                <h4 className="font-extrabold text-base text-foreground">
-                  No Classes Assigned Yet
-                </h4>
-                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                  You have not been assigned to any classes yet. Create a new class to start enrolling students and scheduling lessons.
-                </p>
-                <div className="pt-2">
-                  <Link
-                    href="/classes"
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary text-primary-foreground font-bold text-xs shadow-sm hover:bg-primary/90 transition-all"
-                  >
-                    <PlusCircle className="size-4" />
-                    <span>Create Class</span>
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-                {filteredDashboardClasses.slice(0, 3).map((cls, idx) => {
-                  const capacity = cls.capacity || 50;
-                  const enrolled = cls.enrolledCount || 0;
-                  const fillPercent = Math.min(100, Math.round((enrolled / capacity) * 100));
-
-                  const gradientClass =
-                    idx === 0
-                      ? "from-primary to-indigo-500"
-                      : idx === 1
-                      ? "from-emerald-600 to-teal-400"
-                      : "from-amber-500 to-orange-400";
-
-                  const tagColor =
-                    idx === 0
-                      ? "text-primary"
-                      : idx === 1
-                      ? "text-emerald-600"
-                      : "text-amber-600";
-
-                  const barColor =
-                    idx === 0
-                      ? "bg-primary"
-                      : idx === 1
-                      ? "bg-emerald-500"
-                      : "bg-amber-500";
-
-                  const IconComp = idx === 0 ? Layers : idx === 1 ? Code2 : Target;
-
-                  return (
-                    <div
-                      key={cls.id}
-                      className="bg-card border border-border rounded-3xl p-4 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] hover:shadow-md hover:border-primary/30 transition-all flex flex-col justify-between space-y-4 group"
-                    >
-                      <div
-                        className={cn(
-                          "relative h-28 w-full rounded-2xl bg-gradient-to-tr p-3 flex flex-col justify-between overflow-hidden",
-                          gradientClass
-                        )}
-                      >
-                        <div className="flex items-center justify-between z-10">
-                          <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[10px] font-extrabold uppercase tracking-wider backdrop-blur-xs">
-                            {cls.status || "Active"}
-                          </span>
-                          <span className="text-[10px] font-bold text-white/90 bg-black/20 px-2 py-0.5 rounded-md backdrop-blur-xs">
-                            {enrolled}/{capacity}
-                          </span>
-                        </div>
-                        <div className="size-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white mx-auto z-10">
-                          <IconComp className="size-6 stroke-[2.2]" />
-                        </div>
-                        <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className={cn("text-[10px] font-bold uppercase tracking-wider truncate", tagColor)}>
-                            {cls.subject || "General Class"}
-                          </span>
-                          <span className="text-amber-500 font-extrabold flex items-center gap-0.5 text-xs">
-                            <Star className="size-3 fill-amber-400" />
-                            <span>Active</span>
-                          </span>
-                        </div>
-                        <h4 className="font-extrabold text-sm sm:text-base text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                          {cls.name}
-                        </h4>
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-2">
-                          <span>{enrolled} Enrolled</span>
-                          <span>•</span>
-                          <span>
-                            {cls.schedule?.type === "regular" && cls.schedule?.regular
-                              ? `${cls.schedule.regular.startTime || "09:00"} - ${cls.schedule.regular.endTime || "10:30"}`
-                              : "Special Sessions"}
-                          </span>
-                        </p>
-                      </div>
-
-                      <div className="space-y-1 pt-1">
-                        <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
-                          <div
-                            style={{ width: `${fillPercent}%` }}
-                            className={cn("h-full rounded-full transition-all duration-300", barColor)}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] font-bold">
-                          <span className="text-muted-foreground">Capacity Filled</span>
-                          <span className="text-foreground">{fillPercent}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-
           {/* Bottom Row: Lesson List / Recent Assessments (Left) & Study Hours (Right) */}
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
             {/* Left 7 cols: Real Lesson List / Assessments */}
             <div className="md:col-span-7 bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex flex-col justify-between space-y-4">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <h3 className="font-extrabold text-base text-foreground">
-                  Recent Assessments
-                </h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-extrabold text-base text-foreground">
+                    Recent Assessments
+                  </h3>
+                </div>
                 <Link
                   href="/exams"
                   className="text-xs font-bold text-primary hover:underline"
@@ -591,7 +493,9 @@ export function TeacherDashboardView() {
                 </Link>
               </div>
 
-              {rawExams.length === 0 ? (
+              {loadingExams ? (
+                <DataLoader text="Loading recent assessments..." minHeight="min-h-[160px]" />
+              ) : rawExams.length === 0 ? (
                 <div className="p-8 text-center space-y-2 border border-dashed border-border rounded-2xl">
                   <CheckCircle2 className="size-8 mx-auto text-muted-foreground/40" />
                   <p className="text-xs font-bold text-foreground">No assessments yet</p>
@@ -619,7 +523,7 @@ export function TeacherDashboardView() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-secondary/40 hover:bg-secondary/70 border border-border/50 transition-colors gap-3"
+                        className="flex items-center justify-between p-3 rounded-2xl card-themed border border-border/50 hover:shadow-xs transition-colors gap-3"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div
@@ -628,10 +532,10 @@ export function TeacherDashboardView() {
                               idx === 0
                                 ? "bg-primary/10 text-primary"
                                 : idx === 1
-                                ? "bg-indigo-500/10 text-indigo-600"
-                                : idx === 2
-                                ? "bg-emerald-500/10 text-emerald-600"
-                                : "bg-amber-500/10 text-amber-600"
+                                  ? "bg-indigo-500/10 text-indigo-600"
+                                  : idx === 2
+                                    ? "bg-emerald-500/10 text-emerald-600"
+                                    : "bg-amber-500/10 text-amber-600"
                             )}
                           >
                             <Play className="size-3.5 fill-current" />
@@ -646,22 +550,11 @@ export function TeacherDashboardView() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2.5 shrink-0">
                           <span className="text-[11px] font-medium text-muted-foreground hidden sm:inline">
                             {sessionDate}
                           </span>
-                          <span
-                            className={cn(
-                              "text-[10px] font-extrabold px-2.5 py-0.5 rounded-full capitalize",
-                              isDone
-                                ? "bg-emerald-100 text-emerald-700"
-                                : inProgress
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-secondary text-primary border border-border"
-                            )}
-                          >
-                            {statusStr.replace("_", " ")}
-                          </span>
+                          <CardTypeFlag type={item.type || "exam"} />
                           <ChevronRight className="size-4 text-muted-foreground" />
                         </div>
                       </div>
@@ -693,47 +586,51 @@ export function TeacherDashboardView() {
               </div>
 
               {/* Weekly Vertical Bars dynamically computed from scheduled classes */}
-              <div className="flex items-end justify-between gap-2 h-44 pt-6 px-2">
-                {weekdayBars.map((bar) => {
-                  const isCurrentDay = currentDayIndex === bar.dayIndex;
-                  const barHeightPercent =
-                    maxDailyHours > 0
-                      ? Math.max(12, Math.round((bar.hours / maxDailyHours) * 100))
-                      : 12;
+              {loadingClasses ? (
+                <DataLoader text="Calculating hours..." minHeight="min-h-[176px]" />
+              ) : (
+                <div className="flex items-end justify-between gap-2 h-44 pt-6 px-2 animate-in fade-in duration-300">
+                  {weekdayBars.map((bar) => {
+                    const isCurrentDay = currentDayIndex === bar.dayIndex;
+                    const barHeightPercent =
+                      maxDailyHours > 0
+                        ? Math.max(12, Math.round((bar.hours / maxDailyHours) * 100))
+                        : 12;
 
-                  return (
-                    <div
-                      key={bar.day}
-                      className="flex flex-col items-center gap-2 h-full justify-end flex-1 group"
-                    >
-                      {bar.hours > 0 && (
-                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground shadow-xs mb-1">
-                          {bar.hours.toFixed(1)}h
-                        </span>
-                      )}
+                    return (
                       <div
-                        style={{ height: `${barHeightPercent}%` }}
-                        className={cn(
-                          "w-full max-w-[24px] rounded-full transition-all duration-300",
-                          isCurrentDay
-                            ? "bg-primary shadow-sm"
-                            : bar.hours > 0
-                            ? "bg-primary/40 group-hover:bg-primary/60"
-                            : "bg-secondary"
-                        )}
-                      />
-                      <span
-                        className={cn(
-                          "text-[10px] font-semibold",
-                          isCurrentDay ? "text-primary font-bold" : "text-muted-foreground"
-                        )}
+                        key={bar.day}
+                        className="flex flex-col items-center gap-2 h-full justify-end flex-1 group"
                       >
-                        {bar.day}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                        {bar.hours > 0 && (
+                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground shadow-xs mb-1">
+                            {bar.hours.toFixed(1)}h
+                          </span>
+                        )}
+                        <div
+                          style={{ height: `${barHeightPercent}%` }}
+                          className={cn(
+                            "w-full max-w-[24px] rounded-full transition-all duration-300",
+                            isCurrentDay
+                              ? "bg-primary shadow-sm"
+                              : bar.hours > 0
+                                ? "bg-primary/40 group-hover:bg-primary/60"
+                                : "bg-secondary"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "text-[10px] font-semibold",
+                            isCurrentDay ? "text-primary font-bold" : "text-muted-foreground"
+                          )}
+                        >
+                          {bar.day}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
 
@@ -755,14 +652,16 @@ export function TeacherDashboardView() {
                 </span>
               </div>
 
-              {!analyticsRes?.data?.lowPerformers || analyticsRes.data.lowPerformers.length === 0 ? (
+              {loadingAnalytics ? (
+                <DataLoader text="Loading student alerts..." minHeight="min-h-[140px]" />
+              ) : !analyticsRes?.data?.lowPerformers || analyticsRes.data.lowPerformers.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground space-y-1">
                   <CheckCircle2 className="size-8 mx-auto text-emerald-500 opacity-60" />
                   <p className="text-xs font-bold text-foreground">No students in weak tier</p>
                   <p className="text-[10px]">All evaluated students are scoring above 55%.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border/60">
+                <div className="divide-y divide-border/60 animate-in fade-in duration-300">
                   {analyticsRes.data.lowPerformers.map((st) => (
                     <div key={st.id} className="py-2.5 flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -813,48 +712,92 @@ export function TeacherDashboardView() {
                 </Link>
               </div>
 
-              {!analyticsRes?.data?.topStudents || analyticsRes.data.topStudents.length === 0 ? (
+              {loadingAnalytics ? (
+                <DataLoader text="Loading top performers..." minHeight="min-h-[140px]" />
+              ) : !analyticsRes?.data?.topStudents || analyticsRes.data.topStudents.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground space-y-1">
                   <Award className="size-8 mx-auto text-primary opacity-60" />
                   <p className="text-xs font-bold text-foreground">No scores recorded yet</p>
                 </div>
               ) : (
-                <div className="divide-y divide-border/60">
-                  {analyticsRes.data.topStudents.map((st, idx) => (
-                    <div key={st.id} className="py-2.5 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className={cn(
-                          "size-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0",
-                          idx === 0 ? "bg-amber-100 text-amber-700" : idx === 1 ? "bg-slate-200 text-slate-700" : idx === 2 ? "bg-amber-700/10 text-amber-800" : "bg-secondary text-muted-foreground"
-                        )}>
-                          #{idx + 1}
-                        </span>
+                <div className="space-y-3 animate-in fade-in duration-300">
+                  {/* Top 1 Best Student Spotlight with Super Student Badge */}
+                  {analyticsRes.data.topStudents[0] && (
+                    <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/60">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative w-20 sm:w-24 aspect-[4/3] shrink-0 flex items-center justify-center">
+                          <Image
+                            src="/images/super-student.webp"
+                            alt="Super Student"
+                            fill
+                            className="object-contain"
+                            priority
+                          />
+                        </div>
                         <div className="min-w-0">
+                          <span className="text-[10px] font-black text-amber-600 uppercase tracking-wider block">
+                            ★ Top Performer
+                          </span>
                           <Link
-                            href={`/students/${st.username}`}
-                            className="text-xs sm:text-sm font-bold text-foreground hover:text-primary transition-colors truncate block"
+                            href={`/students/${analyticsRes.data.topStudents[0].username}`}
+                            className="text-xs sm:text-sm font-black text-foreground hover:text-primary transition-colors truncate block"
                           >
-                            {st.name}
+                            {analyticsRes.data.topStudents[0].name}
                           </Link>
                           <p className="text-[10px] text-muted-foreground truncate">
-                            @{st.username} • {st.grade || "Grade 11"}
+                            @{analyticsRes.data.topStudents[0].username} • {analyticsRes.data.topStudents[0].grade || "Grade 11"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-black text-emerald-600 tabular-nums">
-                          {st.score}%
+                      <div className="text-right shrink-0">
+                        <span className="text-sm sm:text-base font-black text-emerald-600 tabular-nums block">
+                          {analyticsRes.data.topStudents[0].score}%
                         </span>
-                        <Link
-                          href={`/students/${st.username}`}
-                          className="size-7 rounded-xl bg-secondary text-primary hover:bg-primary hover:text-white flex items-center justify-center transition-colors text-[10px] font-bold"
-                          title="View Profile"
-                        >
-                          <ChevronRight className="size-3.5" />
-                        </Link>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                          Score
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Remaining Top Students List (#2, #3, ...) */}
+                  <div className="divide-y divide-border/60">
+                    {analyticsRes.data.topStudents.slice(1).map((st, idx) => (
+                      <div key={st.id} className="py-2 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={cn(
+                            "size-5.5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0",
+                            idx === 0 ? "bg-slate-200 text-slate-700" : idx === 1 ? "bg-amber-700/10 text-amber-800" : "bg-secondary text-muted-foreground"
+                          )}>
+                            #{idx + 2}
+                          </span>
+                          <div className="min-w-0">
+                            <Link
+                              href={`/students/${st.username}`}
+                              className="text-xs sm:text-sm font-bold text-foreground hover:text-primary transition-colors truncate block"
+                            >
+                              {st.name}
+                            </Link>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              @{st.username} • {st.grade || "Grade 11"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-black text-emerald-600 tabular-nums">
+                            {st.score}%
+                          </span>
+                          <Link
+                            href={`/students/${st.username}`}
+                            className="size-6 rounded-lg bg-secondary text-primary hover:bg-primary hover:text-white flex items-center justify-center transition-colors text-[10px] font-bold"
+                            title="View Profile"
+                          >
+                            <ChevronRight className="size-3" />
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -887,80 +830,84 @@ export function TeacherDashboardView() {
             </div>
 
             {/* Multi-Line / Area Chart with labeled axes */}
-            <div className="pt-2 pb-2">
-              <div className="relative h-48 w-full flex items-stretch">
-                {/* Y-axis Labels */}
-                <div className="flex flex-col justify-between text-[10px] text-muted-foreground font-semibold pr-3 border-r border-border/60 shrink-0">
-                  <span>100%</span>
-                  <span>75%</span>
-                  <span>50%</span>
-                  <span>25%</span>
-                  <span>0%</span>
+            {loadingAnalytics ? (
+              <DataLoader text="Loading score progress trends..." minHeight="min-h-[190px]" />
+            ) : (
+              <div className="pt-2 pb-2 animate-in fade-in duration-300">
+                <div className="relative h-48 w-full flex items-stretch">
+                  {/* Y-axis Labels */}
+                  <div className="flex flex-col justify-between text-[10px] text-muted-foreground font-semibold pr-3 border-r border-border/60 shrink-0">
+                    <span>100%</span>
+                    <span>75%</span>
+                    <span>50%</span>
+                    <span>25%</span>
+                    <span>0%</span>
+                  </div>
+
+                  {/* Chart Area */}
+                  <div className="flex-1 relative pl-3">
+                    <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 500 160">
+                      <line x1="0" y1="0" x2="500" y2="0" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                      <line x1="0" y1="40" x2="500" y2="40" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                      <line x1="0" y1="80" x2="500" y2="80" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                      <line x1="0" y1="120" x2="500" y2="120" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
+                      <line x1="0" y1="160" x2="500" y2="160" stroke="currentColor" className="text-border/80" />
+
+                      {(analyticsRes?.data?.lowStudentTrends || []).slice(0, 3).map((st, i) => {
+                        const colors = ["#e11d48", "#f59e0b", "#6366f1"];
+                        const history = st.history || [];
+                        if (history.length === 0) return null;
+                        const stepX = 500 / Math.max(1, history.length - 1);
+                        const points = history.map((h, idx) => {
+                          const x = idx * stepX;
+                          const y = 160 - (Math.min(100, Math.max(0, h.score)) / 100) * 160;
+                          return `${x},${y}`;
+                        }).join(" ");
+
+                        return (
+                          <g key={st.id}>
+                            <polyline
+                              fill="none"
+                              stroke={colors[i % colors.length]}
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={points}
+                            />
+                            {history.map((h, idx) => {
+                              const x = idx * stepX;
+                              const y = 160 - (Math.min(100, Math.max(0, h.score)) / 100) * 160;
+                              return (
+                                <circle
+                                  key={idx}
+                                  cx={x}
+                                  cy={y}
+                                  r="4"
+                                  fill="white"
+                                  stroke={colors[i % colors.length]}
+                                  strokeWidth="2.5"
+                                />
+                              );
+                            })}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
                 </div>
 
-                {/* Chart Area */}
-                <div className="flex-1 relative pl-3">
-                  <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 500 160">
-                    <line x1="0" y1="0" x2="500" y2="0" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
-                    <line x1="0" y1="40" x2="500" y2="40" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
-                    <line x1="0" y1="80" x2="500" y2="80" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
-                    <line x1="0" y1="120" x2="500" y2="120" stroke="currentColor" strokeDasharray="3 3" className="text-border/40" />
-                    <line x1="0" y1="160" x2="500" y2="160" stroke="currentColor" className="text-border/80" />
-
-                    {(analyticsRes?.data?.lowStudentTrends || []).slice(0, 3).map((st, i) => {
-                      const colors = ["#e11d48", "#f59e0b", "#6366f1"];
-                      const history = st.history || [];
-                      if (history.length === 0) return null;
-                      const stepX = 500 / Math.max(1, history.length - 1);
-                      const points = history.map((h, idx) => {
-                        const x = idx * stepX;
-                        const y = 160 - (Math.min(100, Math.max(0, h.score)) / 100) * 160;
-                        return `${x},${y}`;
-                      }).join(" ");
-
-                      return (
-                        <g key={st.id}>
-                          <polyline
-                            fill="none"
-                            stroke={colors[i % colors.length]}
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points={points}
-                          />
-                          {history.map((h, idx) => {
-                            const x = idx * stepX;
-                            const y = 160 - (Math.min(100, Math.max(0, h.score)) / 100) * 160;
-                            return (
-                              <circle
-                                key={idx}
-                                cx={x}
-                                cy={y}
-                                r="4"
-                                fill="white"
-                                stroke={colors[i % colors.length]}
-                                strokeWidth="2.5"
-                              />
-                            );
-                          })}
-                        </g>
-                      );
-                    })}
-                  </svg>
+                {/* X-axis Labels */}
+                <div className="flex justify-between pl-10 pr-2 pt-2 text-[10px] text-muted-foreground font-semibold">
+                  {((analyticsRes?.data?.lowStudentTrends?.[0]?.history) || [
+                    { period: "Week 1" },
+                    { period: "Week 2" },
+                    { period: "Week 3" },
+                  ]).map((h, i) => (
+                    <span key={i}>{h.period}</span>
+                  ))}
                 </div>
               </div>
-
-              {/* X-axis Labels */}
-              <div className="flex justify-between pl-10 pr-2 pt-2 text-[10px] text-muted-foreground font-semibold">
-                {((analyticsRes?.data?.lowStudentTrends?.[0]?.history) || [
-                  { period: "Week 1" },
-                  { period: "Week 2" },
-                  { period: "Week 3" },
-                ]).map((h, i) => (
-                  <span key={i}>{h.period}</span>
-                ))}
-              </div>
-            </div>
+            )}
           </section>
         </div>
 
@@ -968,135 +915,20 @@ export function TeacherDashboardView() {
         {/* RIGHT COLUMN: Teacher Profile, Treemap & Class Schedule Calendar           */}
         {/* ========================================================================= */}
         <div className="lg:col-span-4 space-y-6 sm:space-y-8">
-          {/* 1. Teacher Profile Card */}
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
-            <div className="flex items-center gap-3.5 border-b border-border/60 pb-3.5">
-              <div className="size-12 rounded-2xl bg-[#184880] text-white font-black flex items-center justify-center text-base shadow-xs">
-                {user?.name?.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "TP"}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-extrabold text-sm sm:text-base text-foreground truncate">
-                  {analyticsRes?.data?.teacherProfile?.name || user?.name}
-                </h3>
-                <p className="text-[11px] text-muted-foreground truncate">
-                  Teacher Hub • {analyticsRes?.data?.teacherProfile?.accountAgeMonths || 1} Mo Active
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-center">
-              <div className="p-3 rounded-2xl bg-secondary/40 border border-border/40">
-                <span className="text-[10px] font-semibold text-muted-foreground block">Class Average</span>
-                <p className="text-lg font-black text-primary mt-0.5">
-                  {analyticsRes?.data?.teacherProfile?.classAverageScore ?? 72}%
-                </p>
-              </div>
-              <div className="p-3 rounded-2xl bg-secondary/40 border border-border/40">
-                <span className="text-[10px] font-semibold text-muted-foreground block">Pass Rate</span>
-                <p className="text-lg font-black text-emerald-600 mt-0.5">
-                  {analyticsRes?.data?.teacherProfile?.overallResultRate ?? 88}%
-                </p>
-              </div>
+          {/* 1. Stronger Than You Know Motivation Card - Card size, full size image, zero background, zero shadow */}
+          <div className="flex items-center justify-center py-2 px-1">
+            <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-square flex items-center justify-center">
+              <Image
+                src="/images/stronger.webp"
+                alt="You Are Stronger Than You Know"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
 
-          {/* 2. Treemap Student Distribution */}
-          <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <div>
-                <h3 className="font-extrabold text-base text-foreground">
-                  Performance Treemap
-                </h3>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Student tier breakdown across all classes
-                </p>
-              </div>
-              <Link
-                href="/analysis"
-                className="text-xs font-bold text-primary hover:underline"
-              >
-                Details →
-              </Link>
-            </div>
-
-            {/* Treemap visual blocks */}
-            <div className="flex h-12 w-full rounded-2xl overflow-hidden gap-1 p-1 bg-secondary/40 border border-border">
-              {pExcellent > 0 && (
-                <div
-                  style={{ width: `${Math.max(15, pExcellent)}%` }}
-                  className="bg-[#184880] text-white rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs transition-all"
-                  title={`Excellent: ${excellentCount} students`}
-                >
-                  {pExcellent}%
-                </div>
-              )}
-              {pGood > 0 && (
-                <div
-                  style={{ width: `${Math.max(15, pGood)}%` }}
-                  className="bg-[#0284c7] text-white rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs transition-all"
-                  title={`Good: ${goodCount} students`}
-                >
-                  {pGood}%
-                </div>
-              )}
-              {pNeedsHelp > 0 && (
-                <div
-                  style={{ width: `${Math.max(15, pNeedsHelp)}%` }}
-                  className="bg-[#e11d48] text-white rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black shadow-xs transition-all"
-                  title={`Needs Help: ${needsHelpCount} students`}
-                >
-                  {pNeedsHelp}%
-                </div>
-              )}
-            </div>
-
-            {/* Legend Cards */}
-            <div className="space-y-2 pt-1 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30">
-                <span className="flex items-center gap-2 font-bold text-foreground">
-                  <span className="size-2.5 rounded-full bg-[#184880]" />
-                  <span>Excellent Tier</span>
-                </span>
-                <span className="font-extrabold text-foreground">
-                  {pExcellent}% ({excellentCount})
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30">
-                <span className="flex items-center gap-2 font-bold text-foreground">
-                  <span className="size-2.5 rounded-full bg-[#0284c7]" />
-                  <span>Good Tier</span>
-                </span>
-                <span className="font-extrabold text-foreground">
-                  {pGood}% ({goodCount})
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30">
-                <span className="flex items-center gap-2 font-bold text-foreground">
-                  <span className="size-2.5 rounded-full bg-[#e11d48]" />
-                  <span>Needs Attention</span>
-                </span>
-                <span className="font-extrabold text-foreground">
-                  {pNeedsHelp}% ({needsHelpCount})
-                </span>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
-              <span className="text-muted-foreground font-medium">
-                {totalEvaluated > 0
-                  ? `${totalEvaluated} students evaluated`
-                  : "No evaluations yet"}
-              </span>
-              <Link
-                href="/analysis"
-                className="font-bold text-primary hover:underline"
-              >
-                Details →
-              </Link>
-            </div>
-          </div>
-
-          {/* 2. Full Month Class Schedule Calendar */}
+          {/* 3. Full Month Class Schedule Calendar */}
           <div className="bg-card border border-border rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] space-y-4">
             {/* Month & Navigation Header */}
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
@@ -1159,13 +991,13 @@ export function TeacherDashboardView() {
                       !item.isCurrentMonth && "opacity-20 pointer-events-none text-muted-foreground",
                       item.isCurrentMonth && isSelected && "bg-primary text-white font-black shadow-sm scale-105 z-10",
                       item.isCurrentMonth &&
-                        !isSelected &&
-                        item.hasClass &&
-                        "bg-[#EBF3FE] text-primary border border-primary/25 font-bold hover:bg-primary/15",
+                      !isSelected &&
+                      item.hasClass &&
+                      "bg-[#EBF3FE] text-primary border border-primary/25 font-bold hover:bg-primary/15",
                       item.isCurrentMonth &&
-                        !isSelected &&
-                        !item.hasClass &&
-                        "text-muted-foreground/80 hover:bg-secondary hover:text-foreground font-medium",
+                      !isSelected &&
+                      !item.hasClass &&
+                      "text-muted-foreground/80 hover:bg-secondary hover:text-foreground font-medium",
                       item.isToday && !isSelected && "ring-1 ring-primary/50"
                     )}
                   >

@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DataLoader } from "@/components/ui/data-loader";
 
 interface ClassItem {
   id: string;
@@ -168,14 +168,16 @@ export function TeacherAttendanceView() {
           </div>
 
           {/* Large Right Illustration */}
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/schedule.webp"
-              alt="Schedule"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
-            />
+          <div className="pointer-events-none absolute right-2 sm:right-4 md:right-6 top-0 bottom-0 w-48 sm:w-64 md:w-80 lg:w-96 xl:w-[420px] z-10 flex items-center justify-end py-2 sm:py-3">
+            <div className="relative w-full h-full max-h-[260px]">
+              <Image
+                src="/images/teacher-class-bg.webp"
+                alt="Attendance"
+                fill
+                priority
+                className="object-contain object-right drop-shadow-xl"
+              />
+            </div>
           </div>
         </div>
 
@@ -348,11 +350,7 @@ export function TeacherAttendanceView() {
         </div>
 
         {loadingSession ? (
-          <div className="space-y-3 py-4">
-            <Skeleton className="h-12 w-full rounded-2xl" />
-            <Skeleton className="h-12 w-full rounded-2xl" />
-            <Skeleton className="h-12 w-full rounded-2xl" />
-          </div>
+          <DataLoader text="Loading attendance sheet..." minHeight="min-h-[200px]" />
         ) : students.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground space-y-2">
             <Users className="size-10 mx-auto opacity-40 text-primary" />
