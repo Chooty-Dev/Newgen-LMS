@@ -64,16 +64,10 @@ export function TeacherAnalysisView() {
   const searchParams = useSearchParams();
   const urlStudentId = searchParams.get("studentId");
 
-  const [selectedStudentId, setSelectedStudentId] = React.useState<string>(urlStudentId || "");
+  const [selectedStudentId, setSelectedStudentId] = React.useState<string>("");
   const [selectedClassId, setSelectedClassId] = React.useState<string>("");
   const [groupFilter, setGroupFilter] = React.useState<string>("all");
   const [studentSearch, setStudentSearch] = React.useState<string>("");
-
-  React.useEffect(() => {
-    if (urlStudentId) {
-      setSelectedStudentId(urlStudentId);
-    }
-  }, [urlStudentId]);
 
   // Fetch teacher classes for filter
   const { data: classesData } = useQuery({
@@ -103,7 +97,7 @@ export function TeacherAnalysisView() {
 
   const students = studentsData?.data || [];
   const activeStudentId =
-    selectedStudentId || (students.length > 0 ? students[0].id : "");
+    selectedStudentId || urlStudentId || (students.length > 0 ? students[0].id : "");
 
   // Fetch selected student's analysis
   const { data: analysisData, isLoading: loadingAnalysis } = useQuery<{

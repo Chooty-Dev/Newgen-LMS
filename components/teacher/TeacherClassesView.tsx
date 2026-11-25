@@ -6,8 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -156,7 +157,7 @@ export function TeacherClassesView() {
   // React Hook Form for Add Class
   const addForm = useForm<AddClassFormData>({
     mode: "all",
-    resolver: zodResolver(addClassSchema) as any,
+    resolver: zodResolver(addClassSchema) as unknown as Resolver<AddClassFormData>,
     defaultValues: {
       name: "",
       subjectId: "",
@@ -173,7 +174,7 @@ export function TeacherClassesView() {
   // React Hook Form for Edit Class
   const editForm = useForm<EditClassFormData>({
     mode: "all",
-    resolver: zodResolver(editClassSchema) as any,
+    resolver: zodResolver(editClassSchema) as unknown as Resolver<EditClassFormData>,
     defaultValues: {
       name: "",
       subjectId: "",
@@ -249,9 +250,7 @@ export function TeacherClassesView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to create class");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to create class", json.error?.fields);
       }
       return json.data;
     },
@@ -265,11 +264,9 @@ export function TeacherClassesView() {
         router.push(`/classes/${data.slug || data.id}?tab=students`);
       }
     },
-    onError: (err: any) => {
+    onError: (err: ApiFieldError) => {
       if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          addForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
+        applyApiFieldErrors(err, addForm.setError);
       } else if (err.message) {
         const msg = err.message.toLowerCase();
         if (msg.includes("name") || msg.includes("batch")) addForm.setError("name", { message: err.message });
@@ -304,9 +301,7 @@ export function TeacherClassesView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to update class");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to update class", json.error?.fields);
       }
       return json.data;
     },
@@ -316,11 +311,9 @@ export function TeacherClassesView() {
       setEditClass(null);
       toast.success("Class updated successfully!");
     },
-    onError: (err: any) => {
+    onError: (err: ApiFieldError) => {
       if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          editForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
+        applyApiFieldErrors(err, editForm.setError);
       } else if (err.message) {
         const msg = err.message.toLowerCase();
         if (msg.includes("name") || msg.includes("batch")) editForm.setError("name", { message: err.message });
@@ -534,14 +527,16 @@ export function TeacherClassesView() {
       {/* ========================================================================= */}
       <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: "all", label: "All Classes", count: classes.length },
-            { id: "regular", label: "Regular Batches", count: regularCount },
-            { id: "special", label: "Special Sessions", count: specialCount },
-          ].map((tab) => (
+          {(
+            [
+              { id: "all", label: "All Classes", count: classes.length },
+              { id: "regular", label: "Regular Batches", count: regularCount },
+              { id: "special", label: "Special Sessions", count: specialCount },
+            ] as const
+          ).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setTabFilter(tab.id as any)}
+              onClick={() => setTabFilter(tab.id)}
               className={cn(
                 "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
                 tabFilter === tab.id
@@ -851,7 +846,7 @@ export function TeacherClassesView() {
                 onChange={(e) => {
                   const sId = e.target.value;
                   addForm.setValue("subjectId", sId, { shouldValidate: true });
-                  const sub = subjectsData?.data?.find((s: any) => s.id === sId);
+                  const sub = subjectsData?.data?.find((s: { id: string; grades?: number[] }) => s.id === sId);
                   const grades: number[] = sub?.grades && sub.grades.length > 0 ? sub.grades : [6, 7, 8, 9, 10, 11, 12];
                   if (!grades.includes(Number(addForm.getValues("grade")))) {
                     addForm.setValue("grade", grades[0], { shouldValidate: true });
@@ -859,7 +854,7 @@ export function TeacherClassesView() {
                 }}
               >
                 <option value="">Select subject...</option>
-                {subjectsData?.data?.map((s: any) => (
+                {subjectsData?.data?.map((s: { id: string; code: string; name: string }) => (
                   <option key={s.id} value={s.id}>
                     {s.code} - {s.name}
                   </option>
@@ -876,7 +871,7 @@ export function TeacherClassesView() {
               >
                 {(() => {
                   const sId = addForm.watch("subjectId");
-                  const sub = subjectsData?.data?.find((s: any) => s.id === sId);
+                  const sub = subjectsData?.data?.find((s: { id: string; grades?: number[] }) => s.id === sId);
                   const grades: number[] = sub?.grades && sub.grades.length > 0 ? sub.grades : [6, 7, 8, 9, 10, 11, 12];
                   return grades.map((g) => (
                     <option key={g} value={g}>
@@ -1060,7 +1055,7 @@ export function TeacherClassesView() {
                   onChange={(e) => {
                     const sId = e.target.value;
                     editForm.setValue("subjectId", sId, { shouldValidate: true });
-                    const sub = subjectsData?.data?.find((s: any) => s.id === sId);
+                    const sub = subjectsData?.data?.find((s: { id: string; grades?: number[] }) => s.id === sId);
                     const grades: number[] = sub?.grades && sub.grades.length > 0 ? sub.grades : [6, 7, 8, 9, 10, 11, 12];
                     if (!grades.includes(Number(editForm.getValues("grade")))) {
                       editForm.setValue("grade", grades[0], { shouldValidate: true });
@@ -1068,7 +1063,7 @@ export function TeacherClassesView() {
                   }}
                 >
                   <option value="">Select subject...</option>
-                  {subjectsData?.data?.map((s: any) => (
+                  {subjectsData?.data?.map((s: { id: string; code: string; name: string }) => (
                     <option key={s.id} value={s.id}>
                       {s.code} - {s.name}
                     </option>
@@ -1085,7 +1080,7 @@ export function TeacherClassesView() {
                 >
                   {(() => {
                     const sId = editForm.watch("subjectId");
-                    const sub = subjectsData?.data?.find((s: any) => s.id === sId);
+                    const sub = subjectsData?.data?.find((s: { id: string; grades?: number[] }) => s.id === sId);
                     const grades: number[] = sub?.grades && sub.grades.length > 0 ? sub.grades : [6, 7, 8, 9, 10, 11, 12];
                     return grades.map((g) => (
                       <option key={g} value={g}>
@@ -1288,10 +1283,10 @@ export function TeacherClassesView() {
                   <option value="">Select a student to enroll...</option>
                   {allStudentsData?.data
                     ?.filter(
-                      (st: any) =>
-                        !enrolledStudents.some((e: any) => e.id === st.id)
+                      (st: { id: string; name: string; username: string; grade?: string }) =>
+                        !enrolledStudents.some((e: { id: string }) => e.id === st.id)
                     )
-                    .map((st: any) => (
+                    .map((st: { id: string; name: string; username: string; grade?: string }) => (
                       <option key={st.id} value={st.id}>
                         {st.name} ({st.username}) - {st.grade || "No Grade"}
                       </option>
@@ -1323,7 +1318,7 @@ export function TeacherClassesView() {
                 </div>
               ) : (
                 <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
-                  {enrolledStudents.map((st: any) => (
+                  {enrolledStudents.map((st: { id: string; name: string; username: string; email?: string }) => (
                     <div
                       key={st.id}
                       className="p-3 rounded-2xl bg-secondary/50 border border-border/50 flex items-center justify-between gap-3 text-xs"

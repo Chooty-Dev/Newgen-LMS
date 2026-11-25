@@ -144,13 +144,21 @@ export function TeacherShell({ children }: TeacherShellProps) {
       .toUpperCase()
     : "TE";
 
-  // Formatted current date e.g. "Monday, 23 November 2026"
-  const formattedDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  // Formatted current date hydrated safely on client mount
+  const [formattedDate, setFormattedDate] = React.useState("");
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setFormattedDate(
+        new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      );
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const sidebarContent = (
     <div className="flex flex-col h-full justify-between p-6 overflow-y-auto">

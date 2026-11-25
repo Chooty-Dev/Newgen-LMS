@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -127,7 +128,7 @@ export function TeacherStaffView() {
   // RHF Forms
   const addForm = useForm<AddStaffFormValues>({
     mode: "all",
-    resolver: zodResolver(addStaffSchema) as any,
+    resolver: zodResolver(addStaffSchema) as unknown as Resolver<AddStaffFormValues>,
     defaultValues: {
       name: "",
       username: "",
@@ -143,7 +144,7 @@ export function TeacherStaffView() {
 
   const editForm = useForm<EditStaffFormValues>({
     mode: "all",
-    resolver: zodResolver(editStaffSchema) as any,
+    resolver: zodResolver(editStaffSchema) as unknown as Resolver<EditStaffFormValues>,
     defaultValues: {
       name: "",
       email: "",
@@ -198,9 +199,7 @@ export function TeacherStaffView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to add staff member");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to add staff member", json.error?.fields);
       }
       return json;
     },
@@ -213,11 +212,9 @@ export function TeacherStaffView() {
         setTempPassword(data.data.temporaryPassword);
       }
     },
-    onError: (err: any) => {
+    onError: (err: ApiFieldError) => {
       if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          addForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
+        applyApiFieldErrors(err, addForm.setError);
       } else if (err.message) {
         const msg = err.message.toLowerCase();
         if (msg.includes("username")) addForm.setError("username", { message: err.message });
@@ -245,9 +242,7 @@ export function TeacherStaffView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to update staff");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to update staff", json.error?.fields);
       }
       return json;
     },
@@ -256,11 +251,9 @@ export function TeacherStaffView() {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       setEditStaff(null);
     },
-    onError: (err: any) => {
+    onError: (err: ApiFieldError) => {
       if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          editForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
+        applyApiFieldErrors(err, editForm.setError);
       } else if (err.message) {
         const msg = err.message.toLowerCase();
         if (msg.includes("email")) editForm.setError("email", { message: err.message });

@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -62,7 +63,7 @@ export function TeacherSettingsView() {
 
   // Profile Form
   const profileForm = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema) as any,
+    resolver: zodResolver(profileSchema) as unknown as Resolver<ProfileFormData>,
     defaultValues: {
       name: user?.name || "",
       phone: user?.phone || "",
@@ -84,7 +85,7 @@ export function TeacherSettingsView() {
 
   // Password Form
   const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema) as any,
+    resolver: zodResolver(passwordSchema) as unknown as Resolver<PasswordFormData>,
     defaultValues: {
       currentPassword: "",
       newPassword: "",
@@ -122,9 +123,7 @@ export function TeacherSettingsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to update profile");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to update profile", json.error?.fields);
       }
       return json.data;
     },
@@ -132,12 +131,8 @@ export function TeacherSettingsView() {
       await refetchUser();
       toast.success("Teacher profile updated successfully!");
     },
-    onError: (err: any) => {
-      if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          profileForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
-      }
+    onError: (err: ApiFieldError) => {
+      applyApiFieldErrors(err, profileForm.setError);
       toast.error(err.message || "Failed to update profile");
     },
   });
@@ -152,9 +147,7 @@ export function TeacherSettingsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to change password");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to change password", json.error?.fields);
       }
       return json.data;
     },
@@ -162,12 +155,8 @@ export function TeacherSettingsView() {
       passwordForm.reset();
       toast.success("Password changed successfully!");
     },
-    onError: (err: any) => {
-      if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          passwordForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
-      }
+    onError: (err: ApiFieldError) => {
+      applyApiFieldErrors(err, passwordForm.setError);
       toast.error(err.message || "Failed to change password");
     },
   });

@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -87,13 +88,13 @@ export function TeacherSubjectsView() {
 
   // React Hook Form for Add Subject
   const addForm = useForm<AddSubjectFormData>({
-    resolver: zodResolver(addSubjectSchema) as any,
+    resolver: zodResolver(addSubjectSchema) as unknown as Resolver<AddSubjectFormData>,
     defaultValues: { name: "", code: "", description: "", grades: [6, 7, 8, 9, 10, 11] },
   });
 
   // React Hook Form for Edit Subject
   const editForm = useForm<EditSubjectFormData>({
-    resolver: zodResolver(editSubjectSchema) as any,
+    resolver: zodResolver(editSubjectSchema) as unknown as Resolver<EditSubjectFormData>,
     defaultValues: { name: "", code: "", description: "", grades: [6, 7, 8, 9, 10, 11] },
   });
 
@@ -126,9 +127,7 @@ export function TeacherSubjectsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to create subject");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to create subject", json.error?.fields);
       }
       return json;
     },
@@ -138,12 +137,8 @@ export function TeacherSubjectsView() {
       setCreateOpen(false);
       addForm.reset();
     },
-    onError: (err: any) => {
-      if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          addForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
-      }
+    onError: (err: ApiFieldError) => {
+      applyApiFieldErrors(err, addForm.setError);
       toast.error(err.message || "Failed to create subject");
     },
   });
@@ -158,9 +153,7 @@ export function TeacherSubjectsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to update subject");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to update subject", json.error?.fields);
       }
       return json;
     },
@@ -169,12 +162,8 @@ export function TeacherSubjectsView() {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       setEditSubject(null);
     },
-    onError: (err: any) => {
-      if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          editForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
-      }
+    onError: (err: ApiFieldError) => {
+      applyApiFieldErrors(err, editForm.setError);
       toast.error(err.message || "Failed to update subject");
     },
   });

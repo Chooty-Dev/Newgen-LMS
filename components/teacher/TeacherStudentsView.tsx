@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -134,7 +135,7 @@ export function TeacherStudentsView() {
   // RHF Forms
   const registerForm = useForm<RegisterStudentFormValues>({
     mode: "all",
-    resolver: zodResolver(registerStudentSchema) as any,
+    resolver: zodResolver(registerStudentSchema) as unknown as Resolver<RegisterStudentFormValues>,
     defaultValues: {
       name: "",
       username: "",
@@ -150,7 +151,7 @@ export function TeacherStudentsView() {
 
   const editForm = useForm<EditStudentFormValues>({
     mode: "all",
-    resolver: zodResolver(editStudentSchema) as any,
+    resolver: zodResolver(editStudentSchema) as unknown as Resolver<EditStudentFormValues>,
     defaultValues: {
       name: "",
       email: "",
@@ -212,9 +213,7 @@ export function TeacherStudentsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to register student");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to register student", json.error?.fields);
       }
       return json;
     },
@@ -229,11 +228,9 @@ export function TeacherStudentsView() {
         setTempPassword(resData.data.temporaryPassword);
       }
     },
-    onError: (err: any) => {
+    onError: (err: ApiFieldError) => {
       if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          registerForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
+        applyApiFieldErrors(err, registerForm.setError);
       } else if (err.message) {
         const msg = err.message.toLowerCase();
         if (msg.includes("username")) {
@@ -271,9 +268,7 @@ export function TeacherStudentsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to update student");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to update student", json.error?.fields);
       }
       return json;
     },
@@ -282,11 +277,9 @@ export function TeacherStudentsView() {
       queryClient.invalidateQueries({ queryKey: ["students"] });
       setEditStudent(null);
     },
-    onError: (err: any) => {
+    onError: (err: ApiFieldError) => {
       if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          editForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
+        applyApiFieldErrors(err, editForm.setError);
       } else if (err.message) {
         const msg = err.message.toLowerCase();
         if (msg.includes("email")) {
@@ -510,15 +503,17 @@ export function TeacherStudentsView() {
       {/* 2. Filter Tabs & View Mode Switcher (Cards / Table) */}
       <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: "all", label: "All Students", count: students.length },
-            { id: "excellent", label: "High Performers", count: excellentCount },
-            { id: "medium", label: "Good", count: mediumCount },
-            { id: "weak", label: "Needs Help", count: weakCount },
-          ].map((tab) => (
+          {(
+            [
+              { id: "all", label: "All Students", count: students.length },
+              { id: "excellent", label: "High Performers", count: excellentCount },
+              { id: "medium", label: "Good", count: mediumCount },
+              { id: "weak", label: "Needs Help", count: weakCount },
+            ] as const
+          ).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setGroupFilter(tab.id as any)}
+              onClick={() => setGroupFilter(tab.id)}
               className={cn(
                 "h-10 px-4 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2",
                 groupFilter === tab.id

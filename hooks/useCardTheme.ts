@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CARD_THEMES, CardTheme } from "@/lib/card-themes";
+import { CARD_THEMES } from "@/lib/card-themes";
 
 const STORAGE_KEY = "teacher_card_theme";
 const EVENT_NAME = "card-theme-change";
@@ -10,10 +10,11 @@ export function useCardTheme() {
   const [themeId, setThemeId] = React.useState<string>("default");
 
   React.useEffect(() => {
-    // Read from localStorage on mount
-    const saved = localStorage.getItem(STORAGE_KEY) || "default";
-    setThemeId(saved);
-    applyThemeToDOM(saved);
+    const timer = window.setTimeout(() => {
+      const saved = localStorage.getItem(STORAGE_KEY) || "default";
+      setThemeId(saved);
+      applyThemeToDOM(saved);
+    }, 0);
 
     // Listen to theme changes from other components or tabs
     const handleThemeChange = (e: Event) => {
@@ -25,7 +26,10 @@ export function useCardTheme() {
     };
 
     window.addEventListener(EVENT_NAME, handleThemeChange);
-    return () => window.removeEventListener(EVENT_NAME, handleThemeChange);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener(EVENT_NAME, handleThemeChange);
+    };
   }, []);
 
   const setTheme = React.useCallback((newThemeId: string) => {

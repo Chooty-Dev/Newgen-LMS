@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
+import { useClientDateState } from "@/components/staff/staffSchedulePrimitives";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -115,14 +117,16 @@ export function TeacherExamsView() {
       setDeleteExamTitle("");
       toast.success("Assessment deleted successfully");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to delete assessment");
     },
   });
 
+  const { todayDate } = useClientDateState();
+
   // React Hook Form for Schedule Assessment
   const examForm = useForm<CreateExamFormData>({
-    resolver: zodResolver(createExamSchema) as any,
+    resolver: zodResolver(createExamSchema) as unknown as Resolver<CreateExamFormData>,
     defaultValues: {
       title: "",
       type: "exam",
@@ -180,9 +184,7 @@ export function TeacherExamsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to create assessment");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to create assessment", json.error?.fields);
       }
       return json.data;
     },
@@ -196,12 +198,8 @@ export function TeacherExamsView() {
         router.push(`/exams/${data.slug || data.id}?tab=staff`);
       }
     },
-    onError: (err: any) => {
-      if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          examForm.setError(f as any, { message: (msgs as string[])[0] });
-        });
-      }
+    onError: (err: ApiFieldError) => {
+      applyApiFieldErrors(err, examForm.setError);
       toast.error(err.message || "Failed to create assessment");
     },
   });
@@ -643,7 +641,7 @@ export function TeacherExamsView() {
                   className={inputErrorClass(examForm.formState.errors.subjectId)}
                 >
                   <option value="">Select Subject...</option>
-                  {(subjectsData?.data || []).map((sub: any) => (
+                  {(subjectsData?.data || []).map((sub: { id: string; name: string }) => (
                     <option key={sub.id} value={sub.id}>
                       {sub.name}
                     </option>
@@ -660,7 +658,7 @@ export function TeacherExamsView() {
                 className={inputErrorClass(examForm.formState.errors.selectedClassId)}
               >
                 <option value="">Select Class Batch...</option>
-                {(classesData?.data || []).map((cls: any) => (
+                {(classesData?.data || []).map((cls: { id: string; name: string; subject?: string }) => (
                   <option key={cls.id} value={cls.id}>
                     {cls.name} ({cls.subject})
                   </option>
@@ -674,10 +672,10 @@ export function TeacherExamsView() {
                 <FormLabel label="Date" required />
                 <Input
                   type="date"
-                  min={new Date().toISOString().slice(0, 10)}
+                  min={todayDate || undefined}
                   onClick={(e) => {
                     try {
-                      (e.currentTarget as any).showPicker?.();
+                      (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
                     } catch {}
                   }}
                   {...examForm.register("date")}

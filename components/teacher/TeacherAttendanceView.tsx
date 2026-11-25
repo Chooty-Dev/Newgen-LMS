@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientDateState } from "@/components/staff/staffSchedulePrimitives";
 import {
   CalendarCheck,
   CheckCircle2,
@@ -71,19 +72,12 @@ export function TeacherAttendanceView() {
     user?.role === "super_admin";
 
   const [sessionKind, setSessionKind] = React.useState<"class" | "assessment">("class");
-  const [selectedDate, setSelectedDate] = React.useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const { selectedDate, setSelectedDate } = useClientDateState();
   const [selectedClassId, setSelectedClassId] = React.useState<string>("");
   const [selectedAssessmentId, setSelectedAssessmentId] = React.useState<string>("");
   const [searchStudent, setSearchStudent] = React.useState("");
   const [finishConfirmOpen, setFinishConfirmOpen] = React.useState(false);
-  const [isUnlockEditing, setIsUnlockEditing] = React.useState(false);
-
-  // Reset unlock editing when target changes
-  React.useEffect(() => {
-    setIsUnlockEditing(false);
-  }, [sessionKind, selectedClassId, selectedAssessmentId, selectedDate]);
+  const [unlockScopeKey, setUnlockScopeKey] = React.useState<string | null>(null);
 
   // Fetch classes
   const { data: classesData, isLoading: loadingClasses } = useQuery({
@@ -113,6 +107,7 @@ export function TeacherAttendanceView() {
     selectedAssessmentId || (assessments.length > 0 ? assessments[0].id : "");
 
   const activeRefId = sessionKind === "class" ? activeClassId : activeAssessmentId;
+  const scopeKey = `${sessionKind}:${activeRefId}:${selectedDate}`;
 
   // Fetch session attendance
   const { data: sessionData, isLoading: loadingSession } = useQuery({
@@ -129,17 +124,31 @@ export function TeacherAttendanceView() {
     enabled: !!activeRefId,
   });
 
-  const [students, setStudents] = React.useState<SessionStudent[]>([]);
+  const [draftState, setDraftState] = React.useState<{
+    key: string;
+    rows: SessionStudent[];
+  } | null>(null);
 
-  React.useEffect(() => {
-    if (sessionData?.data?.students) {
-      setStudents(sessionData.data.students);
-    } else {
-      setStudents([]);
-    }
-  }, [sessionData]);
+  const serverStudents: SessionStudent[] = sessionData?.data?.students || [];
+  const students: SessionStudent[] =
+    draftState?.key === scopeKey ? draftState.rows : serverStudents;
+
+  const setStudents = (updater: (prev: SessionStudent[]) => SessionStudent[]) => {
+    setDraftState((prev) => {
+      const base = prev?.key === scopeKey ? prev.rows : serverStudents;
+      return { key: scopeKey, rows: updater(base) };
+    });
+  };
 
   const isAlreadyFinalized = sessionData?.data?.session?.isFinalized === true;
+  const isUnlockEditing = unlockScopeKey === scopeKey;
+  const setIsUnlockEditing = (value: React.SetStateAction<boolean>) => {
+    setUnlockScopeKey((prev) => {
+      const current = prev === scopeKey;
+      const next = typeof value === "function" ? value(current) : value;
+      return next ? scopeKey : null;
+    });
+  };
   const isLocked = isAlreadyFinalized && !isUnlockEditing;
 
   // Save session mutation

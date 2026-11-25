@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { StaffAttendanceView } from "@/components/staff/StaffAttendanceView";
 import { TeacherAttendanceView } from "@/components/teacher/TeacherAttendanceView";
 import { AdminAttendanceView } from "@/components/admin/AdminAttendanceView";
+import { useClientDateState } from "@/components/staff/staffSchedulePrimitives";
 
 interface OverviewData {
   expectedToday: number;
@@ -223,7 +224,7 @@ export default function AttendancePage() {
 function LegacyAttendanceView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = React.useState(() => new Date().toISOString().slice(0, 10));
+  const { selectedDate, setSelectedDate } = useClientDateState();
 
   const [activeTab, setActiveTab] = React.useState("by-student");
 

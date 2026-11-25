@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiFieldError, applyApiFieldErrors } from "@/lib/api-error";
 import { z } from "zod";
 import { FormLabel, FormError, inputErrorClass } from "@/components/ui/form-field";
 import {
@@ -103,14 +104,14 @@ export function TeacherAnnouncementsView() {
       setDeleteNoticeTitle("");
       toast.success("Announcement deleted successfully");
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err.message || "Failed to delete announcement");
     },
   });
 
   // React Hook Form
   const form = useForm<AnnouncementFormData>({
-    resolver: zodResolver(announcementFormSchema) as any,
+    resolver: zodResolver(announcementFormSchema) as unknown as Resolver<AnnouncementFormData>,
     defaultValues: {
       title: "",
       body: "",
@@ -156,9 +157,7 @@ export function TeacherAnnouncementsView() {
       });
       const json = await res.json();
       if (!res.ok) {
-        const error: any = new Error(json.error?.message || "Failed to post announcement");
-        error.fields = json.error?.fields;
-        throw error;
+        throw new ApiFieldError(json.error?.message || "Failed to post announcement", json.error?.fields);
       }
       return json.data;
     },
@@ -168,12 +167,8 @@ export function TeacherAnnouncementsView() {
       form.reset();
       toast.success("Announcement published successfully!");
     },
-    onError: (err: any) => {
-      if (err.fields) {
-        Object.entries(err.fields).forEach(([f, msgs]) => {
-          form.setError(f as any, { message: (msgs as string[])[0] });
-        });
-      }
+    onError: (err: ApiFieldError) => {
+      applyApiFieldErrors(err, form.setError);
       toast.error(err.message || "Failed to post announcement");
     },
   });
@@ -504,7 +499,7 @@ export function TeacherAnnouncementsView() {
                   className={inputErrorClass(form.formState.errors.selectedClassId)}
                 >
                   <option value="">Select a class batch...</option>
-                  {(classesData?.data || []).map((cls: any) => (
+                  {(classesData?.data || []).map((cls: { id: string; name: string }) => (
                     <option key={cls.id} value={cls.id}>
                       {cls.name}
                     </option>

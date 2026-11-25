@@ -141,13 +141,21 @@ export function TeacherDashboardView() {
   const rawClasses: ClassItem[] = classesRes?.data || [];
   const rawExams: ExamItem[] = examsRes?.data || [];
 
-  // Full Month Calendar State & Hooks
-  const today = React.useMemo(() => new Date(), []);
+  // Full Month Calendar State & Hooks (hydrated safely after mount for Next.js 16 prerender)
+  const [today, setToday] = React.useState<Date>(() => new Date("2026-01-01T12:00:00Z"));
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [viewMonth, setViewMonth] = React.useState<Date>(
-    () => new Date(today.getFullYear(), today.getMonth(), 1)
-  );
-  const [selectedDate, setSelectedDate] = React.useState<Date>(today);
+  const [viewMonth, setViewMonth] = React.useState<Date>(() => new Date("2026-01-01T12:00:00Z"));
+  const [selectedDate, setSelectedDate] = React.useState<Date>(() => new Date("2026-01-01T12:00:00Z"));
+
+  React.useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const now = new Date();
+      setToday(now);
+      setViewMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+      setSelectedDate(now);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const prevMonth = () => {
     setViewMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
