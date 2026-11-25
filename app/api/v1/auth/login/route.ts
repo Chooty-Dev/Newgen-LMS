@@ -103,7 +103,7 @@ export const POST = defineRoute({
     );
 
     // 6. Create session
-    const { token, expiresAt } = await createSession(user, ip, userAgent);
+    const { token, maxAge } = await createSession(user, ip, userAgent);
 
     const response = NextResponse.json({
       data: {
@@ -124,7 +124,8 @@ export const POST = defineRoute({
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      expires: expiresAt,
+      maxAge,
+      expires: new Date(Date.now() + maxAge * 1000),
       path: "/",
     });
 

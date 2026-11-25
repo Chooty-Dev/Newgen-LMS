@@ -2,13 +2,8 @@
 
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { StatCard } from "@/components/shared/StatCard";
-import { SearchInput } from "@/components/shared/SearchInput";
-import { FilterBar } from "@/components/shared/FilterBar";
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -17,7 +12,14 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { ColumnDef } from "@tanstack/react-table";
-import { Download, ShieldCheck, ShieldAlert, AlertTriangle, Activity } from "lucide-react";
+import { Download, ShieldCheck, ShieldAlert, Activity } from "lucide-react";
+import {
+  AdminAssetTiles,
+  AdminFilterSelect,
+  AdminStatusPill,
+  AdminSurface,
+  AdminToolbar,
+} from "@/components/admin/AdminUI";
 
 interface AuditLogRecord {
   id: string;
@@ -67,16 +69,12 @@ export default function AuditTrailPage() {
   const logs = auditData?.data || [];
   const stats = auditData?.stats;
 
-  const handleExport = () => {
-    window.open("/api/v1/audit/export", "_blank");
-  };
-
   const columns: ColumnDef<AuditLogRecord>[] = [
     {
       accessorKey: "createdAt",
-      header: "Timestamp",
+      header: "Time",
       cell: ({ row }) => (
-        <span className="text-sm font-medium tabular-nums">
+        <span className="text-xs font-medium tabular-nums text-muted-foreground">
           {row.original.createdAt ? new Date(row.original.createdAt).toLocaleString() : "-"}
         </span>
       ),
@@ -86,8 +84,8 @@ export default function AuditTrailPage() {
       header: "Actor",
       cell: ({ row }) => (
         <div>
-          <span className="font-semibold text-foreground text-base block">{row.original.actorName}</span>
-          <span className="text-xs text-muted-foreground capitalize">{row.original.actorRole}</span>
+          <span className="font-bold text-foreground text-xs block">{row.original.actorName}</span>
+          <span className="text-[11px] text-muted-foreground capitalize">{row.original.actorRole}</span>
         </div>
       ),
     },
@@ -95,171 +93,106 @@ export default function AuditTrailPage() {
       accessorKey: "action",
       header: "Action",
       cell: ({ row }) => (
-        <span className="font-mono text-xs px-2.5 py-1 rounded-full bg-accent/40 text-foreground">
+        <span className="font-mono text-[11px] px-2.5 py-0.5 rounded-full bg-[var(--admin-surface)] border border-[var(--admin-border)]">
           {row.original.action}
         </span>
       ),
     },
     {
       accessorKey: "summary",
-      header: "Event Summary",
+      header: "Summary",
       cell: ({ row }) => (
-        <span className="text-base text-foreground line-clamp-1">{row.original.summary}</span>
+        <span className="text-xs text-foreground line-clamp-1 max-w-xs">{row.original.summary}</span>
       ),
     },
     {
       accessorKey: "result",
       header: "Result",
-      cell: ({ row }) => {
-        const res = row.original.result;
-        return (
-          <span className="text-xs font-semibold uppercase px-3 py-1 rounded-full bg-accent text-accent-foreground">
-            {res}
-          </span>
-        );
-      },
+      cell: ({ row }) => (
+        <AdminStatusPill
+          label={row.original.result}
+          tone={row.original.result === "success" ? "primary" : "danger"}
+        />
+      ),
     },
     {
       id: "actions",
-      header: "Details",
+      header: "Inspect",
       cell: ({ row }) => (
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full"
-          onClick={() => setSelectedLog(row.original)}
-        >
-          View Diff
+        <Button variant="outline" size="sm" className="rounded-full h-8 text-xs" onClick={() => setSelectedLog(row.original)}>
+          Diff
         </Button>
       ),
     },
   ];
 
+  const blockedOrFailed = (stats?.totalDenied ?? 0) + (stats?.totalFailed ?? 0);
+
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader
-          title="Audit Trail"
-          description="Track administrative actions, access events, and sensitive data changes."
-        />
-        <Button onClick={handleExport} variant="outline" className="rounded-full px-6 gap-2">
-          <Download className="size-5" />
-          Export to CSV
-        </Button>
-      </div>
-
-      {/* 4 Stat Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Total Events"
-          value={stats?.total ?? 0}
-          subtitle="Audit entries recorded"
-          icon={Activity}
-        />
-        <StatCard
-          label="Successful Actions"
-          value={stats?.totalSuccess ?? 0}
-          subtitle="Allowed operations"
-          icon={ShieldCheck}
-        />
-        <StatCard
-          label="Denied Accesses"
-          value={stats?.totalDenied ?? 0}
-          subtitle="Unauthorized access blocked"
-          icon={ShieldAlert}
-        />
-        <StatCard
-          label="Failed Requests"
-          value={stats?.totalFailed ?? 0}
-          subtitle="Errors or rejected actions"
-          icon={AlertTriangle}
-        />
-      </div>
-
-      {/* Filter Bar */}
-      <FilterBar>
-        <SearchInput
-          value={search}
-          onValueChange={setSearch}
-          placeholder="Search by actor, action or summary..."
-        />
-        <div className="w-48">
-          <Select value={resultFilter} onChange={(e) => setResultFilter(e.target.value)}>
-            <option value="">All Results</option>
-            <option value="success">Success Only</option>
-            <option value="denied">Denied Only</option>
-            <option value="failed">Failed Only</option>
-          </Select>
-        </div>
-      </FilterBar>
-
-      {/* DataTable */}
-      <DataTable
-        columns={columns}
-        data={logs}
-        loading={isLoading}
-        emptyMessage="No audit logs found matching your criteria."
+    <div className="space-y-6 animate-in fade-in duration-200">
+      <AdminAssetTiles
+        columns={3}
+        items={[
+          { label: "Total Events", value: stats?.total ?? 0, icon: Activity, badge: "Recorded", tone: 1 },
+          { label: "Succeeded", value: stats?.totalSuccess ?? 0, icon: ShieldCheck, badge: "Authorized", tone: 2 },
+          { label: "Denied / Failed", value: blockedOrFailed, icon: ShieldAlert, badge: "Blocked", tone: 3 },
+        ]}
       />
 
-      {/* Side Sheet for Detailed Log and Diffs */}
+      <AdminToolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search actor or action..."
+        filters={
+          <AdminFilterSelect value={resultFilter} onChange={setResultFilter}>
+            <option value="">All Results</option>
+            <option value="success">Success</option>
+            <option value="denied">Denied</option>
+            <option value="failed">Failed</option>
+          </AdminFilterSelect>
+        }
+        actions={
+          <Button
+            onClick={() => window.open("/api/v1/audit/export", "_blank")}
+            variant="outline"
+            className="rounded-full h-10 px-5 text-xs font-bold gap-1.5"
+          >
+            <Download className="size-3.5" />
+            <span>Export CSV</span>
+          </Button>
+        }
+      />
+
+      <AdminSurface className="p-2 sm:p-4">
+        <DataTable columns={columns} data={logs} loading={isLoading} emptyMessage="No audit logs found." />
+      </AdminSurface>
+
       <Sheet open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
         {selectedLog && (
-          <SheetContent side="right" className="space-y-6">
+          <SheetContent side="right" className="space-y-5 overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>Audit Log Details</SheetTitle>
-              <SheetDescription>
-                Detailed capture of actor, request context, and before/after payloads.
-              </SheetDescription>
+              <SheetTitle>Audit Details</SheetTitle>
+              <SheetDescription className="text-xs">Event metadata and state diff.</SheetDescription>
             </SheetHeader>
 
-            <div className="space-y-4 text-base">
-              <div className="p-4 rounded-2xl bg-accent/20 border border-border/40 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Action</span>
-                  <span className="font-semibold">{selectedLog.action}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Actor</span>
-                  <span className="font-semibold">
-                    {selectedLog.actorName} ({selectedLog.actorRole})
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Result</span>
-                  <span className="font-semibold uppercase">{selectedLog.result}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Timestamp</span>
-                  <span className="tabular-nums">
-                    {new Date(selectedLog.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                {selectedLog.ip && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">IP Address</span>
-                    <span className="tabular-nums">{selectedLog.ip}</span>
-                  </div>
-                )}
-                {selectedLog.requestId && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Request ID</span>
-                    <span className="text-xs font-mono">{selectedLog.requestId}</span>
-                  </div>
-                )}
+            <div className="space-y-4 text-xs">
+              <div className="p-4 rounded-2xl bg-[var(--admin-surface)] border border-[var(--admin-border)] space-y-2">
+                <div className="flex justify-between"><span className="text-muted-foreground">Action</span><span className="font-bold">{selectedLog.action}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Actor</span><span className="font-bold">{selectedLog.actorName} ({selectedLog.actorRole})</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Result</span><span className="font-bold uppercase">{selectedLog.result}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Time</span><span>{new Date(selectedLog.createdAt).toLocaleString()}</span></div>
+                {selectedLog.ip && <div className="flex justify-between"><span className="text-muted-foreground">IP</span><span className="font-mono">{selectedLog.ip}</span></div>}
               </div>
 
               <div>
-                <h4 className="font-semibold mb-2">Summary</h4>
-                <p className="text-foreground p-3 rounded-2xl bg-card border border-border">
-                  {selectedLog.summary}
-                </p>
+                <h4 className="font-bold mb-1.5">Summary</h4>
+                <p className="p-3 rounded-2xl bg-white border border-border">{selectedLog.summary}</p>
               </div>
 
-              {/* Before and After Diffs */}
               {selectedLog.before && (
                 <div>
-                  <h4 className="font-semibold mb-2">State Before</h4>
-                  <pre className="p-4 rounded-2xl bg-accent/30 border border-border text-xs overflow-x-auto">
+                  <h4 className="font-bold mb-1.5">Before</h4>
+                  <pre className="p-3 rounded-2xl bg-[var(--admin-surface)] border border-border text-[11px] overflow-x-auto">
                     {JSON.stringify(selectedLog.before, null, 2)}
                   </pre>
                 </div>
@@ -267,8 +200,8 @@ export default function AuditTrailPage() {
 
               {selectedLog.after && (
                 <div>
-                  <h4 className="font-semibold mb-2">State After</h4>
-                  <pre className="p-4 rounded-2xl bg-accent/30 border border-border text-xs overflow-x-auto">
+                  <h4 className="font-bold mb-1.5">After</h4>
+                  <pre className="p-3 rounded-2xl bg-[var(--admin-surface)] border border-border text-[11px] overflow-x-auto">
                     {JSON.stringify(selectedLog.after, null, 2)}
                   </pre>
                 </div>

@@ -1,10 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { StatCard } from "@/components/shared/StatCard";
-import { SearchInput } from "@/components/shared/SearchInput";
-import { FilterBar } from "@/components/shared/FilterBar";
 import { DataTable } from "@/components/shared/DataTable";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Can } from "@/components/shared/Can";
@@ -18,11 +14,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, KeyRound, Trash2, Edit, Copy, Check, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Plus, KeyRound, Trash2, Edit, Copy, Check, ShieldAlert, ShieldCheck, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  AdminAssetTiles,
+  AdminFilterSelect,
+  AdminStatusPill,
+  AdminSurface,
+  AdminToolbar,
+} from "@/components/admin/AdminUI";
 
 interface AdminRecord {
   id: string;
@@ -56,13 +58,8 @@ export default function AdminsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["admins", page, search, statusFilter],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: "10",
-        search,
-      });
+      const params = new URLSearchParams({ page: page.toString(), limit: "10", search });
       if (statusFilter) params.append("status", statusFilter);
-
       const res = await fetch(`/api/v1/admins?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load administrators");
       return res.json();
@@ -86,14 +83,14 @@ export default function AdminsPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to create administrator");
+      if (!res.ok) throw new Error(json.error?.message || "Failed to add administrator");
       return json.data;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["admins"] });
       setCreateOpen(false);
       setTempPassword(result.temporaryPassword);
-      toast.success("Administrator added successfully");
+      toast.success("Administrator added");
       resetForm();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -114,7 +111,7 @@ export default function AdminsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admins"] });
       setEditAdmin(null);
-      toast.success("Administrator updated successfully");
+      toast.success("Administrator updated");
       resetForm();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -130,7 +127,7 @@ export default function AdminsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admins"] });
       setDeleteId(null);
-      toast.success("Administrator deleted successfully");
+      toast.success("Administrator deleted");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -145,7 +142,7 @@ export default function AdminsPage() {
     onSuccess: (result) => {
       setResetId(null);
       setTempPassword(result.temporaryPassword);
-      toast.success("Password reset successfully");
+      toast.success("Password reset");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -171,8 +168,8 @@ export default function AdminsPage() {
       header: "Administrator",
       cell: ({ row }) => (
         <div>
-          <div className="font-semibold text-foreground">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground">{row.original.username}</div>
+          <div className="font-bold text-foreground text-xs">{row.original.name}</div>
+          <div className="text-[11px] text-muted-foreground">@{row.original.username}</div>
         </div>
       ),
     },
@@ -180,23 +177,22 @@ export default function AdminsPage() {
       accessorKey: "role",
       header: "Role",
       cell: ({ row }) => (
-        <span className="font-semibold text-foreground">
-          {row.original.role === "super_admin" ? "Super Admin (Developer)" : "Center Admin"}
-        </span>
+        <AdminStatusPill
+          label={row.original.role === "super_admin" ? "Super Admin" : "Center Admin"}
+          tone={row.original.role === "super_admin" ? "primary" : "neutral"}
+        />
       ),
     },
     {
       accessorKey: "email",
       header: "Email",
-      cell: ({ row }) => <span>{row.original.email || "-"}</span>,
+      cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.email || "—"}</span>,
     },
     {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <span className="inline-flex rounded-full bg-muted px-4 py-1 text-sm font-semibold capitalize text-foreground">
-          {row.original.status}
-        </span>
+        <AdminStatusPill label={row.original.status} tone={row.original.status === "active" ? "primary" : "danger"} />
       ),
     },
     {
@@ -205,21 +201,21 @@ export default function AdminsPage() {
       cell: ({ row }) => {
         const isSuper = row.original.role === "super_admin";
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Can permission="admins.update">
               <Button variant="outline" size="icon-sm" onClick={() => handleOpenEdit(row.original)} aria-label="Edit">
-                <Edit className="size-4" />
+                <Edit className="size-3.5" />
               </Button>
             </Can>
             <Can permission="admins.resetPassword">
               <Button variant="outline" size="icon-sm" onClick={() => setResetId(row.original.id)} aria-label="Reset Password">
-                <KeyRound className="size-4" />
+                <KeyRound className="size-3.5" />
               </Button>
             </Can>
             {!isSuper && (
               <Can permission="admins.delete">
-                <Button variant="outline" size="icon-sm" onClick={() => setDeleteId(row.original.id)} aria-label="Delete">
-                  <Trash2 className="size-4" />
+                <Button variant="outline" size="icon-sm" onClick={() => setDeleteId(row.original.id)} className="text-rose-600" aria-label="Delete">
+                  <Trash2 className="size-3.5" />
                 </Button>
               </Can>
             )}
@@ -230,141 +226,137 @@ export default function AdminsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Administrators" description="Manage system administrators.">
-        <Can permission="admins.create">
-          <Button
-            className="rounded-full h-12"
-            onClick={() => {
-              resetForm();
-              setCreateOpen(true);
-            }}
-          >
-            <Plus className="size-5 mr-2" />
-            Add Administrator
-          </Button>
-        </Can>
-      </PageHeader>
+    <div className="space-y-6 animate-in fade-in duration-200">
+      <AdminAssetTiles
+        columns={3}
+        items={[
+          { label: "Total Admins", value: meta.total, icon: ShieldAlert, badge: "Registered", tone: 1 },
+          { label: "Active", value: admins.filter((a) => a.status === "active").length, icon: ShieldCheck, badge: "Online", tone: 2 },
+          { label: "Super Admins", value: admins.filter((a) => a.role === "super_admin").length, icon: Shield, badge: "Root access", tone: 3 },
+        ]}
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <StatCard label="Total Admins" value={meta.total} subtitle="Center owners and developers" icon={ShieldAlert} />
-        <StatCard label="Active Status" value={admins.filter((a) => a.status === "active").length} subtitle="System managers" icon={ShieldCheck} />
-      </div>
-
-      <FilterBar>
-        <SearchInput
-          value={search}
-          onValueChange={(val) => {
-            setSearch(val);
-            setPage(1);
-          }}
-          placeholder="Search by administrator name or username..."
-        />
-        <div className="w-40">
-          <Select
+      <AdminToolbar
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        searchPlaceholder="Search administrators..."
+        filters={
+          <AdminFilterSelect
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+            onChange={(val) => {
+              setStatusFilter(val);
               setPage(1);
             }}
           >
-            <option value="">All Statuses</option>
+            <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="disabled">Disabled</option>
-          </Select>
-        </div>
-      </FilterBar>
-
-      <DataTable
-        columns={columns}
-        data={admins}
-        loading={isLoading}
-        pageCount={meta.totalPages}
-        currentPage={page}
-        onPageChange={setPage}
-        emptyMessage="No administrators found."
-        mobileCardRender={(a) => (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-foreground text-lg">{a.name}</span>
-              <span className="inline-flex rounded-full bg-muted px-3 py-0.5 text-xs font-semibold capitalize">
-                {a.role.replace(/_/g, " ")}
-              </span>
-            </div>
-            <div className="text-sm text-muted-foreground">{a.email || a.phone || "-"}</div>
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-              <Can permission="admins.update">
-                <Button variant="outline" size="sm" onClick={() => handleOpenEdit(a)}>Edit</Button>
-              </Can>
-              <Can permission="admins.resetPassword">
-                <Button variant="outline" size="sm" onClick={() => setResetId(a.id)}>Reset</Button>
-              </Can>
-              {a.role !== "super_admin" && (
-                <Can permission="admins.delete">
-                  <Button variant="outline" size="sm" onClick={() => setDeleteId(a.id)}>Delete</Button>
-                </Can>
-              )}
-            </div>
-          </div>
-        )}
+          </AdminFilterSelect>
+        }
+        actions={
+          <Can permission="admins.create">
+            <Button
+              onClick={() => {
+                resetForm();
+                setCreateOpen(true);
+              }}
+              className="rounded-full h-10 px-5 text-xs font-bold gap-1.5"
+            >
+              <Plus className="size-4" />
+              <span>Add Admin</span>
+            </Button>
+          </Can>
+        }
       />
 
+      <AdminSurface className="p-2 sm:p-4">
+        <DataTable
+          columns={columns}
+          data={admins}
+          loading={isLoading}
+          pageCount={meta.totalPages}
+          currentPage={page}
+          onPageChange={setPage}
+          emptyMessage="No administrators found."
+          mobileCardRender={(a) => (
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">{a.name}</span>
+                <AdminStatusPill label={a.role.replace(/_/g, " ")} />
+              </div>
+              <div className="text-muted-foreground">{a.email || a.phone || "—"}</div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Can permission="admins.update"><Button variant="outline" size="sm" onClick={() => handleOpenEdit(a)}>Edit</Button></Can>
+                <Can permission="admins.resetPassword"><Button variant="outline" size="sm" onClick={() => setResetId(a.id)}>Reset</Button></Can>
+                {a.role !== "super_admin" && (
+                  <Can permission="admins.delete"><Button variant="outline" size="sm" onClick={() => setDeleteId(a.id)}>Delete</Button></Can>
+                )}
+              </div>
+            </div>
+          )}
+        />
+      </AdminSurface>
+
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>Add Administrator</DialogTitle>
-            <DialogDescription>A temporary password will be generated automatically.</DialogDescription>
+            <DialogTitle className="text-lg font-bold">Add Administrator</DialogTitle>
+            <DialogDescription className="text-xs">A temporary password is generated automatically.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-3 py-2 text-xs">
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Full Name</label>
-              <Input placeholder="e.g. Priyantha Dissanayake" value={name} onChange={(e) => setName(e.target.value)} />
+              <label className="font-semibold block mb-1">Full Name</label>
+              <Input placeholder="Priyantha Dissanayake" value={name} onChange={(e) => setName(e.target.value)} className="h-9 rounded-xl" />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Username</label>
-              <Input placeholder="e.g. priyantha" value={username} onChange={(e) => setUsername(e.target.value)} />
+              <label className="font-semibold block mb-1">Username</label>
+              <Input placeholder="priyantha" value={username} onChange={(e) => setUsername(e.target.value)} className="h-9 rounded-xl" />
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Email</label>
-              <Input type="email" placeholder="priyantha@newgen.lk" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Phone</label>
-              <Input placeholder="+94 77 555 1234" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-semibold block mb-1">Email</label>
+                <Input type="email" placeholder="email@newgen.lk" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9 rounded-xl" />
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Phone</label>
+                <Input placeholder="+94 77 555 1234" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9 rounded-xl" />
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!name || !username || createMutation.isPending}>
-              {createMutation.isPending ? "Adding..." : "Add Administrator"}
+            <Button variant="outline" onClick={() => setCreateOpen(false)} className="rounded-full h-10 text-xs">Cancel</Button>
+            <Button onClick={() => createMutation.mutate()} disabled={!name || !username || createMutation.isPending} className="rounded-full h-10 px-5 text-xs">
+              {createMutation.isPending ? "Adding..." : "Add Admin"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={!!editAdmin} onOpenChange={(open) => !open && setEditAdmin(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>Edit Administrator</DialogTitle>
-            <DialogDescription>Update administrator details.</DialogDescription>
+            <DialogTitle className="text-lg font-bold">Edit Administrator</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-3 py-2 text-xs">
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Full Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <label className="font-semibold block mb-1">Full Name</label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 rounded-xl" />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Email</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <label className="font-semibold block mb-1">Email</label>
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9 rounded-xl" />
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Phone</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <label className="font-semibold block mb-1">Phone</label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9 rounded-xl" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditAdmin(null)}>Cancel</Button>
-            <Button onClick={() => editMutation.mutate()} disabled={!name || editMutation.isPending}>
+            <Button variant="outline" onClick={() => setEditAdmin(null)} className="rounded-full h-10 text-xs">Cancel</Button>
+            <Button onClick={() => editMutation.mutate()} disabled={!name || editMutation.isPending} className="rounded-full h-10 px-5 text-xs">
               {editMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
@@ -372,15 +364,13 @@ export default function AdminsPage() {
       </Dialog>
 
       <Dialog open={!!tempPassword} onOpenChange={(open) => !open && setTempPassword(null)}>
-        <DialogContent className="max-w-md text-center">
+        <DialogContent className="max-w-sm rounded-3xl p-6 text-center">
           <DialogHeader>
             <DialogTitle>Temporary Password</DialogTitle>
-            <DialogDescription>This password will only be shown once. Please copy and give it to the administrator.</DialogDescription>
+            <DialogDescription className="text-xs">Copy and share this password once.</DialogDescription>
           </DialogHeader>
-          <div className="my-6 p-4 rounded-3xl bg-muted/60 border border-border flex items-center justify-between">
-            <span className="text-2xl font-bold tracking-wider text-foreground select-all font-mono">
-              {tempPassword}
-            </span>
+          <div className="my-4 p-3 rounded-2xl bg-[var(--admin-surface)] border border-border flex items-center justify-between">
+            <span className="text-xl font-bold font-mono select-all">{tempPassword}</span>
             <Button
               size="icon-sm"
               variant="outline"
@@ -389,16 +379,15 @@ export default function AdminsPage() {
                   navigator.clipboard.writeText(tempPassword);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
-                  toast.success("Password copied to clipboard");
+                  toast.success("Copied");
                 }
               }}
-              aria-label="Copy password"
             >
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
             </Button>
           </div>
           <DialogFooter>
-            <Button className="w-full" onClick={() => setTempPassword(null)}>Done</Button>
+            <Button className="w-full rounded-full" onClick={() => setTempPassword(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -406,24 +395,20 @@ export default function AdminsPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete this administrator?"
-        description="This cannot be undone. System audit records will be kept."
-        confirmLabel="Yes, Delete"
-        onConfirm={async () => {
-          if (deleteId) await deleteMutation.mutateAsync(deleteId);
-        }}
+        title="Delete administrator?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={async () => { if (deleteId) await deleteMutation.mutateAsync(deleteId); }}
       />
 
       <ConfirmDialog
         open={!!resetId}
         onOpenChange={(open) => !open && setResetId(null)}
-        title="Reset administrator password?"
-        description="This will revoke current sessions and generate a new temporary password."
-        confirmLabel="Reset Password"
+        title="Reset password?"
+        description="Generates a new temporary password."
+        confirmLabel="Reset"
         isDestructive={false}
-        onConfirm={async () => {
-          if (resetId) await resetPasswordMutation.mutateAsync(resetId);
-        }}
+        onConfirm={async () => { if (resetId) await resetPasswordMutation.mutateAsync(resetId); }}
       />
     </div>
   );

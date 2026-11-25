@@ -3,6 +3,7 @@ import { Assessment } from "@/modules/exams/model";
 import { Announcement } from "@/modules/announcements/model";
 import { connectDB } from "@/lib/db";
 import { generateSlug } from "@/lib/slug";
+import { invalidateStaffAssignmentOptionsCache } from "@/modules/users/staff-assignment-cache";
 import mongoose from "mongoose";
 
 export class ClassService {
@@ -230,6 +231,7 @@ export class ClassService {
       status: "active",
     });
 
+    invalidateStaffAssignmentOptionsCache(centerId);
     return newClass;
   }
 
@@ -316,8 +318,9 @@ export class ClassService {
     const updated = await ClassModel.findByIdAndUpdate(
       classId,
       { $set: updateDoc },
-      { new: true }
+      { returnDocument: "after" }
     );
+    invalidateStaffAssignmentOptionsCache(updated?.centerId?.toString());
     return updated;
   }
 
@@ -326,11 +329,16 @@ export class ClassService {
     const cObjId = new mongoose.Types.ObjectId(classId);
 
     // Rule: soft delete class
-    await ClassModel.findByIdAndUpdate(cObjId, {
-      deletedAt: new Date(),
-      deletedBy: new mongoose.Types.ObjectId(actorId),
-      status: "ended",
-    });
+    const deleted = await ClassModel.findByIdAndUpdate(
+      cObjId,
+      {
+        deletedAt: new Date(),
+        deletedBy: new mongoose.Types.ObjectId(actorId),
+        status: "ended",
+      },
+      { returnDocument: "after" }
+    );
+    invalidateStaffAssignmentOptionsCache(deleted?.centerId?.toString());
 
     // Rule: mark all active enrollments as left
     await Enrollment.updateMany(

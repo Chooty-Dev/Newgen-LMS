@@ -14,6 +14,8 @@ const envSchema = z.object({
   RATE_LIMIT_API_PER_MINUTE: z.coerce.number().default(120),
   BCRYPT_COST: z.coerce.number().default(12),
   SEED_DEFAULT_PASSWORD: z.string().default("Password123!"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
@@ -31,5 +33,7 @@ export const env = envSchema.parse({
   RATE_LIMIT_API_PER_MINUTE: process.env.RATE_LIMIT_API_PER_MINUTE,
   BCRYPT_COST: process.env.BCRYPT_COST,
   SEED_DEFAULT_PASSWORD: process.env.SEED_DEFAULT_PASSWORD,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  GEMINI_MODEL: process.env.GEMINI_MODEL,
   NODE_ENV: process.env.NODE_ENV,
 });

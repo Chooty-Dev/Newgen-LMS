@@ -10,11 +10,14 @@ import { Select } from "@/components/ui/select";
 import { calculateGrade } from "@/modules/marks/schema";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Save, Send, Award, CheckCircle2, Clock, Users, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Save, Send, Award, CheckCircle2, Clock, Users } from "lucide-react";
+import { SmartBackButton } from "@/components/shared/BackNavigation";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { DataLoader } from "@/components/ui/data-loader";
+import { useAuth } from "@/hooks/useAuth";
+import { AdminAssetTiles, AdminSurface } from "@/components/admin/AdminUI";
+import { StaffEvaluateMarksView } from "@/components/staff/StaffEvaluateMarksView";
 
 interface GridEntry {
   studentId: string;
@@ -53,7 +56,7 @@ function EvaluationGridEditor({
 
   const isAlreadyEvaluated =
     assessment.status === "completed" ||
-    (initialEntries.length > 0 && initialEntries.every((e: any) => e.status === "submitted"));
+    (initialEntries.length > 0 && initialEntries.every((e) => e.status === "submitted"));
 
   const saveMutation = useMutation({
     mutationFn: async (status: "draft" | "submitted") => {
@@ -318,16 +321,30 @@ function EvaluationGridEditor({
 }
 
 export default function EvaluateMarksPage() {
-  const searchParams = useSearchParams();
-  const initialAssessmentId = searchParams?.get("assessmentId") || "";
-  const queryClient = useQueryClient();
-  const [selectedAssessmentId, setSelectedAssessmentId] = React.useState(initialAssessmentId);
+  const { user } = useAuth();
+  if (user?.role === "staff") {
+    return <StaffEvaluateMarksView />;
+  }
+  return <TeacherAdminEvaluateMarksPage />;
+}
 
-  // Sync if query param changes
-  React.useEffect(() => {
-    const q = searchParams?.get("assessmentId");
-    if (q) setSelectedAssessmentId(q);
-  }, [searchParams]);
+function TeacherAdminEvaluateMarksPage() {
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const queryAssessmentId = searchParams?.get("assessmentId") || "";
+  const queryClient = useQueryClient();
+  const [assessmentSelection, setAssessmentSelection] = React.useState<{
+    query: string;
+    id: string;
+  }>({ query: queryAssessmentId, id: queryAssessmentId });
+  const selectedAssessmentId =
+    assessmentSelection.query === queryAssessmentId
+      ? assessmentSelection.id
+      : queryAssessmentId;
+  const setSelectedAssessmentId = React.useCallback(
+    (id: string) => setAssessmentSelection({ query: queryAssessmentId, id }),
+    [queryAssessmentId]
+  );
 
   const { data: assessmentsData } = useQuery({
     queryKey: ["my-evaluations"],
@@ -338,7 +355,15 @@ export default function EvaluateMarksPage() {
     },
   });
 
-  const assessments = assessmentsData?.data || [];
+  const assessments: Array<{
+    id: string;
+    title: string;
+    type: string;
+    subject: string;
+    status: string;
+    totalMarks?: number;
+    passMark?: number;
+  }> = assessmentsData?.data || [];
 
   const { data: gridData, isLoading: gridLoading } = useQuery({
     queryKey: ["evaluation-grid", selectedAssessmentId],
@@ -351,118 +376,159 @@ export default function EvaluateMarksPage() {
     enabled: !!selectedAssessmentId,
   });
 
-  const currentAssessment = assessments.find((a: any) => a.id === selectedAssessmentId);
+  const currentAssessment = assessments.find((a) => a.id === selectedAssessmentId);
   const totalEntries = gridData?.data?.entries?.length || 0;
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
-          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-              Evaluate Student Marks
-            </h2>
-            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-              Rapid marks entry and score submission workflow. Use Enter or arrow keys to quickly navigate between student inputs.
-            </p>
-            <div className="pt-2">
-              <Link
-                href="/exams"
-                className="inline-flex items-center justify-center bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
+      {isAdmin ? (
+        <div className="space-y-5">
+          <AdminAssetTiles
+            columns={4}
+            items={[
+              { label: "Students", value: totalEntries, icon: Users, badge: "In grid", tone: 1 },
+              { label: "Total Marks", value: currentAssessment?.totalMarks ?? "—", icon: Award, badge: "Max", tone: 2 },
+              { label: "Pass Mark", value: currentAssessment?.passMark ?? "—", icon: CheckCircle2, badge: "Required", tone: 3 },
+              {
+                label: "Status",
+                value: currentAssessment?.status ? currentAssessment.status.replace(/_/g, " ") : "Pending",
+                icon: Clock,
+                badge: "Assessment",
+                tone: 1,
+              },
+            ]}
+          />
+          <AdminSurface className="p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex-1 max-w-md">
+              <Select
+                value={selectedAssessmentId}
+                onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                className="w-full h-10 rounded-full bg-[var(--admin-surface)] border border-[var(--admin-border)] text-xs"
               >
-                <ArrowLeft className="size-4" />
-                <span>Back to Assessments</span>
-              </Link>
+                <option value="">Select assessment...</option>
+                {assessments.map((a: { id: string; title: string; type: string; subject: string; status: string }) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({a.type.toUpperCase()})
+                  </option>
+                ))}
+              </Select>
             </div>
-          </div>
-
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/achivements.webp"
-              alt="Evaluate Marks"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
+            <SmartBackButton
+              fallbackHref="/exams"
+              fallbackLabel="Assessments"
+              variant="button"
+              className="h-10 text-xs font-bold border-[var(--admin-border)] hover:bg-[var(--admin-surface)]"
             />
-          </div>
+          </AdminSurface>
         </div>
-
-        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <Users className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {totalEntries}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Students In Grid
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                <Award className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {currentAssessment?.totalMarks ?? "—"}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Total Marks
-                </p>
+      ) : (
+        /* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+          <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
+            <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+                Evaluate Marks
+              </h2>
+              <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
+                Enter student scores and submit evaluations. Use Enter or arrow keys to navigate.
+              </p>
+              <div className="pt-2">
+                <SmartBackButton
+                  fallbackHref={user?.role === "staff" ? "/dashboard" : "/exams"}
+                  fallbackLabel={user?.role === "staff" ? "Staff Overview" : "Assessments"}
+                  variant="hero"
+                />
               </div>
             </div>
 
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {currentAssessment?.passMark ?? "—"}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Pass Mark
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-                <Clock className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-black text-foreground truncate leading-tight capitalize">
-                  {currentAssessment?.status ? currentAssessment.status.replace(/_/g, " ") : "Pending"}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Assessment State
-                </p>
-              </div>
+            <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
+              <Image
+                src="/images/achivements.webp"
+                alt="Evaluate Marks"
+                fill
+                priority
+                className="object-contain object-bottom-right drop-shadow-md"
+              />
             </div>
           </div>
 
-          <div className="relative w-full">
-            <Select
-              value={selectedAssessmentId}
-              onChange={(e) => setSelectedAssessmentId(e.target.value)}
-              className="w-full h-10 rounded-full bg-card border border-border text-xs sm:text-sm shadow-xs"
-            >
-              <option value="">Select assessment to evaluate...</option>
-              {assessments.map((a: { id: string; title: string; type: string; subject: string; status: string }) => (
-                <option key={a.id} value={a.id}>
-                  {a.title} ({a.type.toUpperCase()}) — [{a.status.replace(/_/g, " ")}]
-                </option>
-              ))}
-            </Select>
+          <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+                <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Users className="size-4 sm:size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                    {totalEntries}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                    Students In Grid
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+                <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                  <Award className="size-4 sm:size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                    {currentAssessment?.totalMarks ?? "—"}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                    Total Marks
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+                <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="size-4 sm:size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
+                    {currentAssessment?.passMark ?? "—"}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                    Pass Mark
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
+                <div className="size-9 sm:size-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                  <Clock className="size-4 sm:size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-foreground truncate leading-tight capitalize">
+                    {currentAssessment?.status ? currentAssessment.status.replace(/_/g, " ") : "Pending"}
+                  </p>
+                  <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
+                    Assessment State
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative w-full">
+              <Select
+                value={selectedAssessmentId}
+                onChange={(e) => setSelectedAssessmentId(e.target.value)}
+                className="w-full h-10 rounded-full bg-card border border-border text-xs sm:text-sm shadow-xs"
+              >
+                <option value="">Select assessment to evaluate...</option>
+                {assessments.map((a: { id: string; title: string; type: string; subject: string; status: string }) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({a.type.toUpperCase()}) — [{a.status.replace(/_/g, " ")}]
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Grid Content */}
       {selectedAssessmentId ? (

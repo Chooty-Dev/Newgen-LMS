@@ -112,6 +112,7 @@ function ProfileDetailsSection({
 
 import { StudentSettingsView } from "@/components/student/StudentSettingsView";
 import { TeacherSettingsView } from "@/components/teacher/TeacherSettingsView";
+import { AdminSettingsView } from "@/components/admin/AdminSettingsView";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -120,6 +121,9 @@ export default function SettingsPage() {
   }
   if (user?.role === "teacher") {
     return <TeacherSettingsView />;
+  }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminSettingsView />;
   }
   return <StaffSettingsPage />;
 }

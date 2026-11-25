@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "vitest run tests/seed.test.ts",
-    "test": "vitest run tests/analysis-engine.test.ts tests/score-engine.test.ts tests/messages-engine.test.ts tests/policies.test.ts tests/rbac-resolver.test.ts tests/auto-absent.test.ts tests/center-switching.test.ts tests/centers.test.ts"
+    "test": "vitest run tests/analysis-engine.test.ts tests/score-engine.test.ts tests/messages-engine.test.ts tests/policies.test.ts tests/rbac-resolver.test.ts tests/auto-absent.test.ts tests/center-switching.test.ts tests/centers.test.ts tests/attendance-schedule.test.ts tests/marks-schedule.test.ts tests/gemini-advisor.test.ts tests/teacher-insights-quota.test.ts tests/staff-assignment-cache.test.ts tests/nav-history.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

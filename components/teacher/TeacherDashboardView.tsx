@@ -919,7 +919,7 @@ export function TeacherDashboardView() {
           <div className="flex items-center justify-center py-2 px-1">
             <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-square flex items-center justify-center">
               <Image
-                src="/images/stronger.webp"
+                src="/images/teacher-subject-bg.webp"
                 alt="You Are Stronger Than You Know"
                 fill
                 className="object-contain"
@@ -1082,6 +1082,19 @@ export function TeacherDashboardView() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* 1. Stronger Than You Know Motivation Card - Card size, full size image, zero background, zero shadow */}
+          <div className="flex items-center justify-center py-2 px-1">
+            <div className="relative w-full max-w-[280px] sm:max-w-[320px] aspect-square flex items-center justify-center">
+              <Image
+                src="/images/stronger.webp"
+                alt="You Are Stronger Than You Know"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
         </div>

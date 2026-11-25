@@ -6,7 +6,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  ArrowLeft,
   FileCheck,
   BookOpen,
   UserCheck,
@@ -21,6 +20,7 @@ import {
   ExternalLink,
   AlertCircle,
 } from "lucide-react";
+import { SmartBackButton } from "@/components/shared/BackNavigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataLoader } from "@/components/ui/data-loader";
@@ -175,10 +175,11 @@ function ExamDetailsContent() {
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
           {error instanceof Error ? error.message : "The exam or test you are looking for does not exist."}
         </p>
-        <Button onClick={() => router.push("/exams")} variant="outline" className="rounded-full">
-          <ArrowLeft className="size-4 mr-2" />
-          Back to Exams & Tests
-        </Button>
+        <SmartBackButton
+          fallbackHref="/exams"
+          fallbackLabel="Back to Exams & Tests"
+          variant="button"
+        />
       </div>
     );
   }
@@ -209,13 +210,11 @@ function ExamDetailsContent() {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       <div>
-        <Link
-          href="/exams"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Back to Exams & Tests</span>
-        </Link>
+        <SmartBackButton
+          fallbackHref="/exams"
+          fallbackLabel="Back to Exams & Tests"
+          className="text-muted-foreground hover:text-foreground"
+        />
       </div>
 
       {/* Banner */}

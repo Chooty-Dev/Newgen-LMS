@@ -125,6 +125,20 @@
   --card-theme-tag-bg: #EBF3FE;
   --card-theme-tag-fg: #184880;
   --card-theme-swatch: #184880;
+
+  /* Admin & Super Admin Surface Tokens (Light Blue & White Palette - No Gradients) */
+  --admin-rail: #184880;
+  --admin-rail-fg: #FFFFFF;
+  --admin-rail-muted: #BDD6F2;
+  --admin-rail-active: #23599B;
+  --admin-canvas: #FFFFFF;
+  --admin-surface: #F4F8FD;
+  --admin-tile-1: #EBF3FE;
+  --admin-tile-2: #E2EEFC;
+  --admin-tile-3: #EDF4FC;
+  --admin-highlight: #184880;
+  --admin-highlight-fg: #FFFFFF;
+  --admin-border: #DDE8F8;
 }
 
 /* =========================================

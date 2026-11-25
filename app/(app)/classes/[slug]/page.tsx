@@ -6,7 +6,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  ArrowLeft,
   BookOpen,
   Users,
   UserCheck,
@@ -22,6 +21,7 @@ import {
   Search,
   ExternalLink,
 } from "lucide-react";
+import { SmartBackButton } from "@/components/shared/BackNavigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataLoader } from "@/components/ui/data-loader";
@@ -253,10 +253,11 @@ function ClassDetailsContent() {
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
           {error instanceof Error ? error.message : "The class you are looking for does not exist or you do not have permission to view it."}
         </p>
-        <Button onClick={() => router.push("/classes")} variant="outline" className="rounded-full">
-          <ArrowLeft className="size-4 mr-2" />
-          Back to Classes
-        </Button>
+        <SmartBackButton
+          fallbackHref="/classes"
+          fallbackLabel="Back to Classes"
+          variant="button"
+        />
       </div>
     );
   }
@@ -270,13 +271,11 @@ function ClassDetailsContent() {
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       {/* Back Link */}
       <div>
-        <Link
-          href="/classes"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Back to Classes</span>
-        </Link>
+        <SmartBackButton
+          fallbackHref="/classes"
+          fallbackLabel="Back to Classes"
+          className="text-muted-foreground hover:text-foreground"
+        />
       </div>
 
       {/* Class Banner (Single Blue, matches Teacher theme) */}

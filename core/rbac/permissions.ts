@@ -67,7 +67,9 @@ export const PERMISSIONS = {
   // Attendance
   "attendance.view": "attendance.view",
   "attendance.mark": "attendance.mark",
+  "attendance.create": "attendance.create",
   "attendance.update": "attendance.update",
+  "attendance.delete": "attendance.delete",
   "attendance.finalize": "attendance.finalize",
   "attendance.export": "attendance.export",
 
@@ -207,7 +209,9 @@ export const MODULE_GROUPS: Record<string, { label: string; permissions: Permiss
     permissions: [
       "attendance.view",
       "attendance.mark",
+      "attendance.create",
       "attendance.update",
+      "attendance.delete",
       "attendance.finalize",
       "attendance.export",
     ],

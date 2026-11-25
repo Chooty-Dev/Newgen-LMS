@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { TeacherStudentsView } from "@/components/teacher/TeacherStudentsView";
+import { AdminStudentsView } from "@/components/admin/AdminStudentsView";
 import { cn } from "@/lib/utils";
 
 interface StudentRecord {
@@ -47,7 +48,13 @@ export default function StudentsPage() {
   if (user?.role === "teacher") {
     return <TeacherStudentsView />;
   }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminStudentsView />;
+  }
+  return <LegacyStudentsView />;
+}
 
+function LegacyStudentsView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");

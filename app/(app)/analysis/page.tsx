@@ -57,6 +57,7 @@ interface StudentAnalysisData {
 
 import { StudentAnalysisView } from "@/components/student/StudentAnalysisView";
 import { TeacherAnalysisView } from "@/components/teacher/TeacherAnalysisView";
+import { AdminAnalysisView } from "@/components/admin/AdminAnalysisView";
 
 export default function AnalysisPage() {
   const { user } = useAuth();
@@ -72,6 +73,10 @@ export default function AnalysisPage() {
         <TeacherAnalysisView />
       </React.Suspense>
     );
+  }
+
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminAnalysisView />;
   }
 
   return <TeacherAdminAnalysisView />;

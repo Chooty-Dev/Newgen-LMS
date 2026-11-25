@@ -110,6 +110,7 @@ export function TeacherExamsView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["staff-assignment-options"] });
       setDeleteExamId(null);
       setDeleteExamTitle("");
       toast.success("Assessment deleted successfully");
@@ -187,6 +188,7 @@ export function TeacherExamsView() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["staff-assignment-options"] });
       setCreateOpen(false);
       examForm.reset();
       toast.success("Assessment scheduled successfully!");

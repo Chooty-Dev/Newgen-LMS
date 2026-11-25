@@ -64,6 +64,8 @@ interface ActivityLogItem {
 
 import { StudentHomeView } from "@/components/student/StudentHomeView";
 import { TeacherDashboardView } from "@/components/teacher/TeacherDashboardView";
+import { StaffDashboardView } from "@/components/staff/StaffDashboardView";
+import { AdminDashboardView } from "@/components/admin/AdminDashboardView";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -79,10 +81,10 @@ export default function DashboardPage() {
   }
 
   if (user.role === "staff") {
-    return <StaffDashboard />;
+    return <StaffDashboardView />;
   }
 
-  return <AdminDashboard />;
+  return <AdminDashboardView />;
 }
 
 // ============================================================================

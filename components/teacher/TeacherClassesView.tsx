@@ -257,6 +257,7 @@ export function TeacherClassesView() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["staff-assignment-options"] });
       setCreateOpen(false);
       addForm.reset();
       toast.success("Class created successfully!");
@@ -311,6 +312,7 @@ export function TeacherClassesView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["staff-assignment-options"] });
       setEditClass(null);
       toast.success("Class updated successfully!");
     },
@@ -340,6 +342,7 @@ export function TeacherClassesView() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["staff-assignment-options"] });
       setDeleteClassId(null);
       toast.success("Class deleted successfully!");
     },
@@ -361,6 +364,7 @@ export function TeacherClassesView() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["class-details", enrollClassId] });
       queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["staff-assignment-options"] });
       setSelectedStudentToAdd("");
       toast.success("Student enrolled successfully");
     },

@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 
 import { Mark } from "@/modules/marks/model";
 import { saveDailyPerformanceSnapshot } from "@/modules/analysis/engine/score";
+import { invalidateStaffAssignmentOptionsCache } from "@/modules/users/staff-assignment-cache";
 
 export class AssessmentService {
   static async listAssessments(params: {
@@ -209,6 +210,7 @@ export class AssessmentService {
       status: data.status || "scheduled",
       createdBy: new mongoose.Types.ObjectId(actorId),
     });
+    invalidateStaffAssignmentOptionsCache(centerId);
     return created;
   }
 
@@ -234,6 +236,7 @@ export class AssessmentService {
     await connectDB();
     const updated = await Assessment.findByIdAndUpdate(id, data, { returnDocument: "after" });
     if (!updated || updated.deletedAt) throw new Error("Assessment not found");
+    invalidateStaffAssignmentOptionsCache(updated.centerId?.toString());
     return updated;
   }
 
@@ -241,10 +244,15 @@ export class AssessmentService {
     await connectDB();
     const aObjId = new mongoose.Types.ObjectId(id);
 
-    await Assessment.findByIdAndUpdate(aObjId, {
-      deletedAt: new Date(),
-      deletedBy: new mongoose.Types.ObjectId(actorId),
-    });
+    const deleted = await Assessment.findByIdAndUpdate(
+      aObjId,
+      {
+        deletedAt: new Date(),
+        deletedBy: new mongoose.Types.ObjectId(actorId),
+      },
+      { returnDocument: "after" }
+    );
+    invalidateStaffAssignmentOptionsCache(deleted?.centerId?.toString());
 
     // Recompute snapshots for students affected by this deleted assessment
     try {

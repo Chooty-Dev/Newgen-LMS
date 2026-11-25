@@ -1,11 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { StatCard } from "@/components/shared/StatCard";
-import { SearchInput } from "@/components/shared/SearchInput";
-import { FilterBar } from "@/components/shared/FilterBar";
 import { DataTable } from "@/components/shared/DataTable";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Can } from "@/components/shared/Can";
@@ -19,13 +14,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, KeyRound, Trash2, Edit, Copy, Check, UserCheck, ShieldCheck, Building2, Search, BookOpen, Clock } from "lucide-react";
+import { Plus, KeyRound, Trash2, Edit, Copy, Check, UserCheck, Building2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  AdminAssetTiles,
+  AdminFilterSelect,
+  AdminStatusPill,
+  AdminSurface,
+  AdminToolbar,
+} from "@/components/admin/AdminUI";
 
 interface TeacherRecord {
   id: string;
@@ -64,7 +65,6 @@ export default function TeachersPage() {
 
   const canAssignCenters = user?.role === "super_admin" || user?.role === "admin";
 
-  // Fetch available centers for multi-center assignment
   const { data: centersData } = useQuery<{ data: Array<{ _id: string; name: string }> }>({
     queryKey: ["centers-list"],
     queryFn: async () => {
@@ -78,13 +78,8 @@ export default function TeachersPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["teachers", page, search, statusFilter],
     queryFn: async () => {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: "10",
-        search,
-      });
+      const params = new URLSearchParams({ page: page.toString(), limit: "10", search });
       if (statusFilter) params.append("status", statusFilter);
-
       const res = await fetch(`/api/v1/teachers?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load teachers");
       return res.json();
@@ -111,14 +106,14 @@ export default function TeachersPage() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || "Failed to create teacher");
+      if (!res.ok) throw new Error(json.error?.message || "Failed to add teacher");
       return json.data;
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
       setCreateOpen(false);
       setTempPassword(result.temporaryPassword);
-      toast.success("Teacher added successfully");
+      toast.success("Teacher added");
       resetForm();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -145,7 +140,7 @@ export default function TeachersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
       setEditTeacher(null);
-      toast.success("Teacher updated successfully");
+      toast.success("Teacher updated");
       resetForm();
     },
     onError: (err: Error) => toast.error(err.message),
@@ -160,7 +155,7 @@ export default function TeachersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
       setDeleteId(null);
-      toast.success("Teacher deleted successfully");
+      toast.success("Teacher deleted");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -175,7 +170,7 @@ export default function TeachersPage() {
     onSuccess: (result) => {
       setResetId(null);
       setTempPassword(result.temporaryPassword);
-      toast.success("Password reset successfully");
+      toast.success("Password reset");
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -203,42 +198,29 @@ export default function TeachersPage() {
   const columns: ColumnDef<TeacherRecord>[] = [
     {
       accessorKey: "name",
-      header: "Teacher Name",
+      header: "Teacher",
       cell: ({ row }) => (
         <div>
-          <div className="font-semibold text-foreground">{row.original.name}</div>
-          <div className="text-sm text-muted-foreground">{row.original.username}</div>
+          <div className="font-bold text-foreground text-xs">{row.original.name}</div>
+          <div className="text-[11px] text-muted-foreground">@{row.original.username}</div>
         </div>
       ),
     },
     {
       accessorKey: "title",
-      header: "Designation",
-      cell: ({ row }) => <span>{row.original.title}</span>,
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-      cell: ({ row }) => <span>{row.original.email || "-"}</span>,
+      header: "Title",
+      cell: ({ row }) => <span className="text-xs">{row.original.title}</span>,
     },
     {
       accessorKey: "centers",
-      header: "Assigned Centers",
+      header: "Centers",
       cell: ({ row }) => {
-        const centersList = row.original.centers || [];
-        if (centersList.length === 0) {
-          return <span className="text-muted-foreground text-sm">—</span>;
-        }
+        const list = row.original.centers || [];
+        if (list.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
         return (
-          <div className="flex flex-wrap gap-1.5 max-w-xs">
-            {centersList.map((c) => (
-              <span
-                key={c.id}
-                className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground"
-              >
-                <Building2 className="size-3 text-muted-foreground" />
-                <span>{c.name}</span>
-              </span>
+          <div className="flex flex-wrap gap-1 max-w-[200px]">
+            {list.map((c) => (
+              <AdminStatusPill key={c.id} label={c.name} tone="neutral" />
             ))}
           </div>
         );
@@ -248,29 +230,27 @@ export default function TeachersPage() {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <span className="inline-flex rounded-full bg-muted px-4 py-1 text-sm font-semibold capitalize text-foreground">
-          {row.original.status}
-        </span>
+        <AdminStatusPill label={row.original.status} tone={row.original.status === "active" ? "primary" : "danger"} />
       ),
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Can permission="teachers.update">
             <Button variant="outline" size="icon-sm" onClick={() => handleOpenEdit(row.original)} aria-label="Edit">
-              <Edit className="size-4" />
+              <Edit className="size-3.5" />
             </Button>
           </Can>
           <Can permission="teachers.resetPassword">
             <Button variant="outline" size="icon-sm" onClick={() => setResetId(row.original.id)} aria-label="Reset Password">
-              <KeyRound className="size-4" />
+              <KeyRound className="size-3.5" />
             </Button>
           </Can>
           <Can permission="teachers.delete">
-            <Button variant="outline" size="icon-sm" onClick={() => setDeleteId(row.original.id)} aria-label="Delete">
-              <Trash2 className="size-4" />
+            <Button variant="outline" size="icon-sm" onClick={() => setDeleteId(row.original.id)} className="text-rose-600" aria-label="Delete">
+              <Trash2 className="size-3.5" />
             </Button>
           </Can>
         </div>
@@ -278,250 +258,144 @@ export default function TeachersPage() {
     },
   ];
 
-  const activeTeachersCount = teachers.filter((t) => t.status === "active").length;
+  const activeCount = teachers.filter((t) => t.status === "active").length;
   const multiCenterCount = teachers.filter((t) => t.assignedCenterIds && t.assignedCenterIds.length > 1).length;
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* 1. TOP HEADER: Solid Blue Banner (2/3) + 2x2 Stats Cards (1/3) */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-8 rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)] min-h-[220px] flex flex-col justify-between">
-          <div className="relative z-10 max-w-sm sm:max-w-md space-y-3">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-              Academic Faculty Directory
-            </h2>
-            <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-              Register teachers, assign primary and secondary education centers, and manage instructor access across course classes.
-            </p>
-            <div className="pt-2">
-              <Can permission="teachers.create">
-                <Button
-                  onClick={() => {
-                    resetForm();
-                    setCreateOpen(true);
-                  }}
-                  className="bg-white text-primary hover:bg-white/95 font-bold text-xs sm:text-sm rounded-full shadow-md gap-2 h-11 px-6 transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <Plus className="size-4" />
-                  <span>Add Teacher</span>
-                </Button>
-              </Can>
-            </div>
-          </div>
+    <div className="space-y-6 animate-in fade-in duration-200">
+      <AdminAssetTiles
+        columns={3}
+        items={[
+          { label: "Total Teachers", value: meta.total, icon: UserCheck, badge: "Faculty", tone: 1 },
+          { label: "Active", value: activeCount, icon: ShieldCheck, badge: "Verified", tone: 2 },
+          { label: "Multi-Center", value: multiCenterCount, icon: Building2, badge: "Cross-branch", tone: 3 },
+        ]}
+      />
 
-          <div className="pointer-events-none absolute bottom-0 right-0 w-48 sm:w-64 md:w-72 lg:w-80 h-full max-h-[220px] z-10">
-            <Image
-              src="/images/class.webp"
-              alt="Teachers"
-              fill
-              priority
-              className="object-contain object-bottom-right drop-shadow-md"
-            />
-          </div>
-        </div>
-
-        <div className="lg:col-span-4 flex flex-col justify-between gap-2.5">
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                <UserCheck className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {meta.total}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Total Teachers
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                <ShieldCheck className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {activeTeachersCount}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Active Faculty
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                <Building2 className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {multiCenterCount}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  Multi-Center
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-3.5 shadow-[0_4px_20px_-4px_rgba(24,72,128,0.06)] flex items-center gap-2.5">
-              <div className="size-9 sm:size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
-                <Clock className="size-4 sm:size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-black text-foreground tabular-nums leading-tight">
-                  {activeTeachersCount}
-                </p>
-                <p className="text-[10px] sm:text-[11px] font-semibold text-muted-foreground truncate">
-                  In Service
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative w-full">
-            <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search by teacher name or username..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-card border border-border text-xs sm:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-xs"
-            />
-          </div>
-        </div>
-      </section>
-
-      <div className="flex items-center justify-start gap-3">
-        <div className="w-40">
-          <Select
+      <AdminToolbar
+        searchValue={search}
+        onSearchChange={(val) => {
+          setSearch(val);
+          setPage(1);
+        }}
+        searchPlaceholder="Search teachers..."
+        filters={
+          <AdminFilterSelect
             value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
+            onChange={(val) => {
+              setStatusFilter(val);
               setPage(1);
             }}
           >
-            <option value="">All Statuses</option>
+            <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="disabled">Disabled</option>
-          </Select>
-        </div>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={teachers}
-        loading={isLoading}
-        pageCount={meta.totalPages}
-        currentPage={page}
-        onPageChange={setPage}
-        emptyMessage="No teachers found."
-        mobileCardRender={(t) => (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-foreground text-lg">{t.name}</span>
-              <span className="inline-flex rounded-full bg-muted px-3 py-0.5 text-xs font-semibold capitalize">
-                {t.status}
-              </span>
-            </div>
-            <div className="text-sm text-muted-foreground">{t.title} • {t.email || t.phone || "-"}</div>
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-              <Can permission="teachers.update">
-                <Button variant="outline" size="sm" onClick={() => handleOpenEdit(t)}>Edit</Button>
-              </Can>
-              <Can permission="teachers.resetPassword">
-                <Button variant="outline" size="sm" onClick={() => setResetId(t.id)}>Reset</Button>
-              </Can>
-              <Can permission="teachers.delete">
-                <Button variant="outline" size="sm" onClick={() => setDeleteId(t.id)}>Delete</Button>
-              </Can>
-            </div>
-          </div>
-        )}
+          </AdminFilterSelect>
+        }
+        actions={
+          <Can permission="teachers.create">
+            <Button
+              onClick={() => {
+                resetForm();
+                setCreateOpen(true);
+              }}
+              className="rounded-full h-10 px-5 text-xs font-bold gap-1.5"
+            >
+              <Plus className="size-4" />
+              <span>Add Teacher</span>
+            </Button>
+          </Can>
+        }
       />
+
+      <AdminSurface className="p-2 sm:p-4">
+        <DataTable
+          columns={columns}
+          data={teachers}
+          loading={isLoading}
+          pageCount={meta.totalPages}
+          currentPage={page}
+          onPageChange={setPage}
+          emptyMessage="No teachers found."
+          mobileCardRender={(t) => (
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-foreground">{t.name}</span>
+                <AdminStatusPill label={t.status} tone={t.status === "active" ? "primary" : "danger"} />
+              </div>
+              <div className="text-muted-foreground">{t.title}</div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Can permission="teachers.update"><Button variant="outline" size="sm" onClick={() => handleOpenEdit(t)}>Edit</Button></Can>
+                <Can permission="teachers.resetPassword"><Button variant="outline" size="sm" onClick={() => setResetId(t.id)}>Reset</Button></Can>
+                <Can permission="teachers.delete"><Button variant="outline" size="sm" onClick={() => setDeleteId(t.id)}>Delete</Button></Can>
+              </div>
+            </div>
+          )}
+        />
+      </AdminSurface>
 
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>Add New Teacher</DialogTitle>
-            <DialogDescription>A temporary password will be generated automatically.</DialogDescription>
+            <DialogTitle className="text-lg font-bold">Add Teacher</DialogTitle>
+            <DialogDescription className="text-xs">Temporary password auto-generates if blank.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Full Name</label>
-              <Input placeholder="e.g. Dr. Kamal Silva" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="space-y-3 py-2 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-semibold block mb-1">Full Name</label>
+                <Input placeholder="Dr. Kamal Silva" value={name} onChange={(e) => setName(e.target.value)} className="h-9 rounded-xl" />
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Username</label>
+                <Input placeholder="kamal" value={username} onChange={(e) => setUsername(e.target.value)} className="h-9 rounded-xl" />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Username</label>
-              <Input placeholder="e.g. kamal" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-semibold block mb-1">Email</label>
+                <Input type="email" placeholder="kamal@newgen.lk" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9 rounded-xl" />
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Phone</label>
+                <Input placeholder="+94 77 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9 rounded-xl" />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">
-                Temporary Password <span className="text-muted-foreground font-normal">(optional — auto-generated if blank)</span>
-              </label>
-              <Input
-                type="text"
-                placeholder="Leave blank to auto-generate password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Email</label>
-              <Input type="email" placeholder="kamal@newgen.lk" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Phone</label>
-              <Input placeholder="+94 77 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Designation</label>
-              <Input placeholder="e.g. Senior Physics Lecturer" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-semibold block mb-1">Designation</label>
+                <Input placeholder="Physics Lecturer" value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 rounded-xl" />
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Password (optional)</label>
+                <Input placeholder="Auto-generate" value={password} onChange={(e) => setPassword(e.target.value)} className="h-9 rounded-xl" />
+              </div>
             </div>
             {canAssignCenters && availableCenters.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground block pl-2 mb-1">
-                  Assigned Education Centers ({selectedCenterIds.length} selected)
-                </label>
-                <div className="rounded-2xl border border-border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                  {availableCenters.map((c) => {
-                    const isChecked = selectedCenterIds.includes(c._id);
-                    return (
-                      <label
-                        key={c._id}
-                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted cursor-pointer transition-colors"
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedCenterIds((prev) => [...prev, c._id]);
-                            } else {
-                              setSelectedCenterIds((prev) => prev.filter((id) => id !== c._id));
-                            }
-                          }}
-                        />
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <Building2 className="size-4 text-muted-foreground" />
-                          <span>{c.name}</span>
-                        </div>
-                      </label>
-                    );
-                  })}
+              <div>
+                <label className="font-semibold block mb-1">Centers ({selectedCenterIds.length})</label>
+                <div className="rounded-xl border border-border bg-[var(--admin-surface)] p-2.5 space-y-1.5 max-h-32 overflow-y-auto">
+                  {availableCenters.map((c) => (
+                    <label key={c._id} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-white cursor-pointer">
+                      <Checkbox
+                        checked={selectedCenterIds.includes(c._id)}
+                        onCheckedChange={(checked) =>
+                          setSelectedCenterIds((prev) =>
+                            checked ? [...prev, c._id] : prev.filter((id) => id !== c._id)
+                          )
+                        }
+                      />
+                      <span className="font-medium">{c.name}</span>
+                    </label>
+                  ))}
                 </div>
-                <p className="text-xs text-muted-foreground pl-2">
-                  Only Admins can assign centers. Teachers can switch between their assigned centers in the top header.
-                </p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!name || !username || createMutation.isPending}>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} className="rounded-full h-10 text-xs">Cancel</Button>
+            <Button onClick={() => createMutation.mutate()} disabled={!name || !username || createMutation.isPending} className="rounded-full h-10 px-5 text-xs">
               {createMutation.isPending ? "Adding..." : "Add Teacher"}
             </Button>
           </DialogFooter>
@@ -530,85 +404,67 @@ export default function TeachersPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editTeacher} onOpenChange={(open) => !open && setEditTeacher(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle>Edit Teacher</DialogTitle>
-            <DialogDescription>Update teacher details.</DialogDescription>
+            <DialogTitle className="text-lg font-bold">Edit Teacher</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-3 py-2 text-xs">
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Full Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
+              <label className="font-semibold block mb-1">Full Name</label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 rounded-xl" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-semibold block mb-1">Email</label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9 rounded-xl" />
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Phone</label>
+                <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="h-9 rounded-xl" />
+              </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Email</label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Phone</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground block pl-2 mb-1">Designation</label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+              <label className="font-semibold block mb-1">Designation</label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-9 rounded-xl" />
             </div>
             {canAssignCenters && availableCenters.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground block pl-2 mb-1">
-                  Assigned Education Centers ({selectedCenterIds.length} selected)
-                </label>
-                <div className="rounded-2xl border border-border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                  {availableCenters.map((c) => {
-                    const isChecked = selectedCenterIds.includes(c._id);
-                    return (
-                      <label
-                        key={c._id}
-                        className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted cursor-pointer transition-colors"
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedCenterIds((prev) => [...prev, c._id]);
-                            } else {
-                              setSelectedCenterIds((prev) => prev.filter((id) => id !== c._id));
-                            }
-                          }}
-                        />
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <Building2 className="size-4 text-muted-foreground" />
-                          <span>{c.name}</span>
-                        </div>
-                      </label>
-                    );
-                  })}
+              <div>
+                <label className="font-semibold block mb-1">Centers ({selectedCenterIds.length})</label>
+                <div className="rounded-xl border border-border bg-[var(--admin-surface)] p-2.5 space-y-1.5 max-h-32 overflow-y-auto">
+                  {availableCenters.map((c) => (
+                    <label key={c._id} className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-white cursor-pointer">
+                      <Checkbox
+                        checked={selectedCenterIds.includes(c._id)}
+                        onCheckedChange={(checked) =>
+                          setSelectedCenterIds((prev) =>
+                            checked ? [...prev, c._id] : prev.filter((id) => id !== c._id)
+                          )
+                        }
+                      />
+                      <span className="font-medium">{c.name}</span>
+                    </label>
+                  ))}
                 </div>
-                <p className="text-xs text-muted-foreground pl-2">
-                  Only Admins can assign centers. Teachers can switch between their assigned centers in the top header.
-                </p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTeacher(null)}>Cancel</Button>
-            <Button onClick={() => editMutation.mutate()} disabled={!name || editMutation.isPending}>
+            <Button variant="outline" onClick={() => setEditTeacher(null)} className="rounded-full h-10 text-xs">Cancel</Button>
+            <Button onClick={() => editMutation.mutate()} disabled={!name || editMutation.isPending} className="rounded-full h-10 px-5 text-xs">
               {editMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Temporary Password Dialog */}
       <Dialog open={!!tempPassword} onOpenChange={(open) => !open && setTempPassword(null)}>
-        <DialogContent className="max-w-md text-center">
+        <DialogContent className="max-w-sm rounded-3xl p-6 text-center">
           <DialogHeader>
             <DialogTitle>Temporary Password</DialogTitle>
-            <DialogDescription>This password will only be shown once. Please copy and share it with the teacher.</DialogDescription>
+            <DialogDescription className="text-xs">Copy and share this one-time password.</DialogDescription>
           </DialogHeader>
-          <div className="my-6 p-4 rounded-3xl bg-muted/60 border border-border flex items-center justify-between">
-            <span className="text-2xl font-bold tracking-wider text-foreground select-all font-mono">
-              {tempPassword}
-            </span>
+          <div className="my-4 p-3 rounded-2xl bg-[var(--admin-surface)] border border-border flex items-center justify-between">
+            <span className="text-xl font-bold font-mono select-all">{tempPassword}</span>
             <Button
               size="icon-sm"
               variant="outline"
@@ -617,16 +473,15 @@ export default function TeachersPage() {
                   navigator.clipboard.writeText(tempPassword);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
-                  toast.success("Password copied to clipboard");
+                  toast.success("Copied");
                 }
               }}
-              aria-label="Copy password"
             >
               {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
             </Button>
           </div>
           <DialogFooter>
-            <Button className="w-full" onClick={() => setTempPassword(null)}>Done</Button>
+            <Button className="w-full rounded-full" onClick={() => setTempPassword(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -634,24 +489,20 @@ export default function TeachersPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete this teacher?"
-        description="This cannot be undone. History will be preserved."
-        confirmLabel="Yes, Delete"
-        onConfirm={async () => {
-          if (deleteId) await deleteMutation.mutateAsync(deleteId);
-        }}
+        title="Delete teacher?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={async () => { if (deleteId) await deleteMutation.mutateAsync(deleteId); }}
       />
 
       <ConfirmDialog
         open={!!resetId}
         onOpenChange={(open) => !open && setResetId(null)}
-        title="Reset teacher password?"
-        description="This will revoke current sessions and generate a new temporary password."
-        confirmLabel="Reset Password"
+        title="Reset password?"
+        description="Generates a new temporary password and revokes active sessions."
+        confirmLabel="Reset"
         isDestructive={false}
-        onConfirm={async () => {
-          if (resetId) await resetPasswordMutation.mutateAsync(resetId);
-        }}
+        onConfirm={async () => { if (resetId) await resetPasswordMutation.mutateAsync(resetId); }}
       />
     </div>
   );

@@ -34,13 +34,14 @@ export async function createSession(
   },
   ip = "unknown",
   userAgent = "unknown"
-): Promise<{ token: string; jti: string; expiresAt: Date }> {
+): Promise<{ token: string; jti: string; expiresAt: Date; maxAge: number }> {
   await connectDB();
 
   const jti = crypto.randomUUID();
   const now = new Date();
   const idleMinutes = env.SESSION_IDLE_MINUTES;
   const expiresAt = new Date(now.getTime() + idleMinutes * 60 * 1000);
+  const maxAge = env.SESSION_ABSOLUTE_HOURS * 3600;
 
   // Create session record in MongoDB
   await SessionModel.create({
@@ -70,7 +71,7 @@ export async function createSession(
     .setExpirationTime(`${env.SESSION_ABSOLUTE_HOURS}h`)
     .sign(SECRET_KEY);
 
-  return { token, jti, expiresAt };
+  return { token, jti, expiresAt, maxAge };
 }
 
 export async function updateSessionCenter(

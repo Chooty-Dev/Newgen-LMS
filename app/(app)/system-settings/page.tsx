@@ -2,13 +2,13 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Sliders, Award, Layers, Save } from "lucide-react";
+import { Save, Sliders, Award, Layers } from "lucide-react";
+import { AdminAssetTiles, AdminSectionHeader, AdminSurface } from "@/components/admin/AdminUI";
+import { cn } from "@/lib/utils";
 
 interface SystemSettingsData {
   performanceWeights: {
@@ -39,35 +39,17 @@ export default function SystemSettingsPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="System Settings"
-          description="Configure performance score weights, thresholds, and academic grade boundaries."
-        />
-        <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-96 rounded-3xl" />
-          <Skeleton className="h-96 rounded-3xl" />
-        </div>
-      </div>
-    );
+    return <Skeleton className="h-96 rounded-[24px]" />;
   }
 
   const settings = settingsData?.data;
   if (!settings) return null;
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="System Settings"
-        description="Configure performance score weights, standing thresholds, and academic grade boundaries."
-      />
-
-      <SystemSettingsForm
-        settings={settings}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["system-settings"] })}
-      />
-    </div>
+    <SystemSettingsForm
+      settings={settings}
+      onSaved={() => queryClient.invalidateQueries({ queryKey: ["system-settings"] })}
+    />
   );
 }
 
@@ -79,16 +61,10 @@ function SystemSettingsForm({
   onSaved: () => void;
 }) {
   const [marksWeight, setMarksWeight] = React.useState(Math.round(settings.performanceWeights.marks * 100));
-  const [attendanceWeight, setAttendanceWeight] = React.useState(
-    Math.round(settings.performanceWeights.attendance * 100)
-  );
-  const [improvementWeight, setImprovementWeight] = React.useState(
-    Math.round(settings.performanceWeights.improvement * 100)
-  );
-
+  const [attendanceWeight, setAttendanceWeight] = React.useState(Math.round(settings.performanceWeights.attendance * 100));
+  const [improvementWeight, setImprovementWeight] = React.useState(Math.round(settings.performanceWeights.improvement * 100));
   const [excellentMin, setExcellentMin] = React.useState(settings.groupThresholds.excellent);
   const [mediumMin, setMediumMin] = React.useState(settings.groupThresholds.medium);
-
   const [gradeScale, setGradeScale] = React.useState(settings.gradeScale);
 
   const totalWeight = marksWeight + attendanceWeight + improvementWeight;
@@ -96,9 +72,7 @@ function SystemSettingsForm({
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      if (!isWeightsValid) {
-        throw new Error("Weights must sum exactly to 100%");
-      }
+      if (!isWeightsValid) throw new Error("Weights must sum to 100%");
       const res = await fetch("/api/v1/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -108,10 +82,7 @@ function SystemSettingsForm({
             attendance: attendanceWeight / 100,
             improvement: improvementWeight / 100,
           },
-          groupThresholds: {
-            excellent: excellentMin,
-            medium: mediumMin,
-          },
+          groupThresholds: { excellent: excellentMin, medium: mediumMin },
           gradeScale,
         }),
       });
@@ -119,12 +90,10 @@ function SystemSettingsForm({
       return res.json();
     },
     onSuccess: () => {
-      toast.success("System settings saved successfully.");
+      toast.success("Settings saved");
       onSaved();
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "Failed to save settings.");
-    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const handleGradeChange = (index: number, newMin: number) => {
@@ -133,153 +102,91 @@ function SystemSettingsForm({
     setGradeScale(updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMutation.mutate();
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        updateMutation.mutate();
+      }}
+      className="space-y-6 animate-in fade-in duration-200"
+    >
+      <AdminAssetTiles
+        columns={3}
+        items={[
+          { label: "Formula Weight", value: `${totalWeight}%`, icon: Sliders, badge: isWeightsValid ? "Balanced" : "Must be 100%", tone: 1 },
+          { label: "Excellent Min", value: `${excellentMin}%`, icon: Layers, badge: "Top tier", tone: 2 },
+          { label: "Grade Levels", value: gradeScale.length, icon: Award, badge: "Configured", tone: 3 },
+        ]}
+      />
+
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Card 1: Performance Score Weights */}
-        <Card className="rounded-3xl p-8">
-          <CardHeader className="p-0 mb-6 flex flex-row items-center gap-3">
-            <Sliders className="size-6 text-foreground" />
+        <AdminSurface className="p-6 space-y-4">
+          <AdminSectionHeader title="Score Formula" />
+          <div className="grid grid-cols-3 gap-3 text-xs">
             <div>
-              <CardTitle className="text-xl">Performance Score Formula</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Weights assigned to each component (must sum to 100%)
-              </p>
+              <label className="font-semibold block mb-1">Marks %</label>
+              <Input type="number" min={0} max={100} value={marksWeight} onChange={(e) => setMarksWeight(Number(e.target.value))} className="h-10 rounded-xl" />
             </div>
-          </CardHeader>
-          <CardContent className="p-0 space-y-5">
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Marks Score Weight (%)</label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={marksWeight}
-                onChange={(e) => setMarksWeight(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Attendance Score Weight (%)</label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={attendanceWeight}
-                onChange={(e) => setAttendanceWeight(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Improvement Trend Weight (%)</label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={improvementWeight}
-                onChange={(e) => setImprovementWeight(Number(e.target.value))}
-              />
-            </div>
-
-            <div
-              className={`p-4 rounded-2xl border text-sm flex items-center justify-between ${
-                isWeightsValid
-                  ? "bg-accent/20 border-border text-foreground"
-                  : "bg-destructive/10 border-destructive text-destructive-foreground"
-              }`}
-            >
-              <span className="font-medium">Total Formula Weight</span>
-              <span className="font-bold tabular-nums text-base">{totalWeight}%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: Performance Standing Thresholds */}
-        <Card className="rounded-3xl p-8">
-          <CardHeader className="p-0 mb-6 flex flex-row items-center gap-3">
-            <Layers className="size-6 text-foreground" />
             <div>
-              <CardTitle className="text-xl">Standing Categories</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Score boundaries for performance classifications</p>
+              <label className="font-semibold block mb-1">Attendance %</label>
+              <Input type="number" min={0} max={100} value={attendanceWeight} onChange={(e) => setAttendanceWeight(Number(e.target.value))} className="h-10 rounded-xl" />
             </div>
-          </CardHeader>
-          <CardContent className="p-0 space-y-5">
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">
-                &ldquo;Excellent&rdquo; Minimum Score (%)
-              </label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={excellentMin}
-                onChange={(e) => setExcellentMin(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">Scores equal or above this tier receive &ldquo;Excellent&rdquo;</p>
+            <div>
+              <label className="font-semibold block mb-1">Growth %</label>
+              <Input type="number" min={0} max={100} value={improvementWeight} onChange={(e) => setImprovementWeight(Number(e.target.value))} className="h-10 rounded-xl" />
             </div>
+          </div>
+          <div
+            className={cn(
+              "px-4 py-2.5 rounded-xl border text-xs flex items-center justify-between font-semibold",
+              isWeightsValid
+                ? "bg-[var(--admin-surface)] border-[var(--admin-border)] text-foreground"
+                : "bg-rose-50 border-rose-200 text-rose-600"
+            )}
+          >
+            <span>Total Weight</span>
+            <span className="tabular-nums font-bold">{totalWeight}%</span>
+          </div>
+        </AdminSurface>
 
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">
-                &ldquo;Good&rdquo; Minimum Score (%)
-              </label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={mediumMin}
-                onChange={(e) => setMediumMin(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">
-                Scores below this tier are flagged as &ldquo;Needs Help&rdquo;
-              </p>
+        <AdminSurface className="p-6 space-y-4">
+          <AdminSectionHeader title="Standing Thresholds" />
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label className="font-semibold block mb-1">Excellent Min (%)</label>
+              <Input type="number" min={0} max={100} value={excellentMin} onChange={(e) => setExcellentMin(Number(e.target.value))} className="h-10 rounded-xl" />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <label className="font-semibold block mb-1">Good Min (%)</label>
+              <Input type="number" min={0} max={100} value={mediumMin} onChange={(e) => setMediumMin(Number(e.target.value))} className="h-9 rounded-xl" />
+            </div>
+          </div>
+        </AdminSurface>
       </div>
 
-      {/* Card 3: Grade Boundaries */}
-      <Card className="rounded-3xl p-8">
-        <CardHeader className="p-0 mb-6 flex flex-row items-center gap-3">
-          <Award className="size-6 text-foreground" />
-          <div>
-            <CardTitle className="text-xl">Grade Boundaries</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Minimum percentage marks required for each letter grade
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
-            {gradeScale.map((item, index) => (
-              <div key={item.grade} className="p-4 rounded-2xl bg-card border border-border space-y-2">
-                <span className="text-lg font-bold block">{item.grade} Grade</span>
-                <label className="text-xs text-muted-foreground block">Minimum %</label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={item.min}
-                  onChange={(e) => handleGradeChange(index, Number(e.target.value))}
-                />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <AdminSurface className="p-6">
+        <AdminSectionHeader title="Grade Scale" />
+        <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {gradeScale.map((item, index) => (
+            <div key={item.grade} className="p-3.5 rounded-2xl bg-[var(--admin-surface)] border border-[var(--admin-border)] space-y-1.5 text-xs">
+              <span className="text-base font-bold block">{item.grade}</span>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={item.min}
+                onChange={(e) => handleGradeChange(index, Number(e.target.value))}
+                className="h-9 rounded-xl bg-white"
+              />
+            </div>
+          ))}
+        </div>
+      </AdminSurface>
 
       <div className="flex justify-end">
-        <Button
-          type="submit"
-          disabled={!isWeightsValid || updateMutation.isPending}
-          className="rounded-full px-8 gap-2"
-        >
-          <Save className="size-5" />
-          {updateMutation.isPending ? "Saving..." : "Save System Settings"}
+        <Button type="submit" disabled={!isWeightsValid || updateMutation.isPending} className="rounded-full h-10 px-6 text-xs font-bold gap-1.5">
+          <Save className="size-4" />
+          <span>{updateMutation.isPending ? "Saving..." : "Save Settings"}</span>
         </Button>
       </div>
     </form>

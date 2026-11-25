@@ -57,14 +57,18 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     setIsLoggingOut(true);
     setOpenSignOut(false);
     try {
+      localStorage.removeItem("newgen_last_active");
+      localStorage.setItem("newgen_logout_event", String(Date.now()));
+    } catch {
+      // Ignore
+    }
+    try {
       await fetch("/api/v1/auth/logout", { method: "POST" });
     } catch {
       // Ignore network errors on logout
     }
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setIsLoggingOut(false);
-    router.push("/login");
-    router.refresh();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    window.location.href = "/login";
   };
 
   return (

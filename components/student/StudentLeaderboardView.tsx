@@ -122,7 +122,7 @@ export function StudentLeaderboardView() {
         {/* Right Illustration */}
         <div className="relative w-full h-44 sm:h-52 md:h-full md:absolute md:right-4 md:top-0 md:bottom-0 md:w-56 lg:w-64 flex items-center justify-center md:justify-end shrink-0 z-10">
           <Image
-            src="/images/achivements.webp"
+            src="/images/best-student.webp"
             alt="Leaderboard Achievements"
             fill
             priority

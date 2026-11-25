@@ -2,17 +2,15 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { SearchInput } from "@/components/shared/SearchInput";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Shield, RotateCcw, Save } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AdminSurface, AdminToolbar } from "@/components/admin/AdminUI";
 
 interface PermissionsOverview {
   moduleCatalog: Record<string, { label: string; permissions: string[] }>;
@@ -29,6 +27,7 @@ interface PermissionsOverview {
 
 export default function PermissionsPage() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = React.useState<"roles" | "users">("roles");
 
   const { data: permData, isLoading } = useQuery<{ data: PermissionsOverview }>({
     queryKey: ["permissions-overview"],
@@ -40,55 +39,55 @@ export default function PermissionsPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Role & User Permissions"
-          description="Configure system access rights for each role and individual users."
-        />
-        <Skeleton className="h-96 rounded-3xl" />
-      </div>
-    );
+    return <Skeleton className="h-96 rounded-[24px]" />;
   }
 
   const overview = permData?.data;
   if (!overview) return null;
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Role & User Permissions"
-        description="Configure system access rights for each role and individual users."
-      />
+    <div className="space-y-6 animate-in fade-in duration-200">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[var(--admin-surface)] border border-[var(--admin-border)]">
+          <button
+            type="button"
+            onClick={() => setActiveTab("roles")}
+            className={cn(
+              "px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer",
+              activeTab === "roles" ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)]"
+            )}
+          >
+            Role Matrix
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("users")}
+            className={cn(
+              "px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer",
+              activeTab === "users" ? "bg-[var(--primary)] text-white" : "text-[var(--muted-foreground)]"
+            )}
+          >
+            User Overrides
+          </button>
+        </div>
+      </div>
 
-      <Tabs defaultValue="roles" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="roles">Role Permissions</TabsTrigger>
-          <TabsTrigger value="users">User Overrides</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="roles">
-          <RolePermissionsTab
-            key={JSON.stringify(overview.rolePermissions)}
-            overview={overview}
-            onSaved={() => queryClient.invalidateQueries({ queryKey: ["permissions-overview"] })}
-          />
-        </TabsContent>
-
-        <TabsContent value="users">
-          <UserOverridesTab
-            overview={overview}
-            onSaved={() => queryClient.invalidateQueries({ queryKey: ["permissions-overview"] })}
-          />
-        </TabsContent>
-      </Tabs>
+      {activeTab === "roles" ? (
+        <RolePermissionsTab
+          key={JSON.stringify(overview.rolePermissions)}
+          overview={overview}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["permissions-overview"] })}
+        />
+      ) : (
+        <UserOverridesTab
+          overview={overview}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ["permissions-overview"] })}
+        />
+      )}
     </div>
   );
 }
 
-// -------------------------------------------------------------
-// Tab 1: Role Permissions
-// -------------------------------------------------------------
 function RolePermissionsTab({
   overview,
   onSaved,
@@ -131,24 +130,18 @@ function RolePermissionsTab({
       const res = await fetch("/api/v1/permissions/role", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: selectedRole,
-          permissions: activePermissions,
-        }),
+        body: JSON.stringify({ role: selectedRole, permissions: activePermissions }),
       });
-      if (!res.ok) throw new Error("Failed to save role permissions");
+      if (!res.ok) throw new Error("Failed to save permissions");
       return res.json();
     },
     onSuccess: () => {
-      toast.success(`Permissions for ${selectedRole} saved successfully.`);
+      toast.success(`Saved ${selectedRole} permissions`);
       onSaved();
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "Could not save role permissions.");
-    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  // Filter modules by search
   const filteredModules = Object.entries(overview.moduleCatalog).filter(([key, group]) => {
     if (!search) return true;
     const term = search.toLowerCase();
@@ -160,73 +153,69 @@ function RolePermissionsTab({
   });
 
   return (
-    <div className="space-y-6">
-      {/* Role Picker Pills */}
-      <div className="flex flex-wrap gap-3">
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-2">
         {["admin", "teacher", "staff", "student", "super_admin"].map((role) => (
-          <Button
+          <button
             key={role}
-            variant={selectedRole === role ? "default" : "outline"}
+            type="button"
             onClick={() => handleRoleChange(role)}
-            className="rounded-full px-6 capitalize"
+            className={cn(
+              "px-4 py-2 rounded-full text-xs font-bold capitalize border transition-all cursor-pointer",
+              selectedRole === role
+                ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                : "bg-white text-[var(--foreground)] border-[var(--admin-border)] hover:bg-[var(--admin-surface)]"
+            )}
           >
             {role.replace("_", " ")}
-          </Button>
+          </button>
         ))}
       </div>
 
       {isSuperAdmin ? (
-        <Card className="rounded-3xl p-8 bg-accent/20 border-2 border-border">
-          <div className="flex items-center gap-4">
-            <Shield className="size-8 text-foreground" />
-            <div>
-              <h3 className="text-xl font-bold">Super Admin Full Access</h3>
-              <p className="text-base text-muted-foreground mt-1">
-                The Super Admin role unconditionally has all system permissions and cannot be modified.
-              </p>
-            </div>
+        <AdminSurface tinted className="p-6 flex items-center gap-4">
+          <Shield className="size-7 text-[var(--primary)] shrink-0" />
+          <div>
+            <p className="font-bold text-sm text-foreground">Super Admin Root Access</p>
+            <p className="text-xs text-muted-foreground">All permissions enabled unconditionally.</p>
           </div>
-        </Card>
+        </AdminSurface>
       ) : (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <SearchInput
-              value={search}
-              onValueChange={setSearch}
-              placeholder="Filter module permissions..."
-              className="max-w-md"
-            />
-            <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
-              className="rounded-full px-8 gap-2"
-            >
-              <Save className="size-5" />
-              {saveMutation.isPending ? "Saving..." : "Save Role Permissions"}
-            </Button>
-          </div>
+          <AdminToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Filter modules..."
+            actions={
+              <Button
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+                className="rounded-full h-10 px-5 text-xs font-bold gap-1.5"
+              >
+                <Save className="size-4" />
+                <span>{saveMutation.isPending ? "Saving..." : "Save Permissions"}</span>
+              </Button>
+            }
+          />
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {filteredModules.map(([modKey, modGroup]) => {
               const allChecked = modGroup.permissions.every((p) => activePermissions.includes(p));
               const someChecked = modGroup.permissions.some((p) => activePermissions.includes(p));
 
               return (
-                <Card key={modKey} className="rounded-3xl p-6">
-                  <CardHeader className="p-0 mb-4 flex flex-row items-center justify-between border-b border-border/50 pb-4">
-                    <div>
-                      <CardTitle className="text-xl">{modGroup.label}</CardTitle>
-                      <p className="text-sm text-muted-foreground">Module: {modKey}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-muted-foreground">Full Module Access</span>
+                <AdminSurface key={modKey} className="p-5">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--admin-border)]">
+                    <h3 className="font-bold text-sm text-foreground">{modGroup.label}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>All</span>
                       <Switch
                         checked={allChecked || someChecked}
                         onCheckedChange={() => toggleAllInModule(modGroup.permissions)}
                       />
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-0 pt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  </div>
+                  <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                     {modGroup.permissions.map((perm) => {
                       const isExclusive = overview.superAdminExclusive.includes(perm);
                       const isChecked = activePermissions.includes(perm);
@@ -234,13 +223,11 @@ function RolePermissionsTab({
                       return (
                         <div
                           key={perm}
-                          className="flex items-center justify-between p-3 rounded-2xl bg-accent/20 border border-border/40"
+                          className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[var(--admin-surface)] border border-[var(--admin-border)]"
                         >
-                          <div className="pr-2">
-                            <p className="text-sm font-medium text-foreground">{perm}</p>
-                            {isExclusive && (
-                              <span className="text-xs text-muted-foreground">Super Admin Only</span>
-                            )}
+                          <div className="pr-2 min-w-0">
+                            <p className="text-xs font-semibold text-foreground truncate">{perm}</p>
+                            {isExclusive && <span className="text-[10px] text-muted-foreground">Root Only</span>}
                           </div>
                           <Switch
                             checked={isChecked}
@@ -250,8 +237,8 @@ function RolePermissionsTab({
                         </div>
                       );
                     })}
-                  </CardContent>
-                </Card>
+                  </div>
+                </AdminSurface>
               );
             })}
           </div>
@@ -261,9 +248,6 @@ function RolePermissionsTab({
   );
 }
 
-// -------------------------------------------------------------
-// Tab 2: User Overrides
-// -------------------------------------------------------------
 function UserOverridesTab({
   overview,
   onSaved,
@@ -274,7 +258,6 @@ function UserOverridesTab({
   const [selectedUserId, setSelectedUserId] = React.useState<string>("");
   const [isResetConfirmOpen, setIsResetConfirmOpen] = React.useState(false);
 
-  // Fetch users for the picker
   const { data: usersData } = useQuery<{
     data: Array<{ id: string; name: string; username: string; role: string }>;
   }>({
@@ -299,23 +282,16 @@ function UserOverridesTab({
       const res = await fetch("/api/v1/permissions/user", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: activeUserId,
-          grants,
-          revokes,
-          reset: !!reset,
-        }),
+        body: JSON.stringify({ userId: activeUserId, grants, revokes, reset: !!reset }),
       });
       if (!res.ok) throw new Error("Failed to update user permissions");
       return res.json();
     },
     onSuccess: () => {
-      toast.success("User permissions updated successfully.");
+      toast.success("Overrides updated");
       onSaved();
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "Failed to update user permissions.");
-    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const toggleGrant = (perm: string) => {
@@ -329,78 +305,56 @@ function UserOverridesTab({
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="rounded-3xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex-1 max-w-md">
-            <label className="text-sm font-medium text-muted-foreground mb-1 block">Select User</label>
-            <Select value={activeUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.username}) — Role: {u.role}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-3 pt-4 sm:pt-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsResetConfirmOpen(true)}
-              className="rounded-full gap-2"
-            >
-              <RotateCcw className="size-4" />
-              Reset to Role Defaults
-            </Button>
-            <Button
-              onClick={() => saveMutation.mutate(false)}
-              disabled={saveMutation.isPending}
-              className="rounded-full px-8 gap-2"
-            >
-              <Save className="size-5" />
-              Save Overrides
-            </Button>
-          </div>
+    <div className="space-y-5">
+      <AdminSurface className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex-1 max-w-md">
+          <Select value={activeUserId} onChange={(e) => setSelectedUserId(e.target.value)} className="h-10 rounded-full text-xs">
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} (@{u.username})
+              </option>
+            ))}
+          </Select>
         </div>
-      </Card>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsResetConfirmOpen(true)} className="rounded-full h-10 text-xs gap-1.5">
+            <RotateCcw className="size-3.5" />
+            <span>Reset</span>
+          </Button>
+          <Button onClick={() => saveMutation.mutate(false)} disabled={saveMutation.isPending} className="rounded-full h-10 px-5 text-xs font-bold gap-1.5">
+            <Save className="size-3.5" />
+            <span>Save</span>
+          </Button>
+        </div>
+      </AdminSurface>
 
       {selectedUser && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(overview.moduleCatalog).map(([modKey, modGroup]) => (
-            <Card key={modKey} className="rounded-3xl p-6">
-              <CardHeader className="p-0 mb-4 border-b border-border/50 pb-3">
-                <CardTitle className="text-xl">{modGroup.label}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {modGroup.permissions.map((perm) => {
-                  const isGranted = grants.includes(perm);
-                  const isRevoked = revokes.includes(perm);
-
-                  return (
-                    <div
-                      key={perm}
-                      className="p-3 rounded-2xl bg-accent/20 border border-border/40 space-y-2"
-                    >
-                      <p className="text-sm font-medium text-foreground">{perm}</p>
-                      <div className="flex items-center justify-between pt-1">
-                        <label className="text-xs text-muted-foreground">Grant Extra</label>
-                        <Switch
-                          checked={isGranted}
-                          onCheckedChange={() => toggleGrant(perm)}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <label className="text-xs text-muted-foreground">Explicit Revoke</label>
-                        <Switch
-                          checked={isRevoked}
-                          onCheckedChange={() => toggleRevoke(perm)}
-                        />
-                      </div>
+            <AdminSurface key={modKey} className="p-5">
+              <h3 className="font-bold text-sm text-foreground pb-3 mb-3 border-b border-[var(--admin-border)]">
+                {modGroup.label}
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {modGroup.permissions.map((perm) => (
+                  <div
+                    key={perm}
+                    className="p-3 rounded-xl bg-[var(--admin-surface)] border border-[var(--admin-border)] space-y-2 text-xs"
+                  >
+                    <p className="font-semibold text-foreground">{perm}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Grant</span>
+                      <Switch checked={grants.includes(perm)} onCheckedChange={() => toggleGrant(perm)} />
                     </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Revoke</span>
+                      <Switch checked={revokes.includes(perm)} onCheckedChange={() => toggleRevoke(perm)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </AdminSurface>
           ))}
         </div>
       )}
@@ -408,9 +362,9 @@ function UserOverridesTab({
       <ConfirmDialog
         open={isResetConfirmOpen}
         onOpenChange={setIsResetConfirmOpen}
-        title="Reset User Permissions"
-        description="Are you sure you want to reset this user's permissions back to their default role permissions? All custom grants and revokes will be cleared."
-        confirmLabel="Yes, Reset"
+        title="Reset user permissions?"
+        description="Restores role default permissions."
+        confirmLabel="Reset"
         onConfirm={() => {
           saveMutation.mutate(true);
           setGrants([]);

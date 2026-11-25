@@ -1,9 +1,11 @@
+import "@/modules/subjects/model";
 import { User, StudentProfile, TeacherProfile, StaffProfile, IUser } from "./model";
 import { Center } from "@/modules/centers/model";
 import { ClassModel, Enrollment } from "@/modules/classes/model";
 import { Assessment } from "@/modules/exams/model";
 import { Mark } from "@/modules/marks/model";
 import { PerformanceSnapshot } from "@/modules/analysis/model";
+import { computeStudentScore } from "@/modules/analysis/engine/score";
 import { UserPermissionModel } from "@/modules/permissions/model";
 import { invalidatePermissionCache } from "@/core/rbac/resolver";
 import { canMutateUser } from "@/core/rbac/policies";
@@ -33,6 +35,8 @@ export class UserService {
       position?: string;
       centerIds?: string[];
       permissions?: string[];
+      assignedClassIds?: string[];
+      assignedAssessmentIds?: string[];
     }
   ): Promise<{ user: IUser; temporaryPassword: string }> {
     await connectDB();
@@ -150,6 +154,32 @@ export class UserService {
           revokes: [],
         });
         invalidatePermissionCache(user._id.toString());
+      }
+
+      // Assign staff to classes if provided
+      if (data.assignedClassIds && data.assignedClassIds.length > 0) {
+        const classObjIds = data.assignedClassIds
+          .filter((id) => mongoose.isValidObjectId(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+        if (classObjIds.length > 0) {
+          await ClassModel.updateMany(
+            { _id: { $in: classObjIds } },
+            { $addToSet: { staffIds: user._id } }
+          );
+        }
+      }
+
+      // Assign staff to assessments if provided
+      if (data.assignedAssessmentIds && data.assignedAssessmentIds.length > 0) {
+        const assessmentObjIds = data.assignedAssessmentIds
+          .filter((id: string) => mongoose.isValidObjectId(id))
+          .map((id: string) => new mongoose.Types.ObjectId(id));
+        if (assessmentObjIds.length > 0) {
+          await Assessment.updateMany(
+            { _id: { $in: assessmentObjIds } },
+            { $addToSet: { evaluatorIds: user._id } }
+          );
+        }
       }
     }
 
@@ -498,11 +528,45 @@ export class UserService {
     const profiles = await StaffProfile.find({ userId: { $in: userIds } }).lean();
     const profileMap = new Map(profiles.map((p) => [p.userId.toString(), p]));
 
+    const staffClasses = await ClassModel.find({
+      staffIds: { $in: userIds },
+      deletedAt: null,
+    }).select("_id name staffIds").lean();
+
+    const staffClassesMap = new Map<string, Array<{ id: string; name: string }>>();
+    for (const c of staffClasses) {
+      for (const sId of c.staffIds || []) {
+        const key = sId.toString();
+        if (!staffClassesMap.has(key)) {
+          staffClassesMap.set(key, []);
+        }
+        staffClassesMap.get(key)!.push({ id: c._id.toString(), name: c.name });
+      }
+    }
+
+    const staffAssessments = await Assessment.find({
+      evaluatorIds: { $in: userIds },
+      deletedAt: null,
+    }).select("_id title evaluatorIds").lean();
+
+    const staffAssessmentsMap = new Map<string, Array<{ id: string; title: string }>>();
+    for (const a of staffAssessments) {
+      for (const sId of a.evaluatorIds || []) {
+        const key = sId.toString();
+        if (!staffAssessmentsMap.has(key)) {
+          staffAssessmentsMap.set(key, []);
+        }
+        staffAssessmentsMap.get(key)!.push({ id: a._id.toString(), title: a.title });
+      }
+    }
+
     const userPerms = await UserPermissionModel.find({ userId: { $in: userIds } }).lean();
     const permMap = new Map(userPerms.map((up) => [up.userId.toString(), (up.grants || []) as string[]]));
 
     const data = users.map((u) => {
       const p = profileMap.get(u._id.toString());
+      const assignedCls = staffClassesMap.get(u._id.toString()) || [];
+      const assignedAsm = staffAssessmentsMap.get(u._id.toString()) || [];
       return {
         id: u._id.toString(),
         name: u.name,
@@ -514,6 +578,10 @@ export class UserService {
         title: p?.title || "Staff Member",
         position: p?.position || "Coordinator",
         permissions: permMap.get(u._id.toString()) || [],
+        assignedClasses: assignedCls,
+        assignedClassIds: assignedCls.map((c) => c.id),
+        assignedAssessments: assignedAsm,
+        assignedAssessmentIds: assignedAsm.map((a) => a.id),
       };
     });
 
@@ -615,16 +683,25 @@ export class UserService {
     const classIds = enrollments.map((e) => e.classId);
     const classes = await ClassModel.find({
       _id: { $in: classIds },
-    }).lean();
+    })
+      .populate("subjectId", "name code")
+      .populate("teacherId", "name")
+      .lean();
     const classMap = new Map(classes.map((c) => [c._id.toString(), c]));
 
     const enrichedEnrollments = enrollments.map((e) => {
       const cls = classMap.get(e.classId.toString());
+      const sub = cls?.subjectId as unknown as { name?: string; code?: string } | null;
+      const teach = cls?.teacherId as unknown as { name?: string } | null;
       return {
         id: e._id.toString(),
         classId: e.classId.toString(),
         className: cls?.name || "Unknown Class",
         slug: cls?.slug,
+        grade: cls?.grade ? `Grade ${cls.grade}` : "-",
+        subject: sub ? `${sub.code ? `${sub.code} - ` : ""}${sub.name || ""}` : "-",
+        teacher: teach?.name || "-",
+        schedule: cls?.schedule || null,
         type: cls?.schedule?.type || "regular",
         status: e.status,
         enrolledAt: e.createdAt,
@@ -636,35 +713,46 @@ export class UserService {
     const marks = await Mark.find({
       studentId,
       deletedAt: null,
-    }).sort({ createdAt: -1 }).lean();
+    }).sort({ evaluatedAt: -1, createdAt: -1 }).lean();
 
     const assessmentIds = marks.map((m) => m.assessmentId);
     const assessments = await Assessment.find({
       _id: { $in: assessmentIds },
-    }).lean();
+    })
+      .populate("subjectId", "name code")
+      .lean();
     const assessmentMap = new Map(assessments.map((a) => [a._id.toString(), a]));
 
     const enrichedMarks = marks.map((m) => {
       const a = assessmentMap.get(m.assessmentId.toString());
+      const sub = a?.subjectId as unknown as { name?: string; code?: string } | null;
       return {
         id: m._id.toString(),
         assessmentId: m.assessmentId.toString(),
         assessmentTitle: a?.title || "Assessment",
         assessmentSlug: a?.slug,
-        type: a?.type || "exam",
+        type: a?.type || m.type || "exam",
+        subject: sub ? `${sub.code ? `${sub.code} - ` : ""}${sub.name || ""}` : "-",
         score: m.score,
-        totalMarks: a?.totalMarks || 100,
+        totalMarks: m.totalMarks || a?.totalMarks || 100,
         grade: m.grade,
-        percentage: a?.totalMarks ? Math.round((m.score / a.totalMarks) * 100) : m.score,
+        percentage: m.totalMarks
+          ? Math.round((m.score / m.totalMarks) * 100)
+          : a?.totalMarks
+          ? Math.round((m.score / a.totalMarks) * 100)
+          : m.percentage ?? m.score,
+        attendanceStatus: m.attendanceStatus,
+        status: m.status,
         feedback: m.remarks,
-        evaluatedAt: m.createdAt,
+        evaluatedAt: m.evaluatedAt || m.createdAt,
       };
     });
 
-    // Fetch performance snapshots
-    const snapshots = await PerformanceSnapshot.find({
-      studentId,
-    }).sort({ period: -1 }).limit(12).lean();
+    // Fetch live performance breakdown & historical snapshots
+    const [snapshots, liveScore] = await Promise.all([
+      PerformanceSnapshot.find({ studentId }).sort({ period: -1 }).limit(12).lean(),
+      computeStudentScore(studentId),
+    ]);
 
     const latestSnapshot = snapshots[0];
 
@@ -680,8 +768,18 @@ export class UserService {
       grade: profile?.grade || "-",
       dateOfBirth: profile?.dateOfBirth,
       guardian: profile?.guardian,
-      performanceScore: latestSnapshot?.score ?? 70,
-      group: latestSnapshot?.group ?? "medium",
+      performanceScore: liveScore.displayScore ?? latestSnapshot?.score ?? 0,
+      hasGradedScore: liveScore.displayScore !== null,
+      marksScore: liveScore.marksScore !== null ? Math.round(liveScore.marksScore) : null,
+      attendanceScore: liveScore.attendanceScore !== null ? Math.round(liveScore.attendanceScore) : null,
+      group: liveScore.group ?? latestSnapshot?.group ?? "medium",
+      groupLabel: liveScore.groupLabel,
+      attendanceBreakdown: liveScore.attendanceBreakdown,
+      subjectBreakdown: liveScore.subjects.map((s) => ({
+        subject: s.subjectName,
+        average: Math.round(s.score),
+        count: s.assessmentCount,
+      })),
       enrollments: enrichedEnrollments,
       marks: enrichedMarks,
       snapshots: snapshots.map((s) => ({

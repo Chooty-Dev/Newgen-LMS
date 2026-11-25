@@ -45,24 +45,26 @@ export function FloatingSignOut({ hideOnMobile }: FloatingSignOutProps = {}) {
     setIsLoggingOut(true);
     setOpen(false);
     try {
+      localStorage.removeItem("newgen_last_active");
+      localStorage.setItem("newgen_logout_event", String(Date.now()));
+    } catch {
+      // Ignore
+    }
+    try {
       await fetch("/api/v1/auth/logout", { method: "POST" });
     } catch {
       // Ignore network errors on logout
     }
     // Brief visual pause for pleasant feedback
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    // Reset state before navigation so cached router tree never preserves isLoggingOut = true
-    setIsLoggingOut(false);
-    router.push("/login");
-    router.refresh();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    window.location.href = "/login";
   };
 
   return (
     <>
       <div
-        className={`fixed bottom-4 right-4 z-40 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] ${
-          shouldHideOnMobile ? "hidden md:block" : ""
-        }`}
+        className={`fixed bottom-4 right-4 z-40 pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] ${shouldHideOnMobile ? "hidden md:block" : ""
+          }`}
       >
         <AlertDialog open={open} onOpenChange={setOpen}>
           <TooltipProvider>
@@ -117,11 +119,6 @@ export function FloatingSignOut({ hideOnMobile }: FloatingSignOutProps = {}) {
           className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/95 text-foreground backdrop-blur-md transition-all duration-300 animate-in fade-in"
         >
           <div className="flex flex-col items-center justify-center p-8 max-w-md w-full text-center space-y-6">
-            <div className="relative flex items-center justify-center size-20">
-              <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse" />
-              <div className="size-16 rounded-full border-4 border-transparent border-t-primary border-r-primary animate-spin" />
-              <LogOut className="size-7 text-primary animate-pulse" />
-            </div>
             <div className="space-y-2">
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
                 Logging you out...

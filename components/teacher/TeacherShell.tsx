@@ -55,6 +55,12 @@ export function TeacherShell({ children }: TeacherShellProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      localStorage.removeItem("newgen_last_active");
+      localStorage.setItem("newgen_logout_event", String(Date.now()));
+    } catch {
+      // Ignore
+    }
+    try {
       await fetch("/api/v1/auth/logout", { method: "POST" });
     } catch {
       // Ignore network errors
@@ -69,57 +75,57 @@ export function TeacherShell({ children }: TeacherShellProps) {
     icon: React.ComponentType<{ className?: string }>;
     badge?: string;
   }> = [
-    {
-      label: "Dashboard",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      label: "Marks",
-      href: "/marks",
-      icon: CheckSquare,
-    },
-    {
-      label: "Analysis",
-      href: "/analysis",
-      icon: TrendingUp,
-    },
-    {
-      label: "Classes",
-      href: "/classes",
-      icon: BookOpen,
-    },
-    {
-      label: "Exams & Tests",
-      href: "/exams",
-      icon: FileCheck,
-    },
-    {
-      label: "Subjects",
-      href: "/subjects",
-      icon: BookMarked,
-    },
-    {
-      label: "Announcements",
-      href: "/announcements",
-      icon: Bell,
-    },
-    {
-      label: "Students",
-      href: "/students",
-      icon: Users,
-    },
-    {
-      label: "Staff Members",
-      href: "/staff",
-      icon: UserCheck,
-    },
-    {
-      label: "Leaderboard",
-      href: "/leaderboard",
-      icon: Trophy,
-    },
-  ];
+      {
+        label: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        label: "Marks",
+        href: "/marks",
+        icon: CheckSquare,
+      },
+      {
+        label: "Analysis",
+        href: "/analysis",
+        icon: TrendingUp,
+      },
+      {
+        label: "Classes",
+        href: "/classes",
+        icon: BookOpen,
+      },
+      {
+        label: "Exams & Tests",
+        href: "/exams",
+        icon: FileCheck,
+      },
+      {
+        label: "Subjects",
+        href: "/subjects",
+        icon: BookMarked,
+      },
+      {
+        label: "Announcements",
+        href: "/announcements",
+        icon: Bell,
+      },
+      {
+        label: "Students",
+        href: "/students",
+        icon: Users,
+      },
+      {
+        label: "Staff Members",
+        href: "/staff",
+        icon: UserCheck,
+      },
+      {
+        label: "Leaderboard",
+        href: "/leaderboard",
+        icon: Trophy,
+      },
+    ];
 
   const accountMenuItems = [
     {
@@ -262,19 +268,6 @@ export function TeacherShell({ children }: TeacherShellProps) {
             <LogOut className="size-4.5 text-rose-500 transition-transform group-hover:scale-110" />
             <span>Log out</span>
           </button>
-        </div>
-      </div>
-
-      {/* Bottom Proud Educator Badge - Clean full-size graphic, no background, no shadows */}
-      <div className="mt-auto pt-6 pb-2 flex flex-col items-center justify-center">
-        <div className="relative w-full max-w-[210px] aspect-[16/9] flex items-center justify-center">
-          <Image
-            src="/images/proud-educator.webp"
-            alt="Proud Educator"
-            fill
-            className="object-contain"
-            priority
-          />
         </div>
       </div>
     </div>

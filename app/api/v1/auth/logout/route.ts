@@ -10,15 +10,19 @@ export const POST = defineRoute({
     }
 
     const response = NextResponse.json({ data: { success: true } });
-    response.cookies.set({
-      name: COOKIE_NAME,
-      value: "",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      expires: new Date(0),
-      path: "/",
-    });
+    const cookieNames = [COOKIE_NAME, "newgen_session", "__Host-newgen_session"];
+    for (const name of cookieNames) {
+      response.cookies.set({
+        name,
+        value: "",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 0,
+        expires: new Date(0),
+        path: "/",
+      });
+    }
 
     return response;
   },

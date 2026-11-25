@@ -31,6 +31,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { StudentAnnouncementsView } from "@/components/student/StudentAnnouncementsView";
 import { TeacherAnnouncementsView } from "@/components/teacher/TeacherAnnouncementsView";
+import { AdminAnnouncementsView } from "@/components/admin/AdminAnnouncementsView";
 
 interface AnnouncementRecord {
   id: string;
@@ -52,6 +53,9 @@ export default function AnnouncementsPage() {
   }
   if (user?.role === "teacher") {
     return <TeacherAnnouncementsView />;
+  }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminAnnouncementsView />;
   }
   return <StaffAnnouncementsPage />;
 }

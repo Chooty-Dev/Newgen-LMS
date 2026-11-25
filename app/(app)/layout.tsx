@@ -7,8 +7,11 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { IdleTimeout } from "@/components/layout/IdleTimeout";
 import { CenterSwitchOverlay } from "@/components/layout/CenterSwitchOverlay";
 import { FloatingSignOut } from "@/components/layout/FloatingSignOut";
+import { RouteHistoryTracker } from "@/components/shared/BackNavigation";
 import { StudentShell } from "@/components/student/StudentShell";
 import { TeacherShell } from "@/components/teacher/TeacherShell";
+import { StaffShell } from "@/components/staff/StaffShell";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 function AppContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -41,7 +44,17 @@ function AppContent({ children }: { children: React.ReactNode }) {
     return <TeacherShell>{children}</TeacherShell>;
   }
 
-  // Staff, Teacher, Admin, Super Admin Shell
+  // If role is staff, use dedicated StaffShell (matching 100% reference design)
+  if (user?.role === "staff") {
+    return <StaffShell>{children}</StaffShell>;
+  }
+
+  // If role is admin or super_admin, use dedicated AdminShell
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminShell>{children}</AdminShell>;
+  }
+
+  // Admin, Super Admin Shell
   return (
     <>
       <div className="min-h-screen flex bg-background text-foreground font-sans">
@@ -69,6 +82,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <React.Suspense fallback={<div className="min-h-screen bg-background" />}>
+        <RouteHistoryTracker />
         <AppContent>{children}</AppContent>
       </React.Suspense>
       <IdleTimeout />

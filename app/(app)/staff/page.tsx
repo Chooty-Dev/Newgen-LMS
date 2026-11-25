@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { TeacherStaffView } from "@/components/teacher/TeacherStaffView";
+import { AdminStaffView } from "@/components/admin/AdminStaffView";
 
 interface StaffRecord {
   id: string;
@@ -45,7 +46,13 @@ export default function StaffPage() {
   if (user?.role === "teacher") {
     return <TeacherStaffView />;
   }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminStaffView />;
+  }
+  return <LegacyStaffView />;
+}
 
+function LegacyStaffView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");

@@ -18,7 +18,7 @@ export const sessionAttendanceBatchSchema = z.object({
   records: z.array(
     z.object({
       studentId: z.string().min(1),
-      classId: z.string().min(1),
+      classId: z.string().optional().default(""),
       status: z.enum(["present", "absent", "late", "excused"]),
     })
   ),

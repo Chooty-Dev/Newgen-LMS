@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { TeacherSubjectsView } from "@/components/teacher/TeacherSubjectsView";
+import { AdminSubjectsView } from "@/components/admin/AdminSubjectsView";
 
 interface SubjectRecord {
   id: string;
@@ -42,7 +43,13 @@ export default function SubjectsPage() {
   if (user?.role === "teacher") {
     return <TeacherSubjectsView />;
   }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminSubjectsView />;
+  }
+  return <LegacySubjectsView />;
+}
 
+function LegacySubjectsView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");

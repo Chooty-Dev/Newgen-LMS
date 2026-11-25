@@ -1,3 +1,4 @@
+import "@/modules/subjects/model";
 import { Mark } from "@/modules/marks/model";
 import { Attendance } from "@/modules/attendance/model";
 import { PerformanceSnapshot } from "./model";
@@ -9,6 +10,7 @@ import {
   AttendanceItem,
 } from "./engine";
 import { computeStudentScore, saveDailyPerformanceSnapshot } from "./engine/score";
+import { getStudentTeacherInsights as fetchStudentTeacherInsights } from "./teacher-insights.service";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
 
@@ -197,6 +199,19 @@ export class AnalysisService {
     };
   }
 
+  static async getStudentTeacherInsights(
+    idOrUsername: string,
+    options?: {
+      forceRefresh?: boolean;
+      actorId?: string;
+      sessionId?: string;
+      ipAddress?: string;
+      now?: Date;
+    }
+  ) {
+    return fetchStudentTeacherInsights(idOrUsername, options);
+  }
+
   // Teacher & Admin Dashboard & Analytics data (Strictly scoped when teacherId is passed)
   static async getTeacherAnalytics(centerId?: string, teacherId?: string) {
     await connectDB();
@@ -206,7 +221,7 @@ export class AnalysisService {
         ? new mongoose.Types.ObjectId(centerId)
         : null;
 
-    let studentFilter: Record<string, unknown> = {
+    const studentFilter: Record<string, unknown> = {
       role: "student",
       deletedAt: null,
       ...(centerObjId ? { centerId: centerObjId } : {}),

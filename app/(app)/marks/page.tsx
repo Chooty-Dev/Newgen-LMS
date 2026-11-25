@@ -52,6 +52,7 @@ interface StudentItem {
 
 import { StudentMarksView } from "@/components/student/StudentMarksView";
 import { TeacherMarksView } from "@/components/teacher/TeacherMarksView";
+import { AdminMarksView } from "@/components/admin/AdminMarksView";
 
 export default function MarksPage() {
   const { user } = useAuth();
@@ -60,6 +61,9 @@ export default function MarksPage() {
   }
   if (user?.role === "teacher") {
     return <TeacherMarksView />;
+  }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminMarksView />;
   }
   return <StaffMarksPage />;
 }

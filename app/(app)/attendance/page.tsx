@@ -24,7 +24,9 @@ import {
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { StaffAttendanceView } from "@/components/staff/StaffAttendanceView";
 import { TeacherAttendanceView } from "@/components/teacher/TeacherAttendanceView";
+import { AdminAttendanceView } from "@/components/admin/AdminAttendanceView";
 
 interface OverviewData {
   expectedToday: number;
@@ -206,10 +208,20 @@ function SessionStudentsEditor({
 
 export default function AttendancePage() {
   const { user } = useAuth();
+  if (user?.role === "staff") {
+    return <StaffAttendanceView />;
+  }
   if (user?.role === "teacher") {
     return <TeacherAttendanceView />;
   }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminAttendanceView />;
+  }
+  return <LegacyAttendanceView />;
+}
 
+function LegacyAttendanceView() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = React.useState(() => new Date().toISOString().slice(0, 10));
 
@@ -267,9 +279,13 @@ export default function AttendancePage() {
 
   const studentItems: StudentDayItem[] = studentScheduleData?.data?.items || [];
 
-  const { data: classesData } = useQuery({
-    queryKey: ["classes-list"],
-    queryFn: async () => (await fetch("/api/v1/classes")).json(),
+  const { data: classesData, isLoading: loadingClasses } = useQuery({
+    queryKey: ["classes-list", user?.centerId],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/classes");
+      if (!res.ok) return { data: [] };
+      return res.json();
+    },
   });
 
   const classes = classesData?.data || [];
@@ -523,7 +539,13 @@ export default function AttendancePage() {
                 Choose Class Session
               </label>
               <Select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)}>
-                <option value="">Select a class...</option>
+                <option value="">
+                  {loadingClasses
+                    ? "Loading classes..."
+                    : classes.length === 0
+                    ? "No classes assigned to you"
+                    : "Select a class..."}
+                </option>
                 {classes.map((c: { id: string; name: string; subject: string }) => (
                   <option key={c.id} value={c.id}>
                     {c.name} ({c.subject})

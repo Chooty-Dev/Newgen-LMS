@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { TeacherExamsView } from "@/components/teacher/TeacherExamsView";
+import { AdminExamsView } from "@/components/admin/AdminExamsView";
 import { cn } from "@/lib/utils";
 
 interface AssessmentRecord {
@@ -52,7 +53,13 @@ export default function ExamsPage() {
   if (user?.role === "teacher") {
     return <TeacherExamsView />;
   }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminExamsView />;
+  }
+  return <LegacyExamsView />;
+}
 
+function LegacyExamsView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("");

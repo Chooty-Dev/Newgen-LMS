@@ -2,10 +2,30 @@ import { NextResponse } from "next/server";
 import { defineRoute } from "@/core/http/defineRoute";
 import { MarkService } from "@/modules/marks/service";
 import { evaluateMarksSchema } from "@/modules/marks/schema";
+import { checkAssessmentEvaluationWindow } from "@/modules/marks/evaluation-window";
+import { Assessment } from "@/modules/exams/model";
+import { Center } from "@/modules/centers/model";
+import { connectDB } from "@/lib/db";
 import { canAccessAssessment } from "@/core/rbac/policies";
+import { resolveEffectivePermissions } from "@/core/rbac/resolver";
+
+async function resolveWindowForAssessment(assessmentId: string) {
+  await connectDB();
+  const a = await Assessment.findById(assessmentId)
+    .select("title sessions status centerId deletedAt")
+    .lean();
+  if (!a || a.deletedAt) return null;
+  const center = await Center.findById(a.centerId).select("timezone").lean();
+  return checkAssessmentEvaluationWindow({
+    title: a.title,
+    sessions: a.sessions,
+    status: a.status,
+    timeZone: center?.timezone || "Asia/Colombo",
+  });
+}
 
 export const GET = defineRoute({
-  permission: "marks.evaluate",
+  permission: ["marks.evaluate", "marks.view"],
   handler: async ({ session, req }) => {
     const assessmentId = new URL(req.url).searchParams.get("assessmentId");
     if (!assessmentId) {
@@ -25,8 +45,21 @@ export const GET = defineRoute({
       }
     }
 
-    const grid = await MarkService.getAssessmentForEvaluation(assessmentId);
-    return { data: grid };
+    const [grid, evaluationWindow] = await Promise.all([
+      MarkService.getAssessmentForEvaluation(assessmentId),
+      resolveWindowForAssessment(assessmentId),
+    ]);
+    return {
+      data: {
+        ...grid,
+        assessment: {
+          ...grid.assessment,
+          evaluationWindow:
+            evaluationWindow ||
+            ("evaluationWindow" in grid.assessment ? grid.assessment.evaluationWindow : undefined),
+        },
+      },
+    };
   },
 });
 
@@ -53,12 +86,40 @@ export const POST = defineRoute({
       );
     }
 
+    const evaluationWindow = await resolveWindowForAssessment(body.assessmentId);
+    if (evaluationWindow && !evaluationWindow.hasEnded) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "ASSESSMENT_NOT_ENDED",
+            message:
+              evaluationWindow.message ||
+              "Marks cannot be entered before this assessment finishes.",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    const effectivePerms = await resolveEffectivePermissions(
+      session.sub,
+      session.role,
+      session.permissionsVersion
+    );
+
+    const canEditSubmitted =
+      session.role === "admin" ||
+      session.role === "super_admin" ||
+      session.role === "teacher" ||
+      effectivePerms.includes("marks.update");
+
     const result = await MarkService.evaluateMarks(
       session.sub,
       session.centerId,
       body.assessmentId,
       body.status,
-      body.entries
+      body.entries,
+      { canEditSubmitted }
     );
 
     return { data: result };

@@ -6,6 +6,7 @@ import { User, TeacherProfile } from "@/modules/users/model";
 import { Center } from "@/modules/centers/model";
 import { updateSessionCenter, COOKIE_NAME } from "@/core/auth/session";
 import { connectDB } from "@/lib/db";
+import { env } from "@/core/config/env";
 import mongoose from "mongoose";
 
 const switchCenterSchema = z.object({
@@ -99,10 +100,13 @@ export const POST = defineRoute({
 
     // Set updated session cookie
     const cookieStore = await cookies();
+    const maxAge = env.SESSION_ABSOLUTE_HOURS * 3600;
     cookieStore.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
+      maxAge,
+      expires: new Date(Date.now() + maxAge * 1000),
       path: "/",
     });
 

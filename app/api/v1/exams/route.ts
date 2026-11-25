@@ -4,7 +4,7 @@ import { AssessmentService } from "@/modules/exams/service";
 import { createAssessmentSchema } from "@/modules/exams/schema";
 
 export const GET = defineRoute({
-  permission: "exams.view",
+  permission: ["exams.view", "attendance.view", "attendance.mark", "marks.evaluate", "marks.view"],
   handler: async ({ session, req }) => {
     const url = new URL(req.url);
     const type = url.searchParams.get("type") || undefined;

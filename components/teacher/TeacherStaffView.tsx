@@ -4,7 +4,6 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +33,10 @@ import { CardThemeBar } from "./CardThemeBar";
 import { CardTypeFlag } from "./CardTypeFlag";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import {
+  StaffClassAssessmentPicker,
+  useStaffAssignmentOptions,
+} from "@/components/shared/StaffClassAssessmentPicker";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +51,10 @@ interface StaffRecord {
   status: "active" | "disabled";
   joinedAt: string;
   permissions?: string[];
+  assignedClasses?: Array<{ id: string; name: string }>;
+  assignedClassIds?: string[];
+  assignedAssessments?: Array<{ id: string; title: string }>;
+  assignedAssessmentIds?: string[];
 }
 
 const addStaffSchema = z.object({
@@ -69,6 +76,8 @@ const addStaffSchema = z.object({
   title: z.string().optional(),
   position: z.string().optional(),
   permissions: z.array(z.string()).default([]),
+  assignedClassIds: z.array(z.string()).default([]),
+  assignedAssessmentIds: z.array(z.string()).default([]),
 });
 
 type AddStaffFormValues = z.infer<typeof addStaffSchema>;
@@ -87,13 +96,14 @@ const editStaffSchema = z.object({
   position: z.string().optional(),
   status: z.enum(["active", "disabled"]),
   permissions: z.array(z.string()).default([]),
+  assignedClassIds: z.array(z.string()).default([]),
+  assignedAssessmentIds: z.array(z.string()).default([]),
 });
 
 type EditStaffFormValues = z.infer<typeof editStaffSchema>;
 
 export function TeacherStaffView() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
@@ -126,6 +136,8 @@ export function TeacherStaffView() {
       title: "",
       position: "",
       permissions: [],
+      assignedClassIds: [],
+      assignedAssessmentIds: [],
     },
   });
 
@@ -140,8 +152,15 @@ export function TeacherStaffView() {
       position: "",
       status: "active",
       permissions: [],
+      assignedClassIds: [],
+      assignedAssessmentIds: [],
     },
   });
+
+  // Lazy, cached fetch of classes & class-linked assessments (only fetched when Add/Edit dialog opens)
+  const { classList, assessmentList, isLoadingOptions } = useStaffAssignmentOptions(
+    createOpen || Boolean(editStaff)
+  );
 
   // Fetch staff
   const { data: staffData, isLoading } = useQuery({
@@ -173,6 +192,8 @@ export function TeacherStaffView() {
           username: values.username.toLowerCase().trim(),
           email: values.email || undefined,
           phone: values.phone || undefined,
+          assignedClassIds: values.assignedClassIds,
+          assignedAssessmentIds: values.assignedAssessmentIds,
         }),
       });
       const json = await res.json();
@@ -218,6 +239,8 @@ export function TeacherStaffView() {
           ...values,
           email: values.email || undefined,
           phone: values.phone || undefined,
+          assignedClassIds: values.assignedClassIds,
+          assignedAssessmentIds: values.assignedAssessmentIds,
         }),
       });
       const json = await res.json();
@@ -292,6 +315,8 @@ export function TeacherStaffView() {
       position: st.position || "",
       status: st.status || "active",
       permissions: st.permissions || [],
+      assignedClassIds: st.assignedClassIds || (st.assignedClasses || []).map((c) => c.id) || [],
+      assignedAssessmentIds: st.assignedAssessmentIds || (st.assignedAssessments || []).map((a) => a.id) || [],
     });
   };
 
@@ -529,34 +554,82 @@ export function TeacherStaffView() {
                     </div>
                   </div>
 
-                  {/* 2. Middle Row: Granted Permissions Badges */}
-                  <div className="py-2 px-3 rounded-2xl bg-secondary/40 border border-border/50 space-y-1">
-                    <span className="text-[10px] card-themed-sub font-bold block">Assigned Role & Permissions</span>
-                    <div className="flex flex-wrap items-center gap-1">
-                      {st.permissions && st.permissions.length > 0 ? (
-                        st.permissions.map((p) => {
-                          const label =
-                            p === "students.create"
-                              ? "Add Student"
-                              : p === "students.view"
-                              ? "View Student"
-                              : p === "students.update"
-                              ? "Update Student"
-                              : p === "students.delete"
-                              ? "Delete Student"
-                              : p;
-                          return (
+                  {/* 2. Middle Row: Granted Permissions & Assigned Classes Badges */}
+                  <div className="py-2 px-3 rounded-2xl bg-secondary/40 border border-border/50 space-y-2">
+                    <div>
+                      <span className="text-[10px] card-themed-sub font-bold block mb-1">Assigned Permissions</span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {st.permissions && st.permissions.length > 0 ? (
+                          st.permissions
+                            .filter((p) => p !== "attendance.create")
+                            .map((p) => {
+                              const label =
+                                p === "students.create"
+                                  ? "Add Student"
+                                  : p === "students.view"
+                                    ? "View Student"
+                                    : p === "students.update"
+                                      ? "Update Student"
+                                      : p === "students.delete"
+                                        ? "Delete Student"
+                                        : p === "attendance.view"
+                                          ? "View Attendance"
+                                          : p === "attendance.mark"
+                                            ? "Mark Attendance"
+                                            : p === "attendance.update"
+                                              ? "Edit Attendance"
+                                              : p === "attendance.delete"
+                                                ? "Delete Attendance"
+                                                : p;
+                              return (
+                                <span
+                                  key={p}
+                                  className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20"
+                                >
+                                  ✓ {label}
+                                </span>
+                              );
+                            })
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-medium">Default Staff Permissions</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] card-themed-sub font-bold block mb-1">Assigned Classes</span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {st.assignedClasses && st.assignedClasses.length > 0 ? (
+                          st.assignedClasses.map((c) => (
                             <span
-                              key={p}
-                              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20"
+                              key={c.id}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
                             >
-                              ✓ {label}
+                              {c.name}
                             </span>
-                          );
-                        })
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground font-medium">Default Staff Permissions</span>
-                      )}
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-medium">No Classes Assigned</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] card-themed-sub font-bold block mb-1">Assigned Assessments</span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {st.assignedAssessments && st.assignedAssessments.length > 0 ? (
+                          st.assignedAssessments.map((a) => (
+                            <span
+                              key={a.id}
+                              className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20"
+                            >
+                              {a.title}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-medium">No Assessments Assigned</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -614,6 +687,7 @@ export function TeacherStaffView() {
                     <th className="py-3.5 px-4">Staff Member</th>
                     <th className="py-3.5 px-4">Position</th>
                     <th className="py-3.5 px-4">Email</th>
+                    <th className="py-3.5 px-4">Classes & Assessments</th>
                     <th className="py-3.5 px-4 text-center">Status</th>
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
@@ -644,6 +718,38 @@ export function TeacherStaffView() {
                       </td>
                       <td className="py-3.5 px-4 text-muted-foreground">
                         {st.email || "—"}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-1 max-w-xs">
+                          {st.assignedClasses && st.assignedClasses.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {st.assignedClasses.map((c) => (
+                                <span
+                                  key={c.id}
+                                  className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground border border-border"
+                                >
+                                  {c.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {st.assignedAssessments && st.assignedAssessments.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {st.assignedAssessments.map((a) => (
+                                <span
+                                  key={a.id}
+                                  className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20"
+                                >
+                                  {a.title}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {(!st.assignedClasses || st.assignedClasses.length === 0) &&
+                            (!st.assignedAssessments || st.assignedAssessments.length === 0) ? (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <CardTypeFlag type={st.status || "active"} />
@@ -697,7 +803,7 @@ export function TeacherStaffView() {
         setCreateOpen(open);
         if (!open) addForm.reset();
       }}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6">
+        <DialogContent className="sm:max-w-2xl rounded-3xl p-6">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-foreground">Add New Staff Member</DialogTitle>
           </DialogHeader>
@@ -795,50 +901,129 @@ export function TeacherStaffView() {
             </div>
 
             {/* Allow Permissions Section */}
-            <div className="pt-2 border-t border-border/60 space-y-2">
-              <label className="font-extrabold text-foreground block">
+            <div className="pt-2 border-t border-border/60 space-y-3">
+              <label className="font-extrabold text-foreground block text-xs">
                 Allow Permissions for:
               </label>
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-secondary/30 border border-border">
-                {[
-                  { id: "students.create", label: "Add Student" },
-                  { id: "students.view", label: "View Student" },
-                  { id: "students.update", label: "Update Student" },
-                  { id: "students.delete", label: "Delete Student" },
-                ].map((perm) => {
-                  const currentPerms = addForm.watch("permissions") || [];
-                  const isChecked = currentPerms.includes(perm.id);
-                  return (
-                    <label
-                      key={perm.id}
-                      className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-semibold text-foreground hover:text-primary transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            const newPerms = new Set([...currentPerms, perm.id]);
-                            if (perm.id !== "students.view") newPerms.add("students.view");
-                            addForm.setValue("permissions", Array.from(newPerms));
-                          } else {
-                            let newPerms = currentPerms.filter((p) => p !== perm.id);
-                            if (perm.id === "students.view") {
-                              newPerms = newPerms.filter(
-                                (p) => !["students.create", "students.update", "students.delete"].includes(p)
-                              );
+
+              {/* Student Permissions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Student Management
+                </span>
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-secondary/30 border border-border">
+                  {[
+                    { id: "students.create", label: "Add Student" },
+                    { id: "students.view", label: "View Student" },
+                    { id: "students.update", label: "Update Student" },
+                    { id: "students.delete", label: "Delete Student" },
+                  ].map((perm) => {
+                    const currentPerms = addForm.watch("permissions") || [];
+                    const isChecked = currentPerms.includes(perm.id);
+                    return (
+                      <label
+                        key={perm.id}
+                        className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-semibold text-foreground hover:text-primary transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newPerms = new Set([...currentPerms, perm.id]);
+                              if (perm.id !== "students.view") newPerms.add("students.view");
+                              addForm.setValue("permissions", Array.from(newPerms));
+                            } else {
+                              let newPerms = currentPerms.filter((p) => p !== perm.id);
+                              if (perm.id === "students.view") {
+                                newPerms = newPerms.filter(
+                                  (p) => !["students.create", "students.update", "students.delete"].includes(p)
+                                );
+                              }
+                              addForm.setValue("permissions", newPerms);
                             }
-                            addForm.setValue("permissions", newPerms);
-                          }
-                        }}
-                        className="rounded size-3.5 border-border text-primary focus:ring-primary"
-                      />
-                      <span>{perm.label}</span>
-                    </label>
-                  );
-                })}
+                          }}
+                          className="rounded size-3.5 border-border text-primary focus:ring-primary"
+                        />
+                        <span>{perm.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Attendance Permissions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Attendance Management
+                </span>
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-secondary/30 border border-border">
+                  {[
+                    { id: "attendance.view", label: "View Attendance" },
+                    { id: "attendance.mark", label: "Mark Attendance" },
+                    { id: "attendance.update", label: "Edit Attendance" },
+                    { id: "attendance.delete", label: "Delete Attendance" },
+                  ].map((perm) => {
+                    const currentPerms = addForm.watch("permissions") || [];
+                    const isChecked = currentPerms.includes(perm.id);
+                    return (
+                      <label
+                        key={perm.id}
+                        className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-semibold text-foreground hover:text-primary transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newPerms = new Set([...currentPerms, perm.id]);
+                              if (perm.id !== "attendance.view") newPerms.add("attendance.view");
+                              if (perm.id === "attendance.mark") newPerms.add("attendance.create");
+                              addForm.setValue("permissions", Array.from(newPerms));
+                            } else {
+                              let newPerms = currentPerms.filter((p) => p !== perm.id);
+                              if (perm.id === "attendance.mark") {
+                                newPerms = newPerms.filter((p) => p !== "attendance.create");
+                              }
+                              if (perm.id === "attendance.view") {
+                                newPerms = newPerms.filter(
+                                  (p) =>
+                                    ![
+                                      "attendance.mark",
+                                      "attendance.create",
+                                      "attendance.update",
+                                      "attendance.delete",
+                                    ].includes(p)
+                                );
+                              }
+                              addForm.setValue("permissions", newPerms);
+                            }
+                          }}
+                          className="rounded size-3.5 border-border text-primary focus:ring-primary"
+                        />
+                        <span>{perm.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
+
+            {/* Assign to Classes & Filtered Assessments */}
+            <StaffClassAssessmentPicker
+              classes={classList}
+              assessments={assessmentList}
+              isLoading={isLoadingOptions}
+              selectedClassIds={addForm.watch("assignedClassIds") || []}
+              selectedAssessmentIds={addForm.watch("assignedAssessmentIds") || []}
+              onChangeClasses={(nextClasses, nextAssessments) => {
+                addForm.setValue("assignedClassIds", nextClasses);
+                addForm.setValue("assignedAssessmentIds", nextAssessments);
+              }}
+              onChangeAssessments={(nextAssessments) => {
+                addForm.setValue("assignedAssessmentIds", nextAssessments);
+              }}
+            />
 
             <DialogFooter className="gap-2 sm:gap-0 pt-2">
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} className="rounded-full text-xs">
@@ -962,50 +1147,129 @@ export function TeacherStaffView() {
             </div>
 
             {/* Allow Permissions Section */}
-            <div className="pt-2 border-t border-border/60 space-y-2">
-              <label className="font-extrabold text-foreground block">
+            <div className="pt-2 border-t border-border/60 space-y-3">
+              <label className="font-extrabold text-foreground block text-xs">
                 Allow Permissions for:
               </label>
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-secondary/30 border border-border">
-                {[
-                  { id: "students.create", label: "Add Student" },
-                  { id: "students.view", label: "View Student" },
-                  { id: "students.update", label: "Update Student" },
-                  { id: "students.delete", label: "Delete Student" },
-                ].map((perm) => {
-                  const currentPerms = editForm.watch("permissions") || [];
-                  const isChecked = currentPerms.includes(perm.id);
-                  return (
-                    <label
-                      key={perm.id}
-                      className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-semibold text-foreground hover:text-primary transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            const newPerms = new Set([...currentPerms, perm.id]);
-                            if (perm.id !== "students.view") newPerms.add("students.view");
-                            editForm.setValue("permissions", Array.from(newPerms));
-                          } else {
-                            let newPerms = currentPerms.filter((p) => p !== perm.id);
-                            if (perm.id === "students.view") {
-                              newPerms = newPerms.filter(
-                                (p) => !["students.create", "students.update", "students.delete"].includes(p)
-                              );
+
+              {/* Student Permissions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Student Management
+                </span>
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-secondary/30 border border-border">
+                  {[
+                    { id: "students.create", label: "Add Student" },
+                    { id: "students.view", label: "View Student" },
+                    { id: "students.update", label: "Update Student" },
+                    { id: "students.delete", label: "Delete Student" },
+                  ].map((perm) => {
+                    const currentPerms = editForm.watch("permissions") || [];
+                    const isChecked = currentPerms.includes(perm.id);
+                    return (
+                      <label
+                        key={perm.id}
+                        className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-semibold text-foreground hover:text-primary transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newPerms = new Set([...currentPerms, perm.id]);
+                              if (perm.id !== "students.view") newPerms.add("students.view");
+                              editForm.setValue("permissions", Array.from(newPerms));
+                            } else {
+                              let newPerms = currentPerms.filter((p) => p !== perm.id);
+                              if (perm.id === "students.view") {
+                                newPerms = newPerms.filter(
+                                  (p) => !["students.create", "students.update", "students.delete"].includes(p)
+                                );
+                              }
+                              editForm.setValue("permissions", newPerms);
                             }
-                            editForm.setValue("permissions", newPerms);
-                          }
-                        }}
-                        className="rounded size-3.5 border-border text-primary focus:ring-primary"
-                      />
-                      <span>{perm.label}</span>
-                    </label>
-                  );
-                })}
+                          }}
+                          className="rounded size-3.5 border-border text-primary focus:ring-primary"
+                        />
+                        <span>{perm.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Attendance Permissions */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Attendance Management
+                </span>
+                <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-secondary/30 border border-border">
+                  {[
+                    { id: "attendance.view", label: "View Attendance" },
+                    { id: "attendance.mark", label: "Mark Attendance" },
+                    { id: "attendance.update", label: "Edit Attendance" },
+                    { id: "attendance.delete", label: "Delete Attendance" },
+                  ].map((perm) => {
+                    const currentPerms = editForm.watch("permissions") || [];
+                    const isChecked = currentPerms.includes(perm.id);
+                    return (
+                      <label
+                        key={perm.id}
+                        className="flex items-center gap-2 cursor-pointer select-none text-[11px] font-semibold text-foreground hover:text-primary transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newPerms = new Set([...currentPerms, perm.id]);
+                              if (perm.id !== "attendance.view") newPerms.add("attendance.view");
+                              if (perm.id === "attendance.mark") newPerms.add("attendance.create");
+                              editForm.setValue("permissions", Array.from(newPerms));
+                            } else {
+                              let newPerms = currentPerms.filter((p) => p !== perm.id);
+                              if (perm.id === "attendance.mark") {
+                                newPerms = newPerms.filter((p) => p !== "attendance.create");
+                              }
+                              if (perm.id === "attendance.view") {
+                                newPerms = newPerms.filter(
+                                  (p) =>
+                                    ![
+                                      "attendance.mark",
+                                      "attendance.create",
+                                      "attendance.update",
+                                      "attendance.delete",
+                                    ].includes(p)
+                                );
+                              }
+                              editForm.setValue("permissions", newPerms);
+                            }
+                          }}
+                          className="rounded size-3.5 border-border text-primary focus:ring-primary"
+                        />
+                        <span>{perm.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
+
+            {/* Assign to Classes & Filtered Assessments */}
+            <StaffClassAssessmentPicker
+              classes={classList}
+              assessments={assessmentList}
+              isLoading={isLoadingOptions}
+              selectedClassIds={editForm.watch("assignedClassIds") || []}
+              selectedAssessmentIds={editForm.watch("assignedAssessmentIds") || []}
+              onChangeClasses={(nextClasses, nextAssessments) => {
+                editForm.setValue("assignedClassIds", nextClasses);
+                editForm.setValue("assignedAssessmentIds", nextAssessments);
+              }}
+              onChangeAssessments={(nextAssessments) => {
+                editForm.setValue("assignedAssessmentIds", nextAssessments);
+              }}
+            />
 
             <DialogFooter className="gap-2 sm:gap-0 pt-2">
               <Button type="button" variant="ghost" onClick={() => setEditStaff(null)} className="rounded-full text-xs">

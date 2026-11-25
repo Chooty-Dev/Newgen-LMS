@@ -6,7 +6,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  ArrowLeft,
   UserCheck,
   BookOpen,
   FileCheck,
@@ -18,7 +17,7 @@ import {
   ExternalLink,
   AlertCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SmartBackButton } from "@/components/shared/BackNavigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -103,10 +102,11 @@ function StaffDetailsContent() {
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
           {error instanceof Error ? error.message : "The staff member does not exist."}
         </p>
-        <Button onClick={() => router.push("/staff")} variant="outline" className="rounded-full">
-          <ArrowLeft className="size-4 mr-2" />
-          Back to Staff Members
-        </Button>
+        <SmartBackButton
+          fallbackHref="/staff"
+          fallbackLabel="Back to Staff Members"
+          variant="button"
+        />
       </div>
     );
   }
@@ -117,13 +117,11 @@ function StaffDetailsContent() {
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       <div>
-        <Link
-          href="/staff"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Back to Staff Members</span>
-        </Link>
+        <SmartBackButton
+          fallbackHref="/staff"
+          fallbackLabel="Back to Staff Members"
+          className="text-muted-foreground hover:text-foreground"
+        />
       </div>
 
       {/* Banner */}

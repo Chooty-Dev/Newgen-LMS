@@ -1,40 +1,36 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft,
-  Users,
-  BookOpen,
-  Award,
-  TrendingUp,
-  KeyRound,
-  Copy,
-  Check,
-  Calendar,
-  Phone,
-  Mail,
-  Shield,
-  Sparkles,
-  ExternalLink,
   AlertCircle,
+  Award,
+  BookOpen,
+  Settings2,
+  TrendingUp,
+  Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { toast } from "sonner";
+import { SmartBackButton } from "@/components/shared/BackNavigation";
 import { cn } from "@/lib/utils";
+import {
+  StudentDetailRecord,
+  formatStandingBadge,
+} from "@/components/students/studentProfileTypes";
+import {
+  StudentClassesTab,
+  StudentMarksTab,
+  StudentOverviewTab,
+} from "@/components/students/StudentOverviewTab";
+import { StudentAnalysisTab } from "@/components/students/StudentAnalysisTab";
+import { StudentActionsTab } from "@/components/students/StudentActionsTab";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: Users },
   { id: "classes", label: "Classes", icon: BookOpen },
   { id: "marks", label: "Marks", icon: Award },
   { id: "analysis", label: "Analysis", icon: TrendingUp },
-  { id: "account", label: "Account", icon: KeyRound },
+  { id: "actions", label: "Actions", icon: Settings2 },
 ] as const;
 
 type TabType = (typeof TABS)[number]["id"];
@@ -43,10 +39,9 @@ export default function StudentDetailsPage() {
   return (
     <React.Suspense
       fallback={
-        <div className="space-y-6 animate-pulse">
-          <div className="h-44 bg-muted/60 rounded-3xl" />
-          <div className="h-12 bg-muted/40 rounded-2xl w-96" />
-          <div className="h-64 bg-card rounded-3xl border border-border" />
+        <div className="space-y-5 animate-pulse">
+          <div className="h-44 bg-[#F4F8FD] border border-[#DDE8F8] rounded-[28px]" />
+          <div className="h-72 bg-white border border-[#DDE8F8] rounded-[28px]" />
         </div>
       }
     >
@@ -59,11 +54,15 @@ function StudentDetailsContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   const usernameParam = (params?.username as string) || "";
-  const currentTab = (searchParams?.get("tab") as TabType) || "overview";
+  const rawTab = searchParams?.get("tab") || "overview";
+  const currentTab: TabType =
+    rawTab === "account"
+      ? "actions"
+      : TABS.some((t) => t.id === rawTab)
+        ? (rawTab as TabType)
+        : "overview";
 
   const setTab = (tab: TabType) => {
     const sp = new URLSearchParams(searchParams?.toString() || "");
@@ -71,8 +70,7 @@ function StudentDetailsContent() {
     router.replace(`/students/${usernameParam}?${sp.toString()}`);
   };
 
-  // Fetch Student Details
-  const { data: studentData, isLoading, error } = useQuery({
+  const { data: studentData, isLoading, error } = useQuery<{ data: StudentDetailRecord }>({
     queryKey: ["student-details", usernameParam],
     queryFn: async () => {
       const res = await fetch(`/api/v1/students/${usernameParam}`);
@@ -87,7 +85,6 @@ function StudentDetailsContent() {
 
   const student = studentData?.data;
 
-  // If accessed by Mongo ID and user has a username, canonicalize to username
   React.useEffect(() => {
     if (student?.username && usernameParam !== student.username) {
       const sp = searchParams?.toString();
@@ -95,419 +92,225 @@ function StudentDetailsContent() {
     }
   }, [student?.username, usernameParam, router, searchParams]);
 
-  // Reset Password State
-  const [resetConfirmOpen, setResetConfirmOpen] = React.useState(false);
-  const [tempPassword, setTempPassword] = React.useState<string | null>(null);
-  const [copied, setCopied] = React.useState(false);
-
-  const resetPasswordMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const res = await fetch(`/api/v1/users/${userId}/reset-password`, {
-        method: "POST",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || "Failed to reset password");
-      }
-      return res.json();
-    },
-    onSuccess: (data) => {
-      setResetConfirmOpen(false);
-      setTempPassword(data.data?.temporaryPassword || null);
-      toast.success("Password reset successfully");
-    },
-    onError: (err: Error) => {
-      toast.error(err.message);
-    },
-  });
-
-  const handleCopy = () => {
-    if (tempPassword) {
-      navigator.clipboard.writeText(tempPassword);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success("Password copied to clipboard");
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-44 bg-muted/60 rounded-3xl" />
-        <div className="h-12 bg-muted/40 rounded-2xl w-96" />
-        <div className="h-64 bg-card rounded-3xl border border-border" />
+      <div className="space-y-5 animate-pulse">
+        <div className="h-44 bg-[#F4F8FD] border border-[#DDE8F8] rounded-[28px]" />
+        <div className="h-72 bg-white border border-[#DDE8F8] rounded-[28px]" />
       </div>
     );
   }
 
   if (error || !student) {
     return (
-      <div className="bg-card border border-border rounded-3xl p-12 text-center space-y-4">
-        <AlertCircle className="size-12 text-rose-500 mx-auto" />
-        <h2 className="text-xl font-black text-foreground">Student Not Found</h2>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          {error instanceof Error ? error.message : "The student profile was not found or access is restricted."}
+      <div className="bg-white border border-[#DDE8F8] rounded-[28px] p-12 text-center space-y-4">
+        <AlertCircle className="size-12 text-rose-600 mx-auto" />
+        <h2 className="text-xl font-black text-[#0F172A]">Student Not Found</h2>
+        <p className="text-xs sm:text-sm text-[#627D98] max-w-md mx-auto">
+          {error instanceof Error
+            ? error.message
+            : "The student profile was not found or access is restricted."}
         </p>
-        <Button onClick={() => router.push("/students")} variant="outline" className="rounded-full">
-          <ArrowLeft className="size-4 mr-2" />
-          Back to Students
-        </Button>
+        <SmartBackButton
+          fallbackHref="/students"
+          fallbackLabel="Back to Students"
+          variant="button"
+          className="border-[#DDE8F8]"
+        />
       </div>
     );
   }
 
-  const enrollments = student.enrollments || [];
-  const marks = student.marks || [];
-  const snapshots = student.snapshots || [];
+  const standing = formatStandingBadge(student.group);
+  const initials = student.name
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      <div>
-        <Link
-          href="/students"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
-          <span>Back to Students</span>
-        </Link>
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Top Back Bar */}
+      <div className="flex items-center justify-between gap-3 no-print">
+        <SmartBackButton
+          fallbackHref="/students"
+          fallbackLabel="Back to Students"
+        />
+        <span className="text-xs font-bold text-[#627D98] tabular-nums">
+          Adm No: <span className="text-[#0F172A]">{student.admissionNo}</span>
+        </span>
       </div>
 
-      {/* Banner */}
-      <section className="rounded-3xl p-6 sm:p-8 md:p-9 bg-[#184880] text-white relative overflow-hidden shadow-[0_4px_20px_-4px_rgba(24,72,128,0.12)]">
-        <div className="relative z-10 space-y-4 max-w-2xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-white/20 text-white">
-              Student Profile
-            </span>
-            <span
-              className={cn(
-                "px-3 py-1 rounded-full text-xs font-bold capitalize",
-                student.status === "active" ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white"
-              )}
-            >
-              {student.status}
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white">
-              Grade: {student.grade || "-"}
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs font-bold capitalize bg-white/10 text-white">
-              Group: {student.group}
-            </span>
+      {/* Minimal 2-Card Hero Header + Clean Pill Navigation */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="lg:col-span-8 bg-white border border-[#DDE8F8] rounded-[28px] p-6 sm:p-7 flex flex-col justify-between gap-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 min-w-0 flex-1">
+              <div className="size-14 sm:size-16 rounded-2xl bg-[#EBF3FE] border border-[#DDE8F8] text-[#184880] flex items-center justify-center font-black text-lg sm:text-xl shrink-0">
+                {initials || "ST"}
+              </div>
+
+              <div className="min-w-0 space-y-1.5 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[11px] font-bold border capitalize",
+                      student.status === "active"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border-rose-200"
+                    )}
+                  >
+                    {student.status}
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F4F8FD] text-[#184880] border border-[#DDE8F8]">
+                    {student.grade || "Unassigned"}
+                  </span>
+                  <span
+                    className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[11px] font-bold border",
+                      standing.className
+                    )}
+                  >
+                    {standing.label}
+                  </span>
+                </div>
+
+                <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight truncate">
+                  {student.name}
+                </h1>
+
+                <p className="text-xs font-semibold text-[#627D98]">
+                  @{student.username} • {student.enrollments.length} classes • {student.marks.length} assessments
+                </p>
+              </div>
+            </div>
+
+            {currentTab === "analysis" && (
+              <div className="md:max-w-[300px] border-l-2 border-yellow-500 shrink-0 rounded-none pl-4 flex items-start gap-2.5">
+                <AlertCircle className="size-4 text-yellow-500 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="text-[11px] font-extrabold text-yellow-500 leading-tight">
+                    Notice
+                  </p>
+                  <p className="text-[11px] text-yellow-600 leading-snug font-medium">
+                    This page uses Artificial Intelligence to generate insights, and it may not always be accurate. Don&apos;t rely on this alone—always check real records.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-            {student.name}
-          </h1>
+          {/* Clean Pill Tabs */}
+          <div className="flex items-center gap-1.5 pt-4 border-t border-[#DDE8F8] overflow-x-auto no-print">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = currentTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTab(tab.id)}
+                  className={cn(
+                    "inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-colors shrink-0 cursor-pointer",
+                    isActive
+                      ? "bg-[#184880] text-white"
+                      : "bg-[#F4F8FD] text-[#627D98] hover:text-[#0F172A] border border-[#DDE8F8]"
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  <span>{tab.label}</span>
+                  {tab.id === "classes" && (
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px] tabular-nums",
+                        isActive ? "bg-white/20 text-white" : "bg-[#EBF3FE] text-[#184880]"
+                      )}
+                    >
+                      {student.enrollments.length}
+                    </span>
+                  )}
+                  {tab.id === "marks" && (
+                    <span
+                      className={cn(
+                        "px-1.5 py-0.2 rounded-full text-[10px] tabular-nums",
+                        isActive ? "bg-white/20 text-white" : "bg-[#EBF3FE] text-[#184880]"
+                      )}
+                    >
+                      {student.marks.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          <p className="text-xs sm:text-sm text-white/80 font-medium leading-relaxed">
-            @{student.username} • Adm No: {student.admissionNo} • Performance Score: {student.performanceScore}%
-          </p>
+        {/* Right Solid #184880 Performance Anchor Card */}
+        <div className="lg:col-span-4 bg-[#184880] text-white rounded-[28px] p-6 sm:p-7 flex flex-col justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="px-3 py-1 rounded-full bg-white/15 border border-white/20 text-[11px] font-bold tracking-wide">
+                OVERALL SCORE
+              </span>
+              <span className="text-xs font-bold text-white/80">
+                {student.groupLabel || standing.label}
+              </span>
+            </div>
 
-          <div className="flex flex-wrap gap-4 pt-2 text-xs text-white/90">
-            <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
-              <BookOpen className="size-3.5 text-white" />
-              <span>{enrollments.length} Enrolled Classes</span>
+            <div className="pt-2">
+              <p className="text-4xl sm:text-5xl font-black tabular-nums tracking-tight">
+                {student.hasGradedScore === false && student.marks.length === 0
+                  ? "—"
+                  : `${student.performanceScore}%`}
+              </p>
+              <p className="text-xs text-white/80 font-medium mt-1">
+                Combined marks & attendance index
+              </p>
             </div>
-            <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
-              <Award className="size-3.5 text-white" />
-              <span>{marks.length} Assessments Taken</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/15">
+            <div className="bg-white/10 border border-white/15 rounded-2xl p-3">
+              <span className="text-[10px] font-bold uppercase text-white/75 block">Marks</span>
+              <span className="text-base font-black tabular-nums mt-0.5 block">
+                {student.marksScore !== null && student.marksScore !== undefined
+                  ? `${student.marksScore}%`
+                  : "—"}
+              </span>
             </div>
-            <div className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
-              <Calendar className="size-3.5 text-white" />
-              <span>Joined {new Date(student.joinedAt).toLocaleDateString()}</span>
+            <div className="bg-white/10 border border-white/15 rounded-2xl p-3">
+              <span className="text-[10px] font-bold uppercase text-white/75 block">
+                Attendance
+              </span>
+              <span className="text-base font-black tabular-nums mt-0.5 block">
+                {student.attendanceScore !== null && student.attendanceScore !== undefined
+                  ? `${student.attendanceScore}%`
+                  : "—"}
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 sm:gap-2 p-1.5 bg-card border border-border rounded-2xl shadow-xs overflow-x-auto">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setTab(tab.id)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-              )}
-            >
-              <Icon className="size-4" />
-              <span>{tab.label}</span>
-              {tab.id === "classes" && (
-                <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", isActive ? "bg-white/20 text-white" : "bg-secondary text-muted-foreground")}>
-                  {enrollments.length}
-                </span>
-              )}
-              {tab.id === "marks" && (
-                <span className={cn("px-1.5 py-0.5 rounded-full text-[10px]", isActive ? "bg-white/20 text-white" : "bg-secondary text-muted-foreground")}>
-                  {marks.length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab 1: Overview */}
+      {/* Active Tab Body */}
       {currentTab === "overview" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-4">
-              <h3 className="text-base font-extrabold text-foreground">Personal & Academic Details</h3>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
-                  <span className="text-muted-foreground font-semibold">Admission Number</span>
-                  <p className="text-sm font-bold text-foreground">{student.admissionNo}</p>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
-                  <span className="text-muted-foreground font-semibold">Grade</span>
-                  <p className="text-sm font-bold text-foreground">{student.grade || "-"}</p>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
-                  <span className="text-muted-foreground font-semibold">Date of Birth</span>
-                  <p className="text-sm font-bold text-foreground">
-                    {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : "-"}
-                  </p>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-secondary/40 space-y-1">
-                  <span className="text-muted-foreground font-semibold">Phone</span>
-                  <p className="text-sm font-bold text-foreground">{student.phone || "-"}</p>
-                </div>
-                <div className="col-span-2 p-3.5 rounded-2xl bg-secondary/40 space-y-1">
-                  <span className="text-muted-foreground font-semibold">Email</span>
-                  <p className="text-sm font-bold text-foreground">{student.email || "-"}</p>
-                </div>
-              </div>
-
-              {student.guardian && (
-                <div className="pt-2">
-                  <h4 className="text-xs font-bold text-muted-foreground mb-2">Guardian Information</h4>
-                  <div className="p-3.5 rounded-2xl bg-secondary/30 border border-border text-xs space-y-1">
-                    <p className="font-bold text-foreground">{student.guardian.name} ({student.guardian.relation})</p>
-                    <p className="text-muted-foreground">Phone: {student.guardian.phone}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-card border border-border rounded-3xl p-6 shadow-xs space-y-4">
-              <h3 className="text-base font-extrabold text-foreground">Performance Overview</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-secondary/40">
-                  <span className="text-xs font-semibold text-muted-foreground">Overall Score</span>
-                  <span className="text-sm font-black text-primary">{student.performanceScore}%</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-secondary/40">
-                  <span className="text-xs font-semibold text-muted-foreground">Academic Group</span>
-                  <span className="text-sm font-black capitalize text-foreground">{student.group}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-secondary/40">
-                  <span className="text-xs font-semibold text-muted-foreground">Enrolled Classes</span>
-                  <span className="text-sm font-black text-foreground">{enrollments.length}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StudentOverviewTab student={student} onNavigateTab={setTab} />
       )}
 
-      {/* Tab 2: Classes */}
-      {currentTab === "classes" && (
-        <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
-          <div className="pb-4 border-b border-border/60">
-            <h3 className="text-base font-extrabold text-foreground">Enrolled Classes</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Classes in which this student is currently registered.</p>
-          </div>
+      {currentTab === "classes" && <StudentClassesTab student={student} />}
 
-          {enrollments.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">Not enrolled in any classes.</p>
-          ) : (
-            <div className="divide-y divide-border/60">
-              {enrollments.map((e: { id: string; classId: string; className: string; slug?: string; grade?: string; type?: string; status: string; enrolledAt: string }) => (
-                <div key={e.id} className="py-3.5 flex items-center justify-between gap-4">
-                  <div>
-                    <Link
-                      href={`/classes/${e.slug || e.classId}`}
-                      className="text-sm font-extrabold text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
-                    >
-                      <span>{e.className}</span>
-                      <ExternalLink className="size-3 text-muted-foreground" />
-                    </Link>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Grade: {e.grade || "-"} • {e.type} • Enrolled: {new Date(e.enrolledAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize",
-                      e.status === "active" ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
-                    )}
-                  >
-                    {e.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {currentTab === "marks" && <StudentMarksTab student={student} />}
+
+      {currentTab === "analysis" && <StudentAnalysisTab studentId={student.id} />}
+
+      {currentTab === "actions" && (
+        <StudentActionsTab
+          key={`${student.id}:${student.name}:${student.phone || ""}:${student.email || ""}:${student.grade}:${student.status}:${student.guardian?.phone || ""}`}
+          student={student}
+          onOpenAnalysis={() => setTab("analysis")}
+        />
       )}
-
-      {/* Tab 3: Marks */}
-      {currentTab === "marks" && (
-        <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
-          <div className="pb-4 border-b border-border/60">
-            <h3 className="text-base font-extrabold text-foreground">Assessment Marks</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Recorded scores for all quizzes, tests and term examinations.</p>
-          </div>
-
-          {marks.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">No assessment marks recorded yet.</p>
-          ) : (
-            <div className="divide-y divide-border/60">
-              {marks.map((m: { id: string; assessmentId: string; assessmentTitle: string; assessmentSlug?: string; score: number; totalMarks: number; percentage: number; grade: string; feedback?: string; evaluatedAt: string }) => (
-                <div key={m.id} className="py-3.5 flex items-center justify-between gap-4">
-                  <div>
-                    <Link
-                      href={`/exams/${m.assessmentSlug || m.assessmentId}`}
-                      className="text-sm font-extrabold text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
-                    >
-                      <span>{m.assessmentTitle}</span>
-                      <ExternalLink className="size-3 text-muted-foreground" />
-                    </Link>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Date: {new Date(m.evaluatedAt).toLocaleDateString()} {m.feedback ? `• Feedback: "${m.feedback}"` : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4 text-right">
-                    <div>
-                      <span className="text-sm font-bold text-foreground block tabular-nums">
-                        {m.score} / {m.totalMarks}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{m.percentage}%</span>
-                    </div>
-                    <span className="inline-flex size-8 rounded-full bg-secondary text-primary border border-border items-center justify-center font-black text-xs">
-                      {m.grade}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab 4: Analysis */}
-      {currentTab === "analysis" && (
-        <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6">
-          <div className="pb-4 border-b border-border/60">
-            <h3 className="text-base font-extrabold text-foreground">Performance History</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Weekly performance snapshots and group classifications.</p>
-          </div>
-
-          {snapshots.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-8 text-center">No performance snapshots available.</p>
-          ) : (
-            <div className="divide-y divide-border/60">
-              {snapshots.map((s: { id: string; period: string; score: number; group: string; attendanceRate: number; rank?: number }) => (
-                <div key={s.id} className="py-3.5 flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Period: {s.period}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Attendance: {s.attendanceRate}% {s.rank ? `• Rank #${s.rank}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-black text-primary tabular-nums">{s.score}%</span>
-                    <span
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize",
-                        s.group === "excellent"
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : s.group === "weak"
-                          ? "bg-rose-500/10 text-rose-600"
-                          : "bg-amber-500/10 text-amber-600"
-                      )}
-                    >
-                      {s.group}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab 5: Account (Reset Password) */}
-      {currentTab === "account" && (
-        <div className="bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-xs space-y-6 max-w-xl">
-          <div className="pb-4 border-b border-border/60">
-            <h3 className="text-base font-extrabold text-foreground">Account & Credentials</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Reset temporary password for this student.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-              <KeyRound className="size-4 text-primary" />
-              <span>Password Reset</span>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              If the student has forgotten their password or cannot log in, generating a new temporary password will revoke existing sessions and require a password change on next login.
-            </p>
-            <Button
-              onClick={() => setResetConfirmOpen(true)}
-              className="rounded-full bg-primary text-primary-foreground font-bold text-xs"
-            >
-              Reset Temporary Password
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Confirm Password Reset */}
-      <ConfirmDialog
-        open={resetConfirmOpen}
-        onOpenChange={setResetConfirmOpen}
-        title="Reset Student Password"
-        description={`Are you sure you want to generate a new temporary password for ${student.name}? Their existing login sessions will be terminated.`}
-        confirmLabel="Reset Password"
-        isDestructive={false}
-        onConfirm={() => resetPasswordMutation.mutate(student.id)}
-      />
-
-      {/* Temporary Password Display Dialog */}
-      <Dialog open={!!tempPassword} onOpenChange={() => setTempPassword(null)}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-black text-foreground">Temporary Password Generated</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-xs text-muted-foreground">
-              Please share this temporary password with the student. They will be prompted to change it immediately after signing in.
-            </p>
-            <div className="p-4 rounded-2xl bg-secondary border border-border flex items-center justify-between gap-2">
-              <span className="font-mono text-base font-bold text-foreground select-all">{tempPassword}</span>
-              <Button size="sm" variant="ghost" onClick={handleCopy} className="rounded-full size-8 p-0">
-                {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-              </Button>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setTempPassword(null)} className="rounded-full bg-primary text-primary-foreground font-bold text-xs">
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

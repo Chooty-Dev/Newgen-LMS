@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 import { defineRoute } from "@/core/http/defineRoute";
 import { connectDB } from "@/lib/db";
 import { User } from "@/modules/users/model";
-import { ClassModel } from "@/modules/classes/model";
+import { ClassModel, Enrollment } from "@/modules/classes/model";
+import { Center } from "@/modules/centers/model";
 import { Assessment } from "@/modules/exams/model";
 import { Mark } from "@/modules/marks/model";
 import { AttendanceSession, Attendance } from "@/modules/attendance/model";
@@ -94,14 +95,14 @@ export const GET = defineRoute({
 
       const markFilter = centerObjId
         ? {
-            $or: [
-              { classId: { $in: centerClassIds } },
-              { assessmentId: { $in: centerAssessmentIds } },
-            ],
-          }
+          $or: [
+            { classId: { $in: centerClassIds } },
+            { assessmentId: { $in: centerAssessmentIds } },
+          ],
+        }
         : {};
 
-      const [totalStudents, totalTeachers, totalClasses, marksWaitingCount] = await Promise.all([
+      const [totalStudents, totalTeachers, totalClasses, marksWaitingCount, staffCount, centersCount, examsCount] = await Promise.all([
         User.countDocuments({
           role: "student",
           deletedAt: null,
@@ -121,6 +122,16 @@ export const GET = defineRoute({
           status: "draft",
           ...markFilter,
         }),
+        User.countDocuments({
+          role: "staff",
+          deletedAt: null,
+          ...(centerObjId ? { centerId: centerObjId } : {}),
+        }),
+        Center.countDocuments({ deletedAt: null }),
+        Assessment.countDocuments({
+          deletedAt: null,
+          ...(centerObjId ? { centerId: centerObjId } : {}),
+        }),
       ]);
 
       // Weak / Medium / Excellent distribution
@@ -133,51 +144,165 @@ export const GET = defineRoute({
 
       const latestSnapshots = centerStudentIds.length > 0 || !centerObjId
         ? await PerformanceSnapshot.aggregate([
-            ...(centerObjId ? [{ $match: { studentId: { $in: centerStudentIds } } }] : []),
-            { $sort: { period: -1 } },
-            { $group: { _id: "$studentId", group: { $first: "$group" }, score: { $first: "$score" } } },
-          ])
+          ...(centerObjId ? [{ $match: { studentId: { $in: centerStudentIds } } }] : []),
+          { $sort: { period: -1 } },
+          { $group: { _id: "$studentId", group: { $first: "$group" }, score: { $first: "$score" } } },
+        ])
         : [];
 
       const excellent = latestSnapshots.filter((s) => s.group === "excellent").length;
       const medium = latestSnapshots.filter((s) => s.group === "medium").length;
       const weak = latestSnapshots.filter((s) => s.group === "weak").length;
 
+      const avgScoreFromSnapshots =
+        latestSnapshots.length > 0
+          ? Math.round(
+              (latestSnapshots.reduce((sum, s) => sum + (Number(s.score) || 0), 0) / latestSnapshots.length) * 10
+            ) / 10
+          : 0;
+
       const treemapData = [
-        { name: "Excellent", size: Math.max(1, excellent), count: excellent },
-        { name: "Good", size: Math.max(1, medium), count: medium },
-        { name: "Needs Help", size: Math.max(1, weak), count: weak },
+        { name: "Excellent", size: Math.max(0, excellent), count: excellent },
+        { name: "Good", size: Math.max(0, medium), count: medium },
+        { name: "Needs Help", size: Math.max(0, weak), count: weak },
       ];
 
-      // Average performance over time
+      // Average performance over time (real snapshots only, fallback to real submitted marks grouped by assessment)
       const trendAgg = centerStudentIds.length > 0 || !centerObjId
         ? await PerformanceSnapshot.aggregate([
-            ...(centerObjId ? [{ $match: { studentId: { $in: centerStudentIds } } }] : []),
-            {
-              $group: {
-                _id: "$period",
-                score: { $avg: "$score" },
-              },
+          ...(centerObjId ? [{ $match: { studentId: { $in: centerStudentIds } } }] : []),
+          {
+            $group: {
+              _id: "$period",
+              score: { $avg: "$score" },
             },
-            { $sort: { _id: 1 } },
-            { $limit: 8 },
-          ])
+          },
+          { $sort: { _id: 1 } },
+          { $limit: 12 },
+        ])
         : [];
 
-      const trendData =
-        trendAgg.length > 0
-          ? trendAgg.map((t) => ({ period: t._id, score: Math.round(t.score) }))
-          : [
-              { period: "Week 1", score: 65 },
-              { period: "Week 2", score: 68 },
-              { period: "Week 3", score: 72 },
-              { period: "Week 4", score: 74 },
-            ];
+      let trendData = trendAgg.map((t) => ({ period: String(t._id), score: Math.round(t.score) }));
+
+      if (trendData.length === 0 && centerAssessmentIds.length > 0) {
+        const markTrend = await Mark.aggregate([
+          { $match: { assessmentId: { $in: centerAssessmentIds }, status: "submitted", deletedAt: null } },
+          {
+            $group: {
+              _id: "$assessmentId",
+              avgScore: { $avg: "$score" },
+              date: { $first: "$createdAt" },
+            },
+          },
+          { $sort: { date: 1 } },
+          { $limit: 8 },
+        ]);
+        trendData = markTrend.map((m, idx) => ({
+          period: m.date ? new Date(m.date).toISOString().slice(5, 10) : `Eval ${idx + 1}`,
+          score: Math.round(m.avgScore || 0),
+        }));
+      }
+
+      // Today's attendance overview (real data)
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const dayOfWeek = new Date().getDay();
+      const todayClasses = await ClassModel.find({
+        ...(centerObjId ? { centerId: centerObjId } : {}),
+        deletedAt: null,
+        status: "active",
+        $or: [
+          { "schedule.type": "regular", "schedule.regular.daysOfWeek": dayOfWeek },
+          { "schedule.type": "special", "schedule.special.sessions.date": todayStr },
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      const todayClassIds = todayClasses.map((c) => c._id);
+      const [expectedToday, todayAttendance] =
+        todayClassIds.length > 0
+          ? await Promise.all([
+              Enrollment.countDocuments({ classId: { $in: todayClassIds }, status: "active" }),
+              Attendance.find({ classId: { $in: todayClassIds }, date: todayStr }).select("status").lean(),
+            ])
+          : [0, []];
+      const attendedToday = todayAttendance.filter((r) => r.status === "present" || r.status === "late").length;
+      const attendanceRateToday =
+        expectedToday > 0 ? Math.round((attendedToday / expectedToday) * 100) : 0;
+
+      // Active classes breakdown for overview table
+      const activeClassesRaw = await ClassModel.find({
+        ...(centerObjId ? { centerId: centerObjId } : {}),
+        deletedAt: null,
+      })
+        .populate("subjectId", "name code")
+        .populate("teacherId", "name")
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean();
+
+      const activeClassObjectIds = activeClassesRaw.map((c) => c._id);
+      const enrollmentCounts =
+        activeClassObjectIds.length > 0
+          ? await Enrollment.aggregate([
+              { $match: { classId: { $in: activeClassObjectIds }, status: "active" } },
+              { $group: { _id: "$classId", count: { $sum: 1 } } },
+            ])
+          : [];
+      const enrolledMap = new Map(
+        enrollmentCounts.map((e) => [e._id.toString(), Number(e.count) || 0])
+      );
+
+      const classBreakdown = activeClassesRaw
+        .map((c) => {
+          const sub = c.subjectId as unknown as { name?: string; code?: string } | null;
+          const tch = c.teacherId as unknown as { name?: string } | null;
+          const enrolled = enrolledMap.get(c._id.toString()) || 0;
+          const cap = c.capacity || 30;
+          const occupancy = cap > 0 ? Math.round((enrolled / cap) * 100) : 0;
+          return {
+            id: c._id.toString(),
+            slug: c.slug || c._id.toString(),
+            name: c.name,
+            subject: sub?.code || sub?.name || "Subject",
+            teacher: tch?.name || "Faculty",
+            enrolledCount: enrolled,
+            capacity: cap,
+            occupancy,
+            status: c.status,
+          };
+        })
+        .sort((a, b) => b.enrolledCount - a.enrolledCount)
+        .slice(0, 5);
+
+      // Recent assessments breakdown
+      const recentAssessmentsRaw = await Assessment.find({
+        ...(centerObjId ? { centerId: centerObjId } : {}),
+        deletedAt: null,
+      })
+        .populate("subjectId", "name code")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean();
+
+      const assessmentBreakdown = recentAssessmentsRaw.map((a) => {
+        const sub = a.subjectId as unknown as { name?: string; code?: string } | null;
+        return {
+          id: a._id.toString(),
+          slug: a.slug || a._id.toString(),
+          title: a.title,
+          type: a.type,
+          subject: sub?.code || sub?.name || "Subject",
+          totalMarks: a.totalMarks,
+          status: a.status,
+          date: a.sessions?.[0]?.date || "",
+        };
+      });
 
       // Recent activity
       const recentActivities = (await AuditLog.find()
         .sort({ createdAt: -1 })
-        .limit(5)
+        .limit(6)
         .lean()) as unknown as LeanAuditLog[];
 
       return {
@@ -187,9 +312,18 @@ export const GET = defineRoute({
             totalTeachers,
             classesToday: totalClasses,
             marksWaiting: marksWaitingCount,
+            staffCount,
+            centersCount,
+            examsCount,
+            averageScore: avgScoreFromSnapshots,
+            attendanceRateToday,
+            expectedToday,
+            attendedToday,
           },
           treemapData,
           trendData,
+          classBreakdown,
+          assessmentBreakdown,
           recentActivities: recentActivities.map((log) => ({
             id: log._id.toString(),
             actorName: log.actorName || "System",
@@ -209,7 +343,7 @@ export const GET = defineRoute({
         deletedAt: null,
         ...(centerObjId ? { centerId: centerObjId } : {}),
       }).lean();
-      
+
       return {
         data: {
           myClassesCount: classes.length,
@@ -253,14 +387,14 @@ export const GET = defineRoute({
 
       const markFilter = centerObjId
         ? {
-            $or: [
-              { classId: { $in: centerClassIds } },
-              { assessmentId: { $in: centerAssessmentIds } },
-            ],
-          }
+          $or: [
+            { classId: { $in: centerClassIds } },
+            { assessmentId: { $in: centerAssessmentIds } },
+          ],
+        }
         : {};
 
-      const [pendingMarksCount, sessionsTodayCount, completedMarksCount] = await Promise.all([
+      const [pendingMarksCount, sessionsTodayCount, completedMarksCount, examsCount, testsCount, quizzesCount, assignmentsCount] = await Promise.all([
         Mark.countDocuments({
           status: "draft",
           ...markFilter,
@@ -273,6 +407,26 @@ export const GET = defineRoute({
           status: "submitted",
           ...markFilter,
         }),
+        Assessment.countDocuments({
+          type: "exam",
+          deletedAt: null,
+          ...(centerObjId ? { centerId: centerObjId } : {}),
+        }),
+        Assessment.countDocuments({
+          type: "test",
+          deletedAt: null,
+          ...(centerObjId ? { centerId: centerObjId } : {}),
+        }),
+        Assessment.countDocuments({
+          type: "mcq_quiz",
+          deletedAt: null,
+          ...(centerObjId ? { centerId: centerObjId } : {}),
+        }),
+        Assessment.countDocuments({
+          type: "assignment",
+          deletedAt: null,
+          ...(centerObjId ? { centerId: centerObjId } : {}),
+        }),
       ]);
 
       return {
@@ -281,6 +435,12 @@ export const GET = defineRoute({
             pendingMarksCount,
             sessionsTodayCount,
             completedMarksCount,
+            workload: {
+              exams: examsCount,
+              tests: testsCount,
+              quizzes: quizzesCount,
+              assignments: assignmentsCount,
+            },
           },
           pendingAssessments: pendingAssessments.map((a) => ({
             id: a._id.toString(),

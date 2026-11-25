@@ -4,7 +4,14 @@ import { ClassService } from "@/modules/classes/service";
 import { createClassSchema } from "@/modules/classes/schema";
 
 export const GET = defineRoute({
-  permission: "classes.view",
+  permission: [
+    "classes.view",
+    "attendance.view",
+    "attendance.mark",
+    "attendance.create",
+    "marks.evaluate",
+    "marks.view",
+  ],
   handler: async ({ session, req }) => {
     const url = new URL(req.url);
     const search = url.searchParams.get("search") || undefined;

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { defineRoute } from "@/core/http/defineRoute";
 import { User, StaffProfile } from "@/modules/users/model";
+import { ClassModel } from "@/modules/classes/model";
+import { Assessment } from "@/modules/exams/model";
 import { UserPermissionModel } from "@/modules/permissions/model";
 import { invalidatePermissionCache } from "@/core/rbac/resolver";
 import { UserService } from "@/modules/users/service";
@@ -60,6 +62,46 @@ export const PATCH = defineRoute({
         { upsert: true, new: true }
       );
       invalidatePermissionCache(user._id.toString());
+    }
+
+    if (body.assignedClassIds !== undefined) {
+      const classObjIds = body.assignedClassIds
+        .filter((id) => mongoose.isValidObjectId(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      // Remove this staff member from all classes they are currently assigned to
+      await ClassModel.updateMany(
+        { staffIds: user._id },
+        { $pull: { staffIds: user._id } }
+      );
+
+      // Add to newly selected classes
+      if (classObjIds.length > 0) {
+        await ClassModel.updateMany(
+          { _id: { $in: classObjIds } },
+          { $addToSet: { staffIds: user._id } }
+        );
+      }
+    }
+
+    if (body.assignedAssessmentIds !== undefined) {
+      const assessmentObjIds = body.assignedAssessmentIds
+        .filter((id) => mongoose.isValidObjectId(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      // Remove this staff member from all assessments
+      await Assessment.updateMany(
+        { evaluatorIds: user._id },
+        { $pull: { evaluatorIds: user._id } }
+      );
+
+      // Add to newly selected assessments
+      if (assessmentObjIds.length > 0) {
+        await Assessment.updateMany(
+          { _id: { $in: assessmentObjIds } },
+          { $addToSet: { evaluatorIds: user._id } }
+        );
+      }
     }
 
     return { data: { success: true, message: "Staff member updated successfully" } };

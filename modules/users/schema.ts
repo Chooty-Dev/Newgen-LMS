@@ -24,6 +24,8 @@ export const createUserSchema = z.object({
   position: z.string().optional(),
   centerIds: z.array(z.string()).optional(),
   permissions: z.array(z.string()).optional(),
+  assignedClassIds: z.array(z.string()).optional(),
+  assignedAssessmentIds: z.array(z.string()).optional(),
 });
 
 export const updateUserSchema = z.object({
@@ -46,6 +48,8 @@ export const updateUserSchema = z.object({
   position: z.string().optional(),
   centerIds: z.array(z.string()).optional(),
   permissions: z.array(z.string()).optional(),
+  assignedClassIds: z.array(z.string()).optional(),
+  assignedAssessmentIds: z.array(z.string()).optional(),
 });
 
 export const updateAccountSchema = z.object({

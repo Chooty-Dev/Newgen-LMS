@@ -1,10 +1,22 @@
+import "@/modules/users/model";
+import "@/modules/subjects/model";
 import { Mark } from "./model";
 import { Assessment } from "@/modules/exams/model";
+import { Center } from "@/modules/centers/model";
 import { Enrollment } from "@/modules/classes/model";
+import { Attendance } from "@/modules/attendance/model";
 import { Setting } from "@/modules/settings/model";
 import { saveDailyPerformanceSnapshot } from "@/modules/analysis/engine/score";
+import { checkAssessmentEvaluationWindow } from "./evaluation-window";
+import {
+  getScheduledEvaluationsForDate as fetchScheduledEvaluationsForDate,
+  ScheduledEvaluationItem,
+  ScheduledEvaluationState,
+} from "./scheduled.service";
 import { connectDB } from "@/lib/db";
 import mongoose from "mongoose";
+
+export type { ScheduledEvaluationItem, ScheduledEvaluationState };
 
 export function calculateGrade(
   percentage: number,
@@ -26,7 +38,10 @@ export function calculateGrade(
 
 export class MarkService {
   // Get assessment with student grid for evaluation (assigned to evaluator or teacher)
-  static async getAssessmentForEvaluation(assessmentId: string) {
+  static async getAssessmentForEvaluation(
+    assessmentId: string,
+    options?: { now?: Date }
+  ) {
     await connectDB();
     const a = await Assessment.findById(assessmentId)
       .populate("subjectId", "name code")
@@ -34,6 +49,15 @@ export class MarkService {
       .lean();
 
     if (!a || a.deletedAt) throw new Error("Assessment not found");
+
+    const centerDoc = await Center.findById(a.centerId).select("timezone").lean();
+    const evaluationWindow = checkAssessmentEvaluationWindow({
+      title: a.title,
+      sessions: a.sessions,
+      status: a.status,
+      timeZone: centerDoc?.timezone || "Asia/Colombo",
+      now: options?.now,
+    });
 
     // Fetch enrolled students across all assigned classes
     const enrollments = await Enrollment.find({
@@ -57,12 +81,23 @@ export class MarkService {
       }
     }
 
-    // Fetch any existing marks records
-    const existingMarks = await Mark.find({ assessmentId: a._id }).lean();
+    // Fetch any existing marks records and attendance records for pre-fill
+    const [existingMarks, existingAttendance] = await Promise.all([
+      Mark.find({ assessmentId: a._id }).lean(),
+      Attendance.find({ assessmentId: a._id }).select("studentId status").lean(),
+    ]);
     const markMap = new Map(existingMarks.map((m) => [m.studentId.toString(), m]));
+    const attMap = new Map(existingAttendance.map((att) => [att.studentId.toString(), att.status]));
 
     const entries = Array.from(studentMap.values()).map((st) => {
       const m = markMap.get(st.studentId);
+      const attStatus = attMap.get(st.studentId);
+      const defaultAttendance: "present" | "absent" | "excused" =
+        attStatus === "absent"
+          ? "absent"
+          : attStatus === "excused"
+          ? "excused"
+          : "present";
       return {
         studentId: st.studentId,
         studentName: st.name,
@@ -72,7 +107,7 @@ export class MarkService {
         totalMarks: a.totalMarks,
         percentage: m?.percentage ?? 0,
         grade: m?.grade ?? "F",
-        attendanceStatus: m?.attendanceStatus ?? "present",
+        attendanceStatus: m?.attendanceStatus ?? defaultAttendance,
         remarks: m?.remarks ?? "",
         status: m?.status ?? "draft",
       };
@@ -88,6 +123,7 @@ export class MarkService {
         subject: (a.subjectId as unknown as { name: string; code: string })?.name,
         classes: (a.classIds as unknown as Array<{ name: string }>).map((c) => c.name),
         status: a.status,
+        evaluationWindow,
       },
       entries,
     };
@@ -105,11 +141,37 @@ export class MarkService {
       score: number;
       attendanceStatus: "present" | "absent" | "excused";
       remarks?: string;
-    }>
+    }>,
+    options?: {
+      canEditSubmitted?: boolean;
+      now?: Date;
+    }
   ) {
     await connectDB();
     const a = await Assessment.findById(assessmentId);
     if (!a || a.deletedAt) throw new Error("Assessment not found");
+
+    const centerDoc = await Center.findById(a.centerId || centerId).select("timezone").lean();
+    const evaluationWindow = checkAssessmentEvaluationWindow({
+      title: a.title,
+      sessions: a.sessions,
+      status: a.status,
+      timeZone: centerDoc?.timezone || "Asia/Colombo",
+      now: options?.now,
+    });
+
+    if (!evaluationWindow.hasEnded) {
+      throw new Error(
+        evaluationWindow.message ||
+          "Marks cannot be entered before this assessment finishes."
+      );
+    }
+
+    if (a.status === "completed" && !options?.canEditSubmitted) {
+      throw new Error(
+        "Marks for this assessment have already been finalized and submitted."
+      );
+    }
 
     // Fetch custom grade scale from settings if present
     const gradeScaleSetting = await Setting.findOne({
@@ -183,6 +245,16 @@ export class MarkService {
     }
 
     return { success: true, count: entries.length };
+  }
+
+  static async getScheduledEvaluationsForDate(params: {
+    centerId: string;
+    date: string; // "YYYY-MM-DD"
+    staffId?: string;
+    teacherId?: string;
+    now?: Date;
+  }) {
+    return fetchScheduledEvaluationsForDate(params);
   }
 
   // List student marks

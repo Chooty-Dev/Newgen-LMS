@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { TeacherClassesView } from "@/components/teacher/TeacherClassesView";
+import { AdminClassesView } from "@/components/admin/AdminClassesView";
 
 interface ClassRecord {
   id: string;
@@ -59,7 +60,13 @@ export default function ClassesPage() {
   if (user?.role === "teacher") {
     return <TeacherClassesView />;
   }
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    return <AdminClassesView />;
+  }
+  return <LegacyClassesView />;
+}
 
+function LegacyClassesView() {
   const queryClient = useQueryClient();
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("");

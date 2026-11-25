@@ -5,7 +5,7 @@ import { markSingleAttendanceSchema } from "@/modules/attendance/schema";
 import { canAccessClass } from "@/core/rbac/policies";
 
 export const POST = defineRoute({
-  permission: "attendance.mark",
+  permission: ["attendance.mark", "attendance.create", "attendance.update"],
   bodySchema: markSingleAttendanceSchema,
   auditAction: "attendance.markSingle",
   auditResource: { type: "Attendance" },

@@ -2,16 +2,20 @@
 
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PageHeader } from "@/components/shared/PageHeader";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DataTable } from "@/components/shared/DataTable";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { Lock, Users, AlertOctagon, Save } from "lucide-react";
+import {
+  AdminAssetTiles,
+  AdminSectionHeader,
+  AdminStatusPill,
+  AdminSurface,
+} from "@/components/admin/AdminUI";
 
 interface SecurityConfig {
   idleTimeoutMinutes: number;
@@ -75,28 +79,15 @@ export default function SecurityPage() {
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Session revoked immediately.");
+      toast.success("Session revoked");
       queryClient.invalidateQueries({ queryKey: ["security-overview"] });
       setSessionToRevoke(null);
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "Could not revoke session.");
-    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Security Controls"
-          description="Configure session timeouts, review active logins, and revoke unauthorized access."
-        />
-        <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-96 rounded-3xl" />
-          <Skeleton className="h-96 rounded-3xl" />
-        </div>
-      </div>
-    );
+    return <Skeleton className="h-96 rounded-[24px]" />;
   }
 
   const data = secData?.data;
@@ -108,34 +99,21 @@ export default function SecurityPage() {
       header: "User",
       cell: ({ row }) => (
         <div>
-          <span className="font-semibold text-foreground text-base block">
-            {row.original.user?.name || "Unknown"}
-          </span>
-          <span className="text-xs text-muted-foreground capitalize">
-            {row.original.user?.role || "user"} • {row.original.user?.username}
-          </span>
+          <span className="font-bold text-foreground text-xs block">{row.original.user?.name || "Unknown"}</span>
+          <span className="text-[11px] text-muted-foreground capitalize">{row.original.user?.role || "user"}</span>
         </div>
       ),
     },
     {
       accessorKey: "ip",
       header: "IP Address",
-      cell: ({ row }) => <span className="tabular-nums font-mono text-sm">{row.original.ip}</span>,
-    },
-    {
-      accessorKey: "userAgent",
-      header: "Client Device",
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">
-          {row.original.userAgent}
-        </span>
-      ),
+      cell: ({ row }) => <span className="tabular-nums font-mono text-xs">{row.original.ip}</span>,
     },
     {
       accessorKey: "lastActiveAt",
       header: "Last Active",
       cell: ({ row }) => (
-        <span className="text-sm font-medium tabular-nums">
+        <span className="text-xs text-muted-foreground tabular-nums">
           {row.original.lastActiveAt ? new Date(row.original.lastActiveAt).toLocaleTimeString() : "-"}
         </span>
       ),
@@ -144,12 +122,7 @@ export default function SecurityPage() {
       id: "actions",
       header: "Action",
       cell: ({ row }) => (
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full"
-          onClick={() => setSessionToRevoke(row.original.id)}
-        >
+        <Button variant="outline" size="sm" className="rounded-full h-8 text-xs text-rose-600" onClick={() => setSessionToRevoke(row.original.id)}>
           Revoke
         </Button>
       ),
@@ -157,80 +130,61 @@ export default function SecurityPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title="Security Controls"
-        description="Configure session timeouts, review active logins, and revoke unauthorized access."
+    <div className="space-y-6 animate-in fade-in duration-200">
+      <AdminAssetTiles
+        columns={3}
+        items={[
+          { label: "Active Sessions", value: data.activeSessions.length, icon: Users, badge: "Signed in", tone: 1 },
+          { label: "Failed Logins", value: data.failedLogins.length, icon: AlertOctagon, badge: "Blocked", tone: 2 },
+          { label: "Idle Timeout", value: `${data.config.idleTimeoutMinutes}m`, icon: Lock, badge: "Policy", tone: 3 },
+        ]}
       />
 
-      {/* Security Config Form */}
-      <SecurityConfigForm
-        config={data.config}
-        onSaved={() => queryClient.invalidateQueries({ queryKey: ["security-overview"] })}
-      />
-
-      {/* Center-wide Active Sessions */}
-      <Card className="rounded-3xl p-6">
-        <CardHeader className="p-0 mb-6 flex flex-row items-center gap-3">
-          <Users className="size-6 text-foreground" />
-          <div>
-            <CardTitle className="text-xl">Active Sessions Center-wide</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Currently signed-in devices across all staff, teachers, and students
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <DataTable
-            columns={sessionColumns}
-            data={data.activeSessions}
-            emptyMessage="No active sessions found."
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-6">
+          <AdminSectionHeader title="Session Policy" />
+          <SecurityConfigForm
+            config={data.config}
+            onSaved={() => queryClient.invalidateQueries({ queryKey: ["security-overview"] })}
           />
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Recent Failed Logins */}
-      <Card className="rounded-3xl p-6">
-        <CardHeader className="p-0 mb-4 flex flex-row items-center gap-3">
-          <AlertOctagon className="size-6 text-foreground" />
-          <div>
-            <CardTitle className="text-xl">Recent Failed Login Attempts</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Recorded failed credentials and security blocks
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="space-y-3">
+        <div className="lg:col-span-6">
+          <AdminSectionHeader title="Failed Logins" />
+          <AdminSurface className="p-5 space-y-2.5 max-h-[340px] overflow-y-auto">
             {data.failedLogins.length > 0 ? (
               data.failedLogins.map((fail) => (
                 <div
                   key={fail.id}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-accent/20 border border-border/40"
+                  className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[var(--admin-surface)] border border-[var(--admin-border)] text-xs"
                 >
                   <div>
-                    <p className="text-sm font-medium">{fail.identifier}</p>
-                    <p className="text-xs text-muted-foreground">IP: {fail.ip}</p>
+                    <p className="font-bold text-foreground">{fail.identifier}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">IP: {fail.ip}</p>
                   </div>
-                  <span className="text-xs font-semibold uppercase px-3 py-1 rounded-full bg-accent text-accent-foreground">
-                    {fail.result}
-                  </span>
+                  <AdminStatusPill label={fail.result} tone="danger" />
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground py-4">No failed login attempts recorded.</p>
+              <p className="text-xs text-muted-foreground py-8 text-center">No failed attempts.</p>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </AdminSurface>
+        </div>
+      </div>
 
-      {/* Confirm Revoke Session Dialog */}
+      <div>
+        <AdminSectionHeader title="Active Sessions" />
+        <AdminSurface className="p-2 sm:p-4">
+          <DataTable columns={sessionColumns} data={data.activeSessions} emptyMessage="No active sessions." />
+        </AdminSurface>
+      </div>
+
       <ConfirmDialog
         open={!!sessionToRevoke}
         onOpenChange={(open) => !open && setSessionToRevoke(null)}
-        title="Revoke Session"
-        description="Are you sure you want to revoke this session? The user will be signed out immediately."
-        confirmLabel="Yes, Revoke"
+        title="Revoke session?"
+        description="User will be signed out immediately."
+        confirmLabel="Revoke"
         onConfirm={() => {
           if (sessionToRevoke) revokeMutation.mutate(sessionToRevoke);
         }}
@@ -239,13 +193,7 @@ export default function SecurityPage() {
   );
 }
 
-function SecurityConfigForm({
-  config,
-  onSaved,
-}: {
-  config: SecurityConfig;
-  onSaved: () => void;
-}) {
+function SecurityConfigForm({ config, onSaved }: { config: SecurityConfig; onSaved: () => void }) {
   const [idleMinutes, setIdleMinutes] = React.useState(config.idleTimeoutMinutes);
   const [absoluteHours, setAbsoluteHours] = React.useState(config.absoluteTimeoutHours);
   const [maxAttempts, setMaxAttempts] = React.useState(config.maxLoginAttempts);
@@ -267,92 +215,44 @@ function SecurityConfigForm({
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Security rules updated successfully.");
+      toast.success("Security policy updated");
       onSaved();
     },
-    onError: (err: Error) => {
-      toast.error(err.message || "Failed to update security rules.");
-    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveMutation.mutate();
-  };
-
   return (
-    <Card className="rounded-3xl p-8 max-w-3xl">
-      <CardHeader className="p-0 mb-6 flex flex-row items-center gap-3">
-        <Lock className="size-6 text-foreground" />
-        <div>
-          <CardTitle className="text-xl">Authentication & Session Rules</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            Global session timeouts and brute force lockout parameters
-          </p>
-        </div>
-      </CardHeader>
-      <CardContent className="p-0">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Idle Timeout (minutes)</label>
-              <Input
-                type="number"
-                min={1}
-                max={120}
-                value={idleMinutes}
-                onChange={(e) => setIdleMinutes(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">Inactivity period before requiring re-login</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Absolute Expiry (hours)</label>
-              <Input
-                type="number"
-                min={1}
-                max={72}
-                value={absoluteHours}
-                onChange={(e) => setAbsoluteHours(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">Maximum total duration of a single session</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Max Failed Login Attempts</label>
-              <Input
-                type="number"
-                min={3}
-                max={20}
-                value={maxAttempts}
-                onChange={(e) => setMaxAttempts(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">Threshold before temporarily locking user IP</p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-base font-medium text-foreground">Lockout Duration (minutes)</label>
-              <Input
-                type="number"
-                min={1}
-                max={120}
-                value={lockoutMinutes}
-                onChange={(e) => setLockoutMinutes(Number(e.target.value))}
-              />
-              <p className="text-xs text-muted-foreground">Duration of lockout after repeated failures</p>
-            </div>
+    <AdminSurface className="p-5">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          saveMutation.mutate();
+        }}
+        className="space-y-4 text-xs"
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="font-semibold block mb-1">Idle Timeout (min)</label>
+            <Input type="number" min={1} max={120} value={idleMinutes} onChange={(e) => setIdleMinutes(Number(e.target.value))} className="h-9 rounded-xl" />
           </div>
-
-          <Button
-            type="submit"
-            disabled={saveMutation.isPending}
-            className="rounded-full px-8 gap-2"
-          >
-            <Save className="size-5" />
-            {saveMutation.isPending ? "Saving..." : "Save Security Rules"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <div>
+            <label className="font-semibold block mb-1">Max Session (hrs)</label>
+            <Input type="number" min={1} max={72} value={absoluteHours} onChange={(e) => setAbsoluteHours(Number(e.target.value))} className="h-9 rounded-xl" />
+          </div>
+          <div>
+            <label className="font-semibold block mb-1">Max Login Attempts</label>
+            <Input type="number" min={3} max={20} value={maxAttempts} onChange={(e) => setMaxAttempts(Number(e.target.value))} className="h-9 rounded-xl" />
+          </div>
+          <div>
+            <label className="font-semibold block mb-1">Lockout (min)</label>
+            <Input type="number" min={1} max={120} value={lockoutMinutes} onChange={(e) => setLockoutMinutes(Number(e.target.value))} className="h-9 rounded-xl" />
+          </div>
+        </div>
+        <Button type="submit" disabled={saveMutation.isPending} className="rounded-full h-10 px-5 text-xs font-bold gap-1.5">
+          <Save className="size-3.5" />
+          <span>{saveMutation.isPending ? "Saving..." : "Save Policy"}</span>
+        </Button>
+      </form>
+    </AdminSurface>
   );
 }
